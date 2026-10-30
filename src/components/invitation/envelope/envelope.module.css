@@ -1,0 +1,75 @@
+/* src/components/invitation/envelope/envelope.module.css */
+.scene {
+    position: relative;
+    isolation: isolate;
+    width: var(--w);
+    height: var(--h);
+    margin-inline: auto;
+    cursor: pointer;
+    outline-offset: 8px;
+}
+
+.scene[data-opened='true'] {
+    cursor: default;
+}
+
+.part {
+    position: absolute;
+    inset: 0;
+}
+
+.back {
+    background: var(--liner);
+    border-radius: 4px;
+    box-shadow: 0 18px 40px rgb(0 0 0 / 0.22);
+}
+
+.pocket {
+    background: color-mix(in srgb, var(--env) 86%, black);
+    clip-path: polygon(0 0, 50% 56%, 100% 0, 100% 100%, 0 100%);
+    pointer-events: none;
+}
+
+.flap {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 56%;
+    transform-origin: top center;
+    transform-style: preserve-3d;
+    pointer-events: none;
+}
+
+.face {
+    position: absolute;
+    inset: 0;
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    backface-visibility: hidden;
+}
+
+.outside {
+    background: var(--env);
+}
+
+.inside {
+    background: var(--liner);
+    transform: rotateX(180deg);
+}
+
+.card {
+    position: absolute;
+    left: 4%;
+    bottom: 4%;
+    width: 92%;
+    height: 92%;
+    background: #fff;
+    border-radius: 3px;
+    overflow: hidden;
+    box-shadow: 0 6px 24px rgb(0 0 0 / 0.18);
+    transform-style: preserve-3d;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .scene {
+        outline-offset: 4px;
+    }
+}
