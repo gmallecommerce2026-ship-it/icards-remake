@@ -5,10 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Settings, LogOut, FileText, CreditCard, Home } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
+import { ROUTES } from "@/lib/routes";
 
 const NAV_LINKS = [
   { href: "/", label: "Về trang chủ", icon: Home },
-  { href: "/invitation-management", label: "Quản lý thiệp mời", icon: FileText },
+  { href: ROUTES.invitationManagement, label: "Quản lý thiệp mời", icon: FileText },
   { href: "/account-settings", label: "Cài đặt tài khoản", icon: Settings },
   // { href: "/orders", label: "Lịch sử đơn hàng", icon: CreditCard }, // Mở rộng sau
 ];

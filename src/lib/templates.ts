@@ -1,3 +1,4 @@
+import { ROUTES } from "@/lib/routes";
 // Dữ liệu mẫu thiệp. Sau này thay bằng API / DB: chỉ cần giữ nguyên kiểu InvitationTemplate
 // và 3 hàm getTemplates, getTemplateBySlug, getRelatedTemplates.
 
@@ -39,7 +40,7 @@ export type InvitationTemplate = {
 };
 
 /** Trang tạo sự kiện (nhóm dashboard làm sau). Đổi đường dẫn ở đây nếu cần. */
-export const CREATE_EVENT_HREF = "/my-events/new";
+export const CREATE_EVENT_HREF = ROUTES.newEvent;
 
 export const TEMPLATES: InvitationTemplate[] = [
   {
