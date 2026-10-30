@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, use } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -16,15 +16,15 @@ const INVITATION_TABS = [
   { path: "/delete", label: "XÓA THIỆP MỜI" },
 ];
 
-export default function InvitationDetailLayout({
-  children,
-  params,
-}: {
-  children: ReactNode;
-  params: { id: string };
+export default function InvitationDetailLayout({ children, params }: {
+  children: React.ReactNode;
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
+
   const pathname = usePathname();
-  const basePath = `/invitation-management/${params.id}`;
+
+  const basePath = `/invitation-management/${id}`;
 
   return (
     <div className="flex flex-col gap-6">
