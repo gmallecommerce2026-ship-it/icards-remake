@@ -1,0 +1,274 @@
+/* src/components/invitation/editor/editor.module.css */
+.page {
+    position: absolute;
+    inset: 0;
+    touch-action: none;
+}
+
+.page[data-editable='false'] {
+    pointer-events: none;
+}
+
+.node {
+    position: absolute;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.page[data-editable='true'] .node {
+    cursor: move;
+}
+
+.text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.15;
+    outline: none;
+}
+
+.text[contenteditable='true'] {
+    cursor: text;
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.fill {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.box {
+    position: absolute;
+    inset: -4px;
+    border: 1.5px dashed #2f6bff;
+    pointer-events: none;
+}
+
+.h {
+    position: absolute;
+    width: 11px;
+    height: 11px;
+    background: #fff;
+    border: 1.5px solid #2f6bff;
+    border-radius: 50%;
+    pointer-events: auto;
+}
+
+.h[data-p='nw'] {
+    left: -6px;
+    top: -6px;
+    cursor: nwse-resize;
+}
+
+.h[data-p='ne'] {
+    right: -6px;
+    top: -6px;
+    cursor: nesw-resize;
+}
+
+.h[data-p='se'] {
+    right: -6px;
+    bottom: -6px;
+    cursor: nwse-resize;
+}
+
+.h[data-p='sw'] {
+    left: -6px;
+    bottom: -6px;
+    cursor: nesw-resize;
+}
+
+.rot {
+    position: absolute;
+    left: 50%;
+    top: -34px;
+    width: 22px;
+    height: 22px;
+    margin-left: -11px;
+    display: grid;
+    place-items: center;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 5px rgb(0 0 0 / .4);
+    cursor: grab;
+    pointer-events: auto;
+}
+
+.guideV {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #ff3d9a;
+    pointer-events: none;
+}
+
+.guideH {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #ff3d9a;
+    pointer-events: none;
+}
+
+.textbar {
+    position: absolute;
+    left: 50%;
+    top: 16px;
+    translate: -50% 0;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #fff;
+    color: #1a1a1a;
+    border-radius: 999px;
+    box-shadow: 0 6px 24px rgb(0 0 0 / .4);
+    font: 15px system-ui, sans-serif;
+}
+
+.textbar select {
+    height: 40px;
+    padding: 0 10px;
+    border: 1px solid #d6d6d6;
+    background: #fff;
+    border-radius: 4px;
+    font-size: 15px;
+}
+
+.stepper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 6px;
+    border: 1px solid #d6d6d6;
+}
+
+.stepper span {
+    min-width: 28px;
+    text-align: center;
+}
+
+.stepper button,
+.tbtn {
+    width: 30px;
+    height: 30px;
+    border: 0;
+    background: none;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    color: #222;
+    display: grid;
+    place-items: center;
+}
+
+.colorWrap {
+    position: relative;
+}
+
+.colorBtn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid #c9c9c9;
+    cursor: pointer;
+}
+
+.pop {
+    position: absolute;
+    top: calc(100% + 14px);
+    left: 50%;
+    translate: -50% 0;
+    width: 296px;
+    padding: 14px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgb(0 0 0 / .4);
+}
+
+.palette {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+}
+
+.sw {
+    aspect-ratio: 1;
+    padding: 0;
+    border: 1px solid rgb(0 0 0 / .15);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.sw[aria-pressed='true'] {
+    outline: 2px solid #0b57d0;
+    outline-offset: 2px;
+}
+
+.custom {
+    position: relative;
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    border: 1px solid #d0d0d0;
+    border-radius: 20px;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+.custom input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.actionbar {
+    position: absolute;
+    left: 28px;
+    top: 50%;
+    translate: 0 -50%;
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 8px;
+    background: #fff;
+    border-radius: 999px;
+    box-shadow: 0 6px 24px rgb(0 0 0 / .4);
+}
+
+.act {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: #222;
+    cursor: pointer;
+}
+
+.act:hover {
+    background: #f0f0f0;
+}
+
+.act:focus-visible,
+.tbtn:focus-visible,
+.colorBtn:focus-visible,
+.sw:focus-visible {
+    outline: 2px solid #0b57d0;
+    outline-offset: 2px;
+}

@@ -1,0 +1,58 @@
+/* src/components/invitation/editor/FoldingCard.module.css */
+.stage {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 500px;
+    height: 700px;
+    transform-origin: 0 0;
+    perspective: 2400px;
+}
+
+.sheet {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: 2px;
+    box-shadow: 0 18px 50px rgb(0 0 0 / .45);
+}
+
+/* bóng nếp gấp bên trái ruột thiệp */
+.sheet::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 26px;
+    background: linear-gradient(90deg, rgb(0 0 0 / .2), transparent);
+    pointer-events: none;
+}
+
+.cover {
+    position: absolute;
+    inset: 0;
+    transform-origin: 0 50%;
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+
+.face {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: 2px;
+    backface-visibility: hidden;
+    box-shadow: 0 18px 50px rgb(0 0 0 / .45);
+}
+
+/* khi đang chỉnh sửa, cho phần tử tràn ra ngoài để thấy tay nắm ở mép thiệp */
+.sheet[data-editable='true'],
+.face[data-editable='true'] {
+    overflow: visible;
+}
+
+.back {
+    transform: rotateY(180deg);
+    background: linear-gradient(270deg, #f6f1e6, #ebe4d4);
+}

@@ -1,75 +1,238 @@
 /* src/components/invitation/envelope/envelope.module.css */
-.scene {
+.fit {
     position: relative;
-    isolation: isolate;
-    width: var(--w);
-    height: var(--h);
+    width: 100%;
+    max-width: 832px;
     margin-inline: auto;
-    cursor: pointer;
-    outline-offset: 8px;
 }
 
-.scene[data-opened='true'] {
-    cursor: default;
+.scene {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: 0 0;
+    --noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n' x='0' y='0' width='100%25' height='100%25'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .5 -.17'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>");
 }
 
-.part {
+/* Thiệp nằm sau phong bì */
+.card {
+    position: absolute;
+    background: #fff;
+    box-shadow: 0 24px 60px rgb(0 0 0 / .5);
+    overflow: hidden;
+}
+
+.card>img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.placeholder {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    background: #f6f3ec;
+    color: #8a8478;
+    font: 600 18px system-ui, sans-serif;
+}
+
+.ground {
+    position: absolute;
+    border-radius: 4px;
+    box-shadow: 0 34px 50px -10px rgb(0 0 0 / .6);
+    pointer-events: none;
+}
+
+/* Khối 3D của phong bì */
+.stage3d {
     position: absolute;
     inset: 0;
-}
-
-.back {
-    background: var(--liner);
-    border-radius: 4px;
-    box-shadow: 0 18px 40px rgb(0 0 0 / 0.22);
-}
-
-.pocket {
-    background: color-mix(in srgb, var(--env) 86%, black);
-    clip-path: polygon(0 0, 50% 56%, 100% 0, 100% 100%, 0 100%);
+    perspective: 1800px;
     pointer-events: none;
 }
 
-.flap {
+.envelope {
     position: absolute;
-    inset: 0 0 auto 0;
-    height: 56%;
-    transform-origin: top center;
     transform-style: preserve-3d;
-    pointer-events: none;
+    pointer-events: auto;
 }
 
 .face {
     position: absolute;
     inset: 0;
-    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    border-radius: 3px;
+    transform-style: preserve-3d;
     backface-visibility: hidden;
 }
 
-.outside {
-    background: var(--env);
+.face * {
+    backface-visibility: hidden;
 }
 
-.inside {
-    background: var(--liner);
-    transform: rotateX(180deg);
+.back {
+    transform: rotateY(180deg);
+    cursor: pointer;
 }
 
-.card {
+.paper {
     position: absolute;
-    left: 4%;
-    bottom: 4%;
-    width: 92%;
-    height: 92%;
-    background: #fff;
+    inset: 0;
     border-radius: 3px;
-    overflow: hidden;
-    box-shadow: 0 6px 24px rgb(0 0 0 / 0.18);
-    transform-style: preserve-3d;
+    background-color: var(--env);
+    background-image: var(--noise), linear-gradient(135deg, rgb(255 255 255 / .16), transparent 45%, rgb(0 0 0 / .12));
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .scene {
-        outline-offset: 4px;
-    }
+.sheen {
+    position: absolute;
+    inset: 0;
+    border-radius: 3px;
+    pointer-events: none;
+    background: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / .5) 48%, transparent 66%);
+    transform: translateZ(3px);
+}
+
+/* Mặt trước: tem, dấu bưu điện, tên người nhận */
+.postmark {
+    position: absolute;
+    width: 100px;
+    right: 150px;
+    top: 14px;
+    color: var(--ink);
+    opacity: .55;
+    transform: rotate(-12deg);
+}
+
+.stampBox {
+    position: absolute;
+    right: 30px;
+    top: 26px;
+    width: 88px;
+    height: 103px;
+    transform: rotate(2deg);
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / .35));
+}
+
+.cancel {
+    position: absolute;
+    right: 56px;
+    top: 30px;
+    width: 170px;
+    color: var(--ink);
+    opacity: .5;
+}
+
+.name {
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    top: 56%;
+    margin: 0;
+    transform: translateY(-50%);
+    text-align: center;
+    color: var(--ink);
+    font: 800 36px/1.15 "Arial Rounded MT Bold", Nunito, "Segoe UI", system-ui, sans-serif;
+    letter-spacing: -.01em;
+}
+
+/* Mặt sau: liner, hai cánh bên, cánh đáy, nắp */
+.interior {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 58%;
+    clip-path: polygon(2% 0, 98% 0, 50% 55%);
+    transform: translateZ(.5px);
+}
+
+.interior::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgb(0 0 0 / .3), transparent 55%);
+}
+
+.sides,
+.bottom {
+    position: absolute;
+    inset: 0;
+}
+
+.sides {
+    transform: translateZ(1px);
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / .3));
+}
+
+.bottom {
+    transform: translateZ(1.5px);
+    filter: drop-shadow(0 -2px 3px rgb(0 0 0 / .32));
+}
+
+.piece {
+    position: absolute;
+    inset: 0;
+    background-color: var(--env);
+}
+
+.pl {
+    clip-path: polygon(0 0, 50% 56%, 0 100%);
+    background-image: var(--noise), linear-gradient(100deg, rgb(255 255 255 / .12), rgb(0 0 0 / .1));
+}
+
+.pr {
+    clip-path: polygon(100% 0, 100% 100%, 50% 56%);
+    background-image: var(--noise), linear-gradient(260deg, rgb(255 255 255 / .1), rgb(0 0 0 / .16));
+}
+
+.pb {
+    clip-path: polygon(0 100%, 50% 52%, 100% 100%);
+    background-image: var(--noise), linear-gradient(0deg, rgb(255 255 255 / .12), rgb(0 0 0 / .08));
+}
+
+.flapShadow {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 60%;
+    filter: blur(4px);
+    transform: translateZ(1.8px) translateY(5px);
+    pointer-events: none;
+}
+
+.flapShadow i {
+    position: absolute;
+    inset: 0;
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    background: rgb(0 0 0 / .42);
+}
+
+.flap {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 58%;
+    transform-origin: 50% 0;
+    transform-style: preserve-3d;
+    backface-visibility: visible;
+}
+
+.flapFace {
+    position: absolute;
+    inset: 0;
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.flapOut {
+    background-color: var(--env);
+    background-image: var(--noise), linear-gradient(180deg, rgb(255 255 255 / .14), rgb(0 0 0 / .14));
+}
+
+.flapIn {
+    transform: rotateY(180deg);
+    background-color: var(--env);
+    background-image: var(--noise);
+}
+
+.flapLiner {
+    position: absolute;
+    inset: 0;
+    clip-path: polygon(3.5% 0, 96.5% 0, 50% 88%);
 }

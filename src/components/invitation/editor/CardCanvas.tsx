@@ -7,8 +7,8 @@ import useImage from 'use-image';
 import type Konva from 'konva';
 import { useEditorStore, type CardElement } from './useEditorStore';
 
-export const CARD_W = 600;
-export const CARD_H = 420; // tỉ lệ 1 : 0.7, khớp với EnvelopeScene
+export const CARD_W = 500;
+export const CARD_H = 700; // tỉ lệ 5:7, khớp EnvelopeScene
 
 function Node({ el }: { el: CardElement }) {
   const { selectedId, select, update } = useEditorStore();

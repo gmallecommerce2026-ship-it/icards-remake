@@ -1,93 +1,154 @@
 // src/components/invitation/envelope/EnvelopeScene.tsx
 'use client';
 
-import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
-import { animate, motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
-import styles from './envelope.module.css';
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion';
+import { Stamp } from './Stamp';
+import s from './envelope.module.css';
 
-type Props = {
-  children: ReactNode; // nội dung thiệp (ảnh export từ editor hoặc JSX)
-  width?: number;
-  envelopeColor?: string;
-  linerColor?: string;
-  onOpened?: () => void;
+// Hệ tọa độ thiết kế (px). Cả scene được scale vừa khung chứa.
+const DW = 640, DH = 696;
+const ENV = { x: 12, y: 240, w: 540, h: 390 };
+const CARD = { x: 268, y: 183, w: 360, h: 504 };
+
+// Vị trí thiệp (gốc biến đổi ở mép trái, giữa chiều cao)
+const POSE = {
+  behind: { x: 0, y: 0, scale: 1 },
+  front: { x: -135, y: -8, scale: 1.04 },   // thiệp đóng, ra trước, ở giữa cảnh
+  frontOpen: { x: 52, y: 0, scale: 0.88 },  // thiệp mở: bìa lật sang trái nên dồn thiệp sang phải
 };
 
-const EASE_OUT = [0.22, 1, 0.36, 1] as const;
+type Props = {
+  card?: ReactNode;          // nội dung thiệp (tỉ lệ 5:7)
+  envelopeColor: string;     // hex 6 ký tự
+  liner: string;             // giá trị CSS background
+  stampId: string;
+  recipientName?: string;
+  side: 'front' | 'back';    // front = mặt địa chỉ, back = mặt nắp
+  flapOpen: boolean;
+  onFlapToggle?: () => void;
+  cardFront?: boolean;       // true: thiệp nằm trước phong bì
+  cardOpen?: boolean;        // true: bìa thiệp đã lật mở
+};
 
-export function EnvelopeScene({ children, width = 480, envelopeColor = '#d9c7a3', linerColor = '#9c3b2e', onOpened }: Props) {
-  const h = width * 0.7;
+function isLight(hex: string) {
+  const n = parseInt(hex.slice(1), 16);
+  return 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 150;
+}
+
+export function EnvelopeScene({
+  card, envelopeColor, liner, stampId, recipientName = 'Tên người nhận',
+  side, flapOpen, onFlapToggle, cardFront = false, cardOpen = false,
+}: Props) {
   const reduce = useReducedMotion();
-  const [opened, setOpened] = useState(false);
-  const busy = useRef(false);
+  const pmId = useId().replace(/:/g, '');
+  const box = useRef<HTMLDivElement>(null);
+  const firstLift = useRef(true);
+  const [k, setK] = useState(1);
+  const [layerFront, setLayerFront] = useState(cardFront);
 
-  // Giá trị chuyển động
-  const flapRot = useMotionValue(0);
-  const flapZ = useTransform(flapRot, (v) => (v > 90 ? 1 : 5)); // nắp ra sau thiệp khi đã lật quá 90°
-  const cardPct = useMotionValue(0);
-  const cardY = useTransform(cardPct, (v) => `${v}%`);
-  const cardScale = useMotionValue(1);
-  const cardZ = useMotionValue(2); // 2 = nằm sau túi phong bì, 6 = nổi lên trước
-  const envY = useMotionValue(0);
-  const envOpacity = useMotionValue(1);
-  const tiltX = useSpring(0, { stiffness: 120, damping: 14 });
-  const tiltY = useSpring(0, { stiffness: 120, damping: 14 });
+  const flip = useMotionValue(side === 'front' ? 0 : 180);
+  const flapRot = useMotionValue(flapOpen ? 180 : 0);
+  const lift = useMotionValue(0);
+  const rad = Math.PI / 180;
+  const groundX = useTransform(flip, (v) => 0.3 + 0.7 * Math.abs(Math.cos(v * rad)));
+  const sheen = useTransform(flip, (v) => 0.5 * Math.abs(Math.sin(2 * v * rad)));
+  const flapShadow = useTransform(flapRot, [0, 45], [1, 0]);
 
-  async function open() {
-    if (busy.current || opened) return;
-    busy.current = true;
-    const k = reduce ? 0 : 1;
-    await animate(flapRot, 180, { duration: 0.7 * k, ease: [0.4, 0, 0.2, 1] });
-    await animate(cardPct, -58, { duration: 0.7 * k, ease: 'easeOut' });
-    cardZ.set(6);
-    await Promise.all([
-      animate(cardPct, -12, { duration: 0.9 * k, ease: EASE_OUT }),
-      animate(cardScale, 1.12, { duration: 0.9 * k, ease: EASE_OUT }),
-      animate(envY, h * 0.5, { duration: 0.9 * k, ease: EASE_OUT }),
-      animate(envOpacity, 0, { duration: 0.7 * k, delay: 0.2 * k }),
-    ]);
-    setOpened(true);
-    onOpened?.();
-  }
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setK(Math.min(1.3, e.contentRect.width / DW)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  useEffect(() => {
+    const c = animate(flip, side === 'front' ? 0 : 180, { duration: reduce ? 0 : 1, ease: [0.45, 0, 0.2, 1] });
+    return () => c.stop();
+  }, [side, reduce, flip]);
+  useEffect(() => {
+    const c = animate(flapRot, flapOpen ? 180 : 0, { duration: reduce ? 0 : 0.8, ease: [0.4, 0, 0.2, 1] });
+    return () => c.stop();
+  }, [flapOpen, reduce, flapRot]);
 
-  function onMove(e: PointerEvent<HTMLDivElement>) {
-    if (!opened || reduce) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    tiltY.set(((e.clientX - r.left) / r.width - 0.5) * 16);
-    tiltX.set(-((e.clientY - r.top) / r.height - 0.5) * 16);
-  }
-  function onKey(e: KeyboardEvent) {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
-  }
+  // Đổi thứ tự lớp ở giữa hành trình để thiệp "chui" qua mặt phong bì
+  useEffect(() => {
+    const t = setTimeout(() => setLayerFront(cardFront), reduce ? 0 : 300);
+    return () => clearTimeout(t);
+  }, [cardFront, reduce]);
+  // Cú nảy lên khi thiệp đổi tầng
+  useEffect(() => {
+    if (firstLift.current) { firstLift.current = false; return; }
+    if (reduce) return;
+    const c = animate(lift, [0, -70, 0], { duration: 0.7, ease: 'easeInOut' });
+    return () => c.stop();
+  }, [cardFront, reduce, lift]);
 
-  const env = { y: envY, opacity: envOpacity };
-  const vars = { '--w': `${width}px`, '--h': `${h}px`, '--env': envelopeColor, '--liner': linerColor, marginBlock: `${h * 0.7}px ${h * 0.25}px` } as CSSProperties;
+  const pose = !cardFront ? POSE.behind : cardOpen ? POSE.frontOpen : POSE.front;
+  const vars = { '--env': envelopeColor, '--ink': isLight(envelopeColor) ? '#17171a' : '#ffffff' } as CSSProperties;
 
   return (
-    <div
-      className={styles.scene}
-      style={vars}
-      data-opened={opened}
-      role="button"
-      tabIndex={opened ? -1 : 0}
-      aria-label={opened ? 'Thiệp mời' : 'Mở phong bì'}
-      onClick={open}
-      onKeyDown={onKey}
-      onPointerMove={onMove}
-      onPointerLeave={() => { tiltX.set(0); tiltY.set(0); }}
-    >
-      <motion.div className={`${styles.part} ${styles.back}`} style={{ ...env, zIndex: 0 }} />
-      <motion.div className={styles.flap} style={{ ...env, rotateX: flapRot, transformPerspective: 1200, zIndex: flapZ }}>
-        <div className={`${styles.face} ${styles.outside}`} />
-        <div className={`${styles.face} ${styles.inside}`} />
-      </motion.div>
-      <motion.div
-        className={styles.card}
-        style={{ y: cardY, scale: cardScale, rotateX: tiltX, rotateY: tiltY, transformPerspective: 1200, zIndex: cardZ }}
-      >
-        {children}
-      </motion.div>
-      <motion.div className={`${styles.part} ${styles.pocket}`} style={{ ...env, zIndex: 4 }} />
+    <div ref={box} className={s.fit} style={{ height: DH * k }}>
+      <div className={s.scene} style={{ ...vars, width: DW, height: DH, transform: `scale(${k})` }}>
+        <motion.div
+          className={s.card}
+          style={{
+            left: CARD.x, top: CARD.y, width: CARD.w, height: CARD.h,
+            zIndex: layerFront ? 5 : 0, transformOrigin: '0% 50%',
+            overflow: 'visible', background: 'transparent', boxShadow: 'none',
+          }}
+          initial={false}
+          animate={pose}
+          transition={{ duration: reduce ? 0 : 0.7, ease: [0.4, 0, 0.2, 1] }}
+        >
+          <motion.div style={{ y: lift, position: 'absolute', inset: 0 }}>
+            {card ?? <div className={s.placeholder}>Thiệp của bạn</div>}
+          </motion.div>
+        </motion.div>
+
+        <motion.div className={s.ground} style={{ left: ENV.x, top: ENV.y, width: ENV.w, height: ENV.h, scaleX: groundX }} />
+
+        <div className={s.stage3d} style={{ perspectiveOrigin: `${ENV.x + ENV.w / 2}px ${ENV.y + ENV.h / 2}px` }}>
+          <motion.div className={s.envelope} style={{ left: ENV.x, top: ENV.y, width: ENV.w, height: ENV.h, rotateY: flip }}>
+            {/* Mặt trước: địa chỉ */}
+            <div className={s.face}>
+              <div className={s.paper} />
+              <svg className={s.postmark} viewBox="0 0 100 100" aria-hidden>
+                <defs><path id={pmId} d="M50 50m-33 0a33 33 0 1 1 66 0a33 33 0 1 1-66 0" /></defs>
+                <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="2.2" />
+                <circle cx="50" cy="50" r="26" fill="none" stroke="currentColor" strokeWidth="1.2" />
+                <text fontSize="10.5" letterSpacing="2.4" fill="currentColor" fontWeight="700" fontFamily="system-ui, sans-serif">
+                  <textPath href={`#${pmId}`}>INVITATION · POST · 2026 ·</textPath>
+                </text>
+              </svg>
+              <div className={s.stampBox}><Stamp id={stampId} /></div>
+              <svg className={s.cancel} viewBox="0 0 160 44" aria-hidden>
+                {[4, 12, 20, 28, 36].map((y) => (
+                  <path key={y} d={`M0 ${y}q10-5 20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0`} fill="none" stroke="currentColor" strokeWidth="1.4" />
+                ))}
+              </svg>
+              <p className={s.name}>{recipientName}</p>
+              <motion.div className={s.sheen} style={{ opacity: sheen }} />
+            </div>
+
+            {/* Mặt sau: nắp + liner */}
+            <div className={`${s.face} ${s.back}`} onClick={onFlapToggle} role="button" aria-label={flapOpen ? 'Đóng nắp phong bì' : 'Mở nắp phong bì'}>
+              <div className={s.paper} />
+              <div className={s.interior} style={{ background: liner }} />
+              <div className={s.sides}><div className={`${s.piece} ${s.pl}`} /><div className={`${s.piece} ${s.pr}`} /></div>
+              <div className={s.bottom}><div className={`${s.piece} ${s.pb}`} /></div>
+              <motion.div className={s.flapShadow} style={{ opacity: flapShadow }}><i /></motion.div>
+              <motion.div className={s.flap} style={{ rotateX: flapRot, z: 2 }}>
+                <div className={`${s.flapFace} ${s.flapOut}`} />
+                <div className={`${s.flapFace} ${s.flapIn}`}>
+                  <div className={s.flapLiner} style={{ background: liner }} />
+                </div>
+              </motion.div>
+              <motion.div className={s.sheen} style={{ opacity: sheen }} />
+            </div>
+          </motion.div>
+        </div>
+      </div>
     </div>
   );
 }
