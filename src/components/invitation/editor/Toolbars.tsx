@@ -1,8 +1,9 @@
 // src/components/invitation/editor/Toolbars.tsx
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { FONTS, PALETTE } from './editor.data';
+import { readImage } from './readImage';
 import { useEditorStore, type Align, type CardEl } from './useEditorStore';
 import e from './editor.module.css';
 
@@ -79,12 +80,13 @@ export function TextToolbar({ el }: { el: CardEl }) {
   );
 }
 
+function Btn({ label, k, onClick }: { label: string; k: keyof typeof IC; onClick: () => void }) {
+  return <button type="button" className={e.act} aria-label={label} title={label} onClick={onClick}><Icon k={k} /></button>;
+}
+
 export function ActionBar({ el }: { el: CardEl }) {
   const { patch, checkpoint, remove, duplicate, reorder } = useEditorStore.getState();
   const flip = (k: 'flipX' | 'flipY') => { checkpoint(); patch(el.id, { [k]: !el[k] }); };
-  const Btn = ({ label, k, onClick }: { label: string; k: keyof typeof IC; onClick: () => void }) => (
-    <button type="button" className={e.act} aria-label={label} title={label} onClick={onClick}><Icon k={k} /></button>
-  );
   return (
     <div className={e.actionbar} onPointerDown={(ev) => ev.stopPropagation()}>
       {el.kind !== 'text' && <><Btn label="Lật ngang" k="flipH" onClick={() => flip('flipX')} /><Btn label="Lật dọc" k="flipV" onClick={() => flip('flipY')} /></>}
@@ -92,6 +94,47 @@ export function ActionBar({ el }: { el: CardEl }) {
       <Btn label="Đưa xuống dưới" k="down" onClick={() => reorder(el.id, -1)} />
       <Btn label="Nhân đôi" k="dup" onClick={() => duplicate(el.id)} />
       <Btn label="Xóa" k="del" onClick={() => remove(el.id)} />
+    </div>
+  );
+}
+
+/** Thanh định dạng cho hình khối / đồ họa / 3D / nét vẽ / khung ảnh: màu, độ đục, đổi ảnh. */
+export function StyleBar({ el }: { el: CardEl }) {
+  const patch = useEditorStore((s) => s.patch);
+  const checkpoint = useEditorStore((s) => s.checkpoint);
+  const setFrameImage = useEditorStore((s) => s.setFrameImage);
+  const [pop, setPop] = useState(false);
+  const file = useRef<HTMLInputElement>(null);
+  const hasColor = el.kind !== 'image' && el.kind !== 'frame';
+  const opacity = Math.round((el.op ?? 1) * 100);
+
+  return (
+    <div className={e.textbar} onPointerDown={(ev) => ev.stopPropagation()}>
+      {hasColor && (
+        <div className={e.colorWrap}>
+          <button type="button" className={e.colorBtn} style={{ background: el.color }} aria-label="Màu" onClick={() => setPop((v) => !v)} />
+          {pop && (
+            <div className={e.pop}>
+              <ColorGrid value={el.color} onBegin={checkpoint} onPick={(c) => patch(el.id, { color: c })} />
+            </div>
+          )}
+        </div>
+      )}
+      {el.kind === 'frame' && (
+        <>
+          <button type="button" className={e.pill} onClick={() => file.current?.click()}>{el.src ? 'Đổi ảnh' : 'Thêm ảnh'}</button>
+          {el.src && <button type="button" className={e.pill} onClick={() => setFrameImage(el.id, undefined)}>Gỡ ảnh</button>}
+          <input ref={file} type="file" accept="image/*" hidden
+            onChange={async (ev) => { const f = ev.target.files?.[0]; ev.target.value = ''; if (f) setFrameImage(el.id, await readImage(f)); }} />
+        </>
+      )}
+      {el.kind !== 'draw' && (
+        <label className={e.range}>
+          Độ đục
+          <input type="range" min={10} max={100} value={opacity} onPointerDown={() => checkpoint()} onChange={(ev) => patch(el.id, { op: Number(ev.target.value) / 100 })} />
+          <span>{opacity}%</span>
+        </label>
+      )}
     </div>
   );
 }

@@ -8,13 +8,20 @@ export type Align = 'left' | 'center' | 'right';
 
 export type CardEl = {
   id: string;
-  kind: 'text' | 'sticker' | 'image';
+  kind: 'text' | 'sticker' | 'image' | 'shape' | 'threed' | 'frame' | 'draw';
   x: number; y: number; w: number; h: number; rot: number;
   text?: string; font?: string; size?: number; bold?: boolean; color?: string; align?: Align;
   art?: string;
   src?: string;
   flipX?: boolean; flipY?: boolean;
+  op?: number;                       // độ đục 0..1
+  path?: string;                     // nét vẽ tay: đường path trong hệ tọa độ 0..w × 0..h
+  sw?: number;                       // độ dày nét (vẽ tay / hình viền)
+  vw?: number; vh?: number;          // kích thước gốc của nét vẽ, để co giãn đúng
 };
+
+export type DrawTool = 'pen' | 'marker';
+export type DrawCfg = { on: boolean; tool: DrawTool; color: string; size: number };
 
 export type Snap = { pages: Record<PageId, CardEl[]>; backdrops: Record<PageId, string> };
 
@@ -24,6 +31,9 @@ type State = Snap & {
   editingId: string | null;
   past: Snap[];
   future: Snap[];
+  tplName: string | null;       // tên mẫu đang dùng (đổi được ngay trong editor)
+  uploads: string[];            // ảnh người dùng đã tải lên trong phiên này
+  draw: DrawCfg;
 
   select: (id: string | null) => void;
   edit: (id: string | null) => void;
@@ -38,8 +48,16 @@ type State = Snap & {
   addText: (p?: Partial<CardEl>) => void;
   addSticker: (art: string) => void;
   addImage: (src: string, ratio: number) => void;
+  addShape: (kind: 'shape' | 'sticker' | 'threed', art: string, color: string, stroke?: boolean) => void;
+  addFrame: (art: string, ratio: number) => void;
+  addGrid: (cells: [number, number, number, number][]) => void;
+  setFrameImage: (id: string, src: string | undefined) => void;
+  addUpload: (src: string) => void;
+  setDraw: (p: Partial<DrawCfg>) => void;
+  addStroke: (pts: [number, number][]) => void;
+  clearStrokes: (last?: boolean) => void;
   setBackdrop: (bg: string, record?: boolean) => void;
-  loadTemplate: (t: InvitationTemplate) => void;
+  loadTemplate: (t: InvitationTemplate, record?: boolean) => void;
   hydrate: (d: Snap) => void;
 };
 
@@ -114,6 +132,9 @@ export const useEditorStore = create<State>((set, get) => {
     editingId: null,
     past: [],
     future: [],
+    tplName: null,
+    uploads: [],
+    draw: { on: false, tool: 'pen', color: '#1a1a1a', size: 6 },
 
     select: (selectedId) => set({ selectedId }),
     edit: (editingId) => set({ editingId }),
@@ -178,12 +199,66 @@ export const useEditorStore = create<State>((set, get) => {
       addEl({ kind: 'image', x: (PAGE.w - w) / 2, y: (PAGE.h - h) / 2, w, h, rot: 0, src });
     },
 
+    addShape: (kind, art, color, stroke) => addEl({
+      kind, art, color, x: (PAGE.w - 160) / 2, y: (PAGE.h - 160) / 2, w: 160, h: art === 'line' || art === 'wave' || art === 'dash' ? 40 : 160, rot: 0,
+      sw: stroke ? 6 : undefined,
+    }),
+    addFrame: (art, ratio) => {
+      const w = 260, h = Math.round(w / (ratio || 1));
+      addEl({ kind: 'frame', art, x: (PAGE.w - w) / 2, y: (PAGE.h - h) / 2, w, h, rot: 0 });
+    },
+    addGrid: (cells) => set((s) => {
+      const M = 36, GAP = 10, W = PAGE.w - M * 2, H = PAGE.h - M * 2;
+      const els: CardEl[] = cells.map(([cx, cy, cw, ch]) => ({
+        id: uid(), kind: 'frame', art: 'f-sq', rot: 0,
+        x: M + cx * W + (cx > 0.001 ? GAP / 2 : 0),
+        y: M + cy * H + (cy > 0.001 ? GAP / 2 : 0),
+        w: cw * W - (cx > 0.001 ? GAP / 2 : 0) - (cx + cw < 0.999 ? GAP / 2 : 0),
+        h: ch * H - (cy > 0.001 ? GAP / 2 : 0) - (cy + ch < 0.999 ? GAP / 2 : 0),
+      }));
+      return { ...push(s), pages: { ...s.pages, [s.page]: [...s.pages[s.page], ...els] }, selectedId: els[0]?.id ?? null };
+    }),
+    setFrameImage: (id, src) => set((s) => ({ ...push(s), pages: mapPages(s, (l) => l.map((e) => (e.id === id ? { ...e, src } : e))) })),
+    addUpload: (src) => set((s) => ({ uploads: [src, ...s.uploads].slice(0, 40) })),
+    setDraw: (p) => set((s) => ({ draw: { ...s.draw, ...p } })),
+    addStroke: (pts) => set((s) => {
+      if (pts.length < 2) return s;
+      const { color, size, tool } = s.draw;
+      const pad = size / 2 + 1;
+      const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
+      const x0 = Math.min(...xs) - pad, y0 = Math.min(...ys) - pad;
+      const w = Math.max(...xs) + pad - x0, h = Math.max(...ys) + pad - y0;
+      const L = pts.map(([x, y]) => [x - x0, y - y0] as const);
+      // làm mượt bằng đường cong bậc 2 qua trung điểm
+      let d = `M${L[0][0].toFixed(1)} ${L[0][1].toFixed(1)}`;
+      for (let i = 1; i < L.length - 1; i++) {
+        const mx = (L[i][0] + L[i + 1][0]) / 2, my = (L[i][1] + L[i + 1][1]) / 2;
+        d += `Q${L[i][0].toFixed(1)} ${L[i][1].toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)}`;
+      }
+      d += `L${L[L.length - 1][0].toFixed(1)} ${L[L.length - 1][1].toFixed(1)}`;
+      const el: CardEl = {
+        id: uid(), kind: 'draw', x: x0, y: y0, w, h, rot: 0, path: d, color,
+        sw: tool === 'marker' ? size * 2.4 : size, op: tool === 'marker' ? 0.45 : 1, vw: w, vh: h,
+      };
+      return { ...push(s), pages: { ...s.pages, [s.page]: [...s.pages[s.page], el] } };
+    }),
+    clearStrokes: (last) => set((s) => {
+      const list = s.pages[s.page];
+      const idx = last ? list.map((e) => e.kind).lastIndexOf('draw') : -1;
+      const next = last ? (idx < 0 ? list : list.filter((_, i) => i !== idx)) : list.filter((e) => e.kind !== 'draw');
+      if (next.length === list.length) return s;
+      return { ...push(s), pages: { ...s.pages, [s.page]: next }, selectedId: null };
+    }),
+
     setBackdrop: (bg, record = true) => set((s) => ({
       ...(record ? push(s) : {}),
       backdrops: { ...s.backdrops, [get().page]: bg },
     })),
 
-    loadTemplate: (t) => set({ ...fromTemplate(t), page: 'cover', selectedId: null, editingId: null, past: [], future: [] }),
+    loadTemplate: (t, record = false) => set((s) => ({
+      ...(record ? push(s) : { past: [], future: [] }),
+      ...fromTemplate(t), tplName: t.name, page: 'cover', selectedId: null, editingId: null,
+    })),
     hydrate: (d) => set({ pages: d.pages, backdrops: d.backdrops, selectedId: null, editingId: null, past: [], future: [] }),
   };
 });

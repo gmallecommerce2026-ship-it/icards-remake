@@ -272,3 +272,63 @@
     outline: 2px solid #0b57d0;
     outline-offset: 2px;
 }
+
+/* ---- khung ảnh, polaroid, vẽ tay ---- */
+.frameFill {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.polaroid {
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    padding: 6% 6% 20%;
+    background: #fff;
+    box-shadow: 0 6px 18px rgb(0 0 0 / .28);
+}
+
+.drawLayer {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.pill {
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid #d6d6d6;
+    border-radius: 999px;
+    background: #fff;
+    font-size: 14px;
+    color: #222;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.pill:hover {
+    background: #f3f3f3;
+}
+
+.range {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #444;
+    white-space: nowrap;
+}
+
+.range input {
+    width: 96px;
+}
+
+.range span {
+    min-width: 34px;
+    text-align: right;
+    color: #777;
+}

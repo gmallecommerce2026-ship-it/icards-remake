@@ -45,7 +45,11 @@ const T_SLIDE = 0.4;     // mốc của t: thiệp (đang nằm ngang) đã trư
 const T_TURN = 0.34;     // từ mốc này thiệp bắt đầu xoay dọc + bay vòng cung ra trước
 const BOW = -60;         // độ phình của quỹ đạo vòng cung (px, sang trái)
 const Z_BUMP = 170;
-const SWAP_ARC = 70;     // khi đổi chỗ: thiệp nhấc lên, phong bì hạ xuống từng ấy px để hai vật lướt qua nhau không chồng lên nhau
+const ORBIT_Y = 42;      // độ xoay quanh trục dọc của mỗi vật khi hai vật đổi chỗ (quỹ đạo 3D)
+const ORBIT_X = 12;      // độ ngả ra sau / ngửa ra trước
+const ORBIT_Z = 7;       // độ nghiêng thoáng qua trong mặt phẳng
+const ORBIT_LIFT = 90;   // thiệp nhích về phía người xem giữa chặng để lướt qua phong bì
+const SWAP_ARC = 90;     // khi đổi chỗ: thiệp nhấc lên, phong bì hạ xuống từng ấy px để hai vật lướt qua nhau không chồng lên nhau
 
 /* "Máy quay" đi theo nội dung: nắp mở / thiệp trượt lên làm cụm cao hơn nên cả cảnh được kéo xuống
    đúng bằng phần lòi ra phía trên, để cụm luôn nằm giữa khung (và không bao giờ bị cắt). */
@@ -193,16 +197,16 @@ export function EnvelopeScene({
     const closed = lerp(POSE.outClosed.s, POSE.behind.s, f);
     return lerp(POSE.sealed.s, lerp(closed, POSE.outOpen.s, op * (1 - f)), u);
   });
-  const cardRotZ = useTransform(swing, (u) => -90 * (1 - u));      // -90° = nằm ngang · 0° = đứng thẳng
-  const cardRotX = useTransform(swing, (u) => -16 * Math.sin(Math.PI * u));
-  const cardRotY = useTransform(swing, (u) => 38 * Math.sin(Math.PI * u));
+  // orbit: 0 → 1 → 0 trong lúc thiệp ⇄ phong bì đổi chỗ (chỉ có tác dụng khi thiệp đã rút ra)
+  const orbit = useTransform(fv, (f) => Math.sin(Math.PI * f));
+  const cardRotZ = useTransform([swing, orbit], ([u, o]: number[]) => -90 * (1 - u) + ORBIT_Z * o * u);   // -90° = nằm ngang · 0° = đứng thẳng
+  const cardRotX = useTransform([swing, orbit, fv], ([u, o, f]: number[]) => -16 * Math.sin(Math.PI * u) * (1 - f) - ORBIT_X * o * u);
+  const cardRotY = useTransform([swing, orbit, fv], ([u, o, f]: number[]) => 38 * Math.sin(Math.PI * u) * (1 - f) + ORBIT_Y * o * u);
   // z = 1 nằm GIỮA lưng phong bì (z 0) và mặt trước (z 2); ra ngoài thì lên trước (z 100) hoặc lùi hẳn ra sau phong bì (z -160)
   const cardZ = useTransform([t, fv], ([v, f]: number[]) => {
     const u = ss(T_SLIDE, 1, v);
-    return 1 + 99 * u + Z_BUMP * Math.sin(Math.PI * u) * (1 - f) - 260 * ss(0.35, 0.65, f) * u;
+    return 1 + 99 * u + Z_BUMP * Math.sin(Math.PI * u) * (1 - f) - 260 * ss(0.35, 0.65, f) * u + ORBIT_LIFT * Math.sin(Math.PI * f) * u;
   });
-  // z-index: lưng phong bì = 1 · thiệp (đang trong) = 2 · mặt trước phong bì = 3
-  const cardLayer = useTransform([t, fv], ([v, f]: number[]) => (ss(T_SLIDE, 1, v) < 0.001 ? 2 : f < 0.5 ? 4 : 0));
   const cardOpacity = useTransform([t, rise], ([tt, r]: number[]) => Math.min(1, r * 3 + tt * 6));
 
   // máy quay: chỉ cần kéo xuống khi nắp đang mở (nhìn từ mặt nắp) và thiệp còn nằm trong phong bì
@@ -218,13 +222,17 @@ export function EnvelopeScene({
   const envX = useTransform([uOut, fv], ([u, f]: number[]) => u * lerp(ENV_LAYOUT.x[0], ENV_LAYOUT.x[1], f));
   const envY = useTransform([uOut, fv, flapAmt], ([u, f, fa]: number[]) =>
     u * (lerp(ENV_LAYOUT.y[0], ENV_LAYOUT.y[1], f) * fa + SWAP_ARC * Math.sin(Math.PI * f)));
-  const envS = useTransform([uOut, fv], ([u, f]: number[]) => 1 + u * (lerp(ENV_LAYOUT.s[0], ENV_LAYOUT.s[1], f) - 1));
+  const envS = useTransform([uOut, fv], ([u, f]: number[]) => (1 + u * (lerp(ENV_LAYOUT.s[0], ENV_LAYOUT.s[1], f) - 1)) * (1 + 0.05 * u * Math.sin(Math.PI * f)));
   const backZ = useTransform([t, fv], ([v, f]: number[]) => -ENV_PUSH * ss(T_SLIDE, 0.9, v) * (1 - ss(0.35, 0.65, f)));
   const frontZ = useTransform(backZ, (v) => v + 2);
+  // z-index: lưng phong bì = 1 · thiệp (đang trong) = 2 · mặt trước phong bì = 3.
+  // Khi thiệp đã ra ngoài, vật nào GẦN người xem hơn theo trục z thì nằm trên -> thứ tự đổi đúng lúc hai vật lướt ngang nhau, không bị "nhảy"
+  const cardLayer = useTransform([t, cardZ, frontZ], ([v, cz, ez]: number[]) => (ss(T_SLIDE, 1, v) < 0.001 ? 2 : cz > ez ? 4 : 0));
   // hai vật nghiêng ngược chiều nhau trong lúc bay -> cảm giác xoay quanh nhau trong không gian
   const arc = useTransform(t, (v) => Math.sin(Math.PI * ss(T_TURN - 0.05, 1, v)) * 0.6);   // chỉ nghiêng thoáng qua khi rút/cất thiệp
-  const envRotY = useTransform(arc, (a) => -22 * a);
-  const envRotX = useTransform(arc, (a) => 8 * a);
+  const envRotY = useTransform([arc, orbit, uOut], ([a, o, u]: number[]) => -22 * a - ORBIT_Y * o * u);
+  const envRotX = useTransform([arc, orbit, uOut], ([a, o, u]: number[]) => 8 * a + ORBIT_X * o * u);
+  const envRotZ = useTransform([orbit, uOut], ([o, u]: number[]) => -ORBIT_Z * o * u);
 
   const vars = { '--env': envelopeColor, '--ink': isLight(envelopeColor) ? '#17171a' : '#ffffff' } as CSSProperties;
   const envClick = (face: 'front' | 'back') => (e?: { stopPropagation: () => void }) => { e?.stopPropagation(); onEnvClick?.(face); };
@@ -266,7 +274,7 @@ export function EnvelopeScene({
       >
         <motion.div className={s.world} style={{ y: pan, perspectiveOrigin: `${CX}px ${CY}px` }}>
           {/* ===== TẤM LƯNG: giấy phong bì, lớp lót, nắp ĐÃ MỞ (nằm sau thiệp) ===== */}
-          <motion.div className={s.plane} style={{ x: envX, y: envY, scale: envS, z: backZ, zIndex: 1, rotateY: envRotY, rotateX: envRotX }}>
+          <motion.div className={s.plane} style={{ x: envX, y: envY, scale: envS, z: backZ, zIndex: 1, rotateY: envRotY, rotateX: envRotX, rotateZ: envRotZ }}>
             <motion.div className={s.ground} style={{ left: ENV.x, top: ENV.y, width: ENV.w, height: ENV.h, scaleX: groundX }} />
             <Rotor flip={flip} innerRef={envRef}>
               <div className={`${s.face} ${s.back}`}>
@@ -310,7 +318,7 @@ export function EnvelopeScene({
           </motion.div>
 
           {/* ===== TẤM TRƯỚC: mặt địa chỉ, hai cánh bên + cánh đáy (miệng túi), nắp ĐANG ĐÓNG ===== */}
-          <motion.div className={s.plane} style={{ x: envX, y: envY, scale: envS, z: frontZ, zIndex: 3, rotateY: envRotY, rotateX: envRotX }}>
+          <motion.div className={s.plane} style={{ x: envX, y: envY, scale: envS, z: frontZ, zIndex: 3, rotateY: envRotY, rotateX: envRotX, rotateZ: envRotZ }}>
             <Rotor flip={flip}>
               {/* Mặt trước: địa chỉ */}
               <div className={`${s.face} ${s.hit}`} onClick={envClick('front')}>
