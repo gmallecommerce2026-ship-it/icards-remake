@@ -236,3 +236,10 @@
     inset: 0;
     clip-path: polygon(3.5% 0, 96.5% 0, 50% 88%);
 }
+
+/* nhóm phong bì + bóng đổ, dùng để cho phong bì tụt xuống khi thiệp được lấy ra */
+.drop {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}

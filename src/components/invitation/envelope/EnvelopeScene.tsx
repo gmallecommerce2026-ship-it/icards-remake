@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion';
+import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react';
 import { Stamp } from './Stamp';
 import s from './envelope.module.css';
 
@@ -29,6 +29,7 @@ type Props = {
   onFlapToggle?: () => void;
   cardFront?: boolean;       // true: thiệp nằm trước phong bì
   cardOpen?: boolean;        // true: bìa thiệp đã lật mở
+  cardFlipped?: boolean;     // true: đang xem mặt sau thiệp
 };
 
 function isLight(hex: string) {
@@ -38,7 +39,7 @@ function isLight(hex: string) {
 
 export function EnvelopeScene({
   card, envelopeColor, liner, stampId, recipientName = 'Tên người nhận',
-  side, flapOpen, onFlapToggle, cardFront = false, cardOpen = false,
+  side, flapOpen, onFlapToggle, cardFront = false, cardOpen = false, cardFlipped = false,
 }: Props) {
   const reduce = useReducedMotion();
   const pmId = useId().replace(/:/g, '');
@@ -50,6 +51,8 @@ export function EnvelopeScene({
   const flip = useMotionValue(side === 'front' ? 0 : 180);
   const flapRot = useMotionValue(flapOpen ? 180 : 0);
   const lift = useMotionValue(0);
+  const dropY = useMotionValue(0);
+  const dropA = useMotionValue(1);
   const rad = Math.PI / 180;
   const groundX = useTransform(flip, (v) => 0.3 + 0.7 * Math.abs(Math.cos(v * rad)));
   const sheen = useTransform(flip, (v) => 0.5 * Math.abs(Math.sin(2 * v * rad)));
@@ -80,11 +83,20 @@ export function EnvelopeScene({
   useEffect(() => {
     if (firstLift.current) { firstLift.current = false; return; }
     if (reduce) return;
-    const c = animate(lift, [0, -70, 0], { duration: 0.7, ease: 'easeInOut' });
+    const c = animate(lift, [0, -150, 0], { duration: 0.9, ease: [0.4, 0, 0.2, 1] });
     return () => c.stop();
   }, [cardFront, reduce, lift]);
 
-  const pose = !cardFront ? POSE.behind : cardOpen ? POSE.frontOpen : POSE.front;
+  // Phong bì tụt xuống và mờ dần khi thiệp đã được lấy ra; trượt lên lại khi cho thiệp vào
+  useEffect(() => {
+    const t = reduce ? 0 : 0.8;
+    const delay = reduce ? 0 : cardFront ? 0.25 : 0;
+    const a = animate(dropY, cardFront ? 150 : 0, { duration: t, delay, ease: [0.4, 0, 0.2, 1] });
+    const b = animate(dropA, cardFront ? 0.0 : 1, { duration: t, delay, ease: 'easeInOut' });
+    return () => { a.stop(); b.stop(); };
+  }, [cardFront, reduce, dropY, dropA]);
+
+  const pose = !cardFront ? POSE.behind : cardFlipped ? POSE.front : cardOpen ? POSE.frontOpen : POSE.front;
   const vars = { '--env': envelopeColor, '--ink': isLight(envelopeColor) ? '#17171a' : '#ffffff' } as CSSProperties;
 
   return (
@@ -106,6 +118,7 @@ export function EnvelopeScene({
           </motion.div>
         </motion.div>
 
+        <motion.div className={s.drop} style={{ y: dropY, opacity: dropA, pointerEvents: cardFront ? 'none' : 'auto' }}>
         <motion.div className={s.ground} style={{ left: ENV.x, top: ENV.y, width: ENV.w, height: ENV.h, scaleX: groundX }} />
 
         <div className={s.stage3d} style={{ perspectiveOrigin: `${ENV.x + ENV.w / 2}px ${ENV.y + ENV.h / 2}px` }}>
@@ -148,6 +161,7 @@ export function EnvelopeScene({
             </div>
           </motion.div>
         </div>
+        </motion.div>
       </div>
     </div>
   );
