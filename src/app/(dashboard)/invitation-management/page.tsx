@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import { Plus, Users, Calendar, ArrowRight } from "lucide-react";
 import { getUserInvitations } from "@/lib/dashboard";
+import { ROUTES } from "@/lib/routes";
 
 export const metadata: Metadata = {
   title: "Quản lý thiệp mời | iCards",
@@ -19,7 +20,7 @@ export default function InvitationManagementPage() {
           <p className="text-sm text-muted mt-1">Danh sách các sự kiện và thiệp bạn đã tạo.</p>
         </div>
         <Link
-          href="/templates" // Chuyển đến trang mẫu để tạo mới
+          href={ROUTES.newEvent}
           className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-lacquer px-5 text-sm font-medium text-white transition-colors hover:bg-lacquer-dark focus-visible:outline-none"
         >
           <Plus className="h-4 w-4" />
@@ -31,7 +32,7 @@ export default function InvitationManagementPage() {
         {invitations.map((inv) => (
           <Link
             key={inv.id}
-            href={`/invitation-management/${inv.id}`}
+            href={ROUTES.invitation(inv.id)}
             className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-white transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lacquer"
           >
             {/* Ảnh bìa giả lập bằng CSS */}
