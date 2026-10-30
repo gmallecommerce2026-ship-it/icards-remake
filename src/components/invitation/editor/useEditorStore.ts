@@ -1,8 +1,9 @@
 // src/components/invitation/editor/useEditorStore.ts
 import { create } from 'zustand';
 import { PAGE } from '../envelope/envelope.data';
+import type { InvitationTemplate } from '@/lib/templates';
 
-export type PageId = 'cover' | 'inside';
+export type PageId = 'cover' | 'inside' | 'back';
 export type Align = 'left' | 'center' | 'right';
 
 export type CardEl = {
@@ -15,7 +16,7 @@ export type CardEl = {
   flipX?: boolean; flipY?: boolean;
 };
 
-type Snap = { pages: Record<PageId, CardEl[]>; backdrops: Record<PageId, string> };
+export type Snap = { pages: Record<PageId, CardEl[]>; backdrops: Record<PageId, string> };
 
 type State = Snap & {
   page: PageId;                 // mặt đang chỉnh: bìa ngoài hoặc ruột thiệp
@@ -38,6 +39,8 @@ type State = Snap & {
   addSticker: (art: string) => void;
   addImage: (src: string, ratio: number) => void;
   setBackdrop: (bg: string, record?: boolean) => void;
+  loadTemplate: (t: InvitationTemplate) => void;
+  hydrate: (d: Snap) => void;
 };
 
 const MAX_HISTORY = 60;
@@ -54,9 +57,46 @@ const DEFAULT_PAGES: Record<PageId, CardEl[]> = {
     { id: 'i-title', kind: 'text', x: 50, y: 200, w: 400, h: 60, rot: 0, text: 'Thời gian & Địa điểm', font: 'Playfair Display', size: 40, bold: true, color: '#2b2b2e', align: 'center' },
     { id: 'i-body', kind: 'text', x: 50, y: 300, w: 400, h: 60, rot: 0, text: 'Thứ Bảy, 20:00\nĐịa chỉ của bạn ở đây', font: 'Be Vietnam Pro', size: 24, bold: false, color: '#4d4d4d', align: 'center' },
   ],
+  back: [
+    { id: 'b-thanks', kind: 'text', x: 50, y: 300, w: 400, h: 60, rot: 0, text: 'Hẹn gặp bạn!', font: 'Dancing Script', size: 48, bold: true, color: '#2b2b2e', align: 'center' },
+  ],
 };
 
-export const PAGES: PageId[] = ['cover', 'inside'];
+/** Dựng nội dung 3 mặt thiệp từ một mẫu (màu + chữ mẫu). */
+function fromTemplate(t: InvitationTemplate): Snap {
+  const { palette: c, sample: m } = t;
+  const text = (id: string, y: number, o: Partial<CardEl>): CardEl => ({
+    id, kind: 'text', x: 50, y, w: 400, h: 60, rot: 0, font: 'Be Vietnam Pro', size: 24, bold: false, color: c.ink, align: 'center', ...o,
+  });
+  const names = m.titleLines.filter((l) => l.trim() !== '&');
+  return {
+    backdrops: { cover: c.bg, inside: c.bg, back: c.soft },
+    pages: {
+      cover: [
+        text('c-kicker', 150, { text: m.kicker, size: 22, color: c.accent }),
+        text('c-n1', 230, { text: names[0] ?? '', font: 'Playfair Display', size: 64, bold: true }),
+        text('c-amp', 330, { text: '&', font: 'Dancing Script', size: 56, color: c.accent }),
+        text('c-n2', 410, { text: names[1] ?? '', font: 'Playfair Display', size: 64, bold: true }),
+        text('c-date', 560, { text: m.date, size: 20, color: c.accent }),
+      ],
+      inside: [
+        text('i-msg', 130, { text: m.message, size: 22 }),
+        text('i-h', 290, { text: 'Thời gian & Địa điểm', font: 'Playfair Display', size: 34, bold: true }),
+        text('i-time', 360, { text: `${m.date}\nLúc ${m.time}`, size: 22, color: c.accent, bold: true }),
+        text('i-place', 450, { text: `${m.place}\n${m.address}`, size: 22 }),
+      ],
+      back: [
+        text('b-thanks', 280, { text: 'Rất mong được đón bạn', font: 'Dancing Script', size: 48, bold: true, color: c.accent }),
+        text('b-names', 400, { text: names.join('  &  '), font: 'Playfair Display', size: 28, bold: true }),
+      ],
+    },
+  };
+}
+
+export const PAGES: PageId[] = ['cover', 'inside', 'back'];
+
+const mapPages = (s: Snap, fn: (l: CardEl[]) => CardEl[]) =>
+  Object.fromEntries(PAGES.map((p) => [p, fn(s.pages[p])])) as Record<PageId, CardEl[]>;
 
 export const useEditorStore = create<State>((set, get) => {
   /** thêm phần tử vào mặt đang chỉnh và chọn luôn nó */
@@ -68,7 +108,7 @@ export const useEditorStore = create<State>((set, get) => {
 
   return {
     pages: DEFAULT_PAGES,
-    backdrops: { cover: '#fffaf0', inside: '#ffffff' },
+    backdrops: { cover: '#fffaf0', inside: '#ffffff', back: '#fffaf0' },
     page: 'cover',
     selectedId: null,
     editingId: null,
@@ -91,16 +131,11 @@ export const useEditorStore = create<State>((set, get) => {
       return { ...next, future: s.future.slice(1), past: [...s.past, snap(s)], selectedId: null, editingId: null };
     }),
 
-    patch: (id, p) => set((s) => ({
-      pages: {
-        cover: s.pages.cover.map((e) => (e.id === id ? { ...e, ...p } : e)),
-        inside: s.pages.inside.map((e) => (e.id === id ? { ...e, ...p } : e)),
-      },
-    })),
+    patch: (id, p) => set((s) => ({ pages: mapPages(s, (l) => l.map((e) => (e.id === id ? { ...e, ...p } : e))) })),
 
     remove: (id) => set((s) => ({
       ...push(s),
-      pages: { cover: s.pages.cover.filter((e) => e.id !== id), inside: s.pages.inside.filter((e) => e.id !== id) },
+      pages: mapPages(s, (l) => l.filter((e) => e.id !== id)),
       selectedId: null, editingId: null,
     })),
 
@@ -147,5 +182,8 @@ export const useEditorStore = create<State>((set, get) => {
       ...(record ? push(s) : {}),
       backdrops: { ...s.backdrops, [get().page]: bg },
     })),
+
+    loadTemplate: (t) => set({ ...fromTemplate(t), page: 'cover', selectedId: null, editingId: null, past: [], future: [] }),
+    hydrate: (d) => set({ pages: d.pages, backdrops: d.backdrops, selectedId: null, editingId: null, past: [], future: [] }),
   };
 });

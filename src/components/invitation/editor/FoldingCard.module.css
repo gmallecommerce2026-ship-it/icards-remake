@@ -56,3 +56,33 @@
     transform: rotateY(180deg);
     background: linear-gradient(270deg, #f6f1e6, #ebe4d4);
 }
+
+/* Lật cả tấm thiệp quanh trục dọc giữa thiệp */
+.flipper {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+
+.front {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+}
+
+/* mặt sau: xoay sẵn 180° để khi cả tấm thiệp lật sẽ hiện đúng chiều */
+.rear {
+    position: absolute;
+    inset: 0;
+    transform: rotateY(180deg);
+}
+
+.shine {
+    position: absolute;
+    inset: 0;
+    border-radius: 2px;
+    background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / .55) 50%, transparent 70%);
+    pointer-events: none;
+    mix-blend-mode: soft-light;
+}

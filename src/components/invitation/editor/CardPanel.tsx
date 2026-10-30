@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { BACKDROPS, STICKERS, StickerArt } from './editor.data';
 import { ColorGrid } from './Toolbars';
-import { useEditorStore } from './useEditorStore';
+import { PAGES, useEditorStore } from './useEditorStore';
 import p from './CardPanel.module.css';
 
 type Sub = 'backdrop' | 'sticker' | 'text' | 'image';
@@ -26,7 +26,7 @@ export function CardPanel() {
   const page = useEditorStore((s) => s.page);
   const bg = useEditorStore((s) => s.backdrops[s.page]);
   const sel = useEditorStore((s) => {
-    for (const pg of ['cover', 'inside'] as const) {
+    for (const pg of PAGES) {
       const f = s.pages[pg].find((x) => x.id === s.selectedId);
       if (f) return f;
     }
@@ -48,7 +48,7 @@ export function CardPanel() {
 
   return (
     <div>
-      <p className={p.where}>Đang chỉnh: <b>{page === 'cover' ? 'Mặt ngoài' : 'Mặt trong'}</b></p>
+      <p className={p.where}>Đang chỉnh: <b>{page === 'cover' ? 'Mặt ngoài' : page === 'inside' ? 'Mặt trong' : 'Mặt sau'}</b></p>
       <div className={p.seg} role="tablist">
         {SUBS.map((x) => (
           <button key={x.id} type="button" role="tab" className={p.segBtn} aria-selected={sub === x.id} onClick={() => setSub(x.id)}>{x.label}</button>
