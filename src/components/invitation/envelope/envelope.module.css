@@ -2,8 +2,7 @@
 .fit {
     position: relative;
     width: 100%;
-    max-width: 832px;
-    margin-inline: auto;
+    height: 100%;
 }
 
 .scene {
@@ -19,8 +18,10 @@
     position: absolute;
     inset: 0;
     perspective: 1800px;
-    perspective-origin: 320px 400px;
-    transform-style: preserve-3d;
+    perspective-origin: 360px 350px;
+    /* PHẲNG: thứ tự trước/sau do z-index quyết định (không để trình duyệt tự sắp theo chiều sâu 3D),
+       còn translateZ chỉ dùng để tạo độ xa/gần (phóng to/thu nhỏ) */
+    transform-style: flat;
 }
 
 /* mỗi tấm phong bì là MỘT mặt phẳng trong thế giới 3D (bên trong tự phẳng hoá) */

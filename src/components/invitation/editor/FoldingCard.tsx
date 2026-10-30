@@ -46,6 +46,8 @@ export function FoldingCard({ cm, view, editable, gesture = false, onViewChange 
   const shadeIn = useTransform(open, [0.5, 1], [0.45, 0]);
   // bóng do chính cái bìa đang lật đổ xuống trang giữa
   const castShadow = useTransform(open, [0, 0.45, 1], [0, 1, 0]);
+  // trang trong chỉ được vẽ khi bìa đã hé: bìa đóng thì ẩn hẳn để chữ không lộ xuyên qua bìa (hai lớp đồng phẳng)
+  const insideVis = useTransform(open, (v) => (v > 0.002 ? 'visible' : 'hidden'));
 
   // ---- Lật cả tấm thiệp để xem mặt sau: xoay + nhích lên + nghiêng nhẹ như cầm trên tay
   const turnDeg = useTransform(turn, (v) => 180 * v);
@@ -80,6 +82,7 @@ export function FoldingCard({ cm, view, editable, gesture = false, onViewChange 
         if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy)) return;
         active = true;
         setDragging(true);
+        window.getSelection()?.removeAllRanges();
         useEditorStore.getState().select(null);
       }
       const now = performance.now();
@@ -110,11 +113,12 @@ export function FoldingCard({ cm, view, editable, gesture = false, onViewChange 
     <div
       ref={box}
       onPointerDown={onPointerDown}
+      onDragStart={(ev) => ev.preventDefault()}
       style={{
         position: 'absolute', inset: 0,
         touchAction: gesture ? 'pan-y' : undefined,
         cursor: gesture ? (dragging ? 'grabbing' : 'grab') : undefined,
-        userSelect: dragging ? 'none' : undefined,
+        userSelect: 'none', WebkitUserSelect: 'none',
       }}
     >
       <div className={c.stage} style={{ transform: `scale(${k})` }}>
@@ -123,12 +127,14 @@ export function FoldingCard({ cm, view, editable, gesture = false, onViewChange 
           <motion.div className={c.front} style={{ opacity: frontAlpha, pointerEvents: showFront ? 'auto' : 'none' }}>
             {/* Ruột thiệp (nằm dưới) */}
             <div className={c.sheet} data-editable={editInside} style={{ background: insideBg }}>
-              <PageEditor pageId="inside" editable={editInside} />
+              <motion.div style={{ position: 'absolute', inset: 0, visibility: insideVis }}>
+                <PageEditor pageId="inside" editable={editInside} />
+              </motion.div>
               <motion.div aria-hidden className={c.cast} style={{ opacity: castShadow }} />
             </div>
 
             {/* Bìa: lật quanh gáy bên trái - chỉ xoay, không dịch ngang nên không bao giờ tách khỏi ruột */}
-            <motion.div className={c.cover} style={{ rotateY: coverRot }}>
+            <motion.div className={c.cover} style={{ rotateY: coverRot, z: 1 }}>
               <div className={c.face} data-editable={editCover} style={{ background: coverBg }}>
                 <PageEditor pageId="cover" editable={editCover} />
                 <motion.div aria-hidden className={c.shadeOut} style={{ opacity: shadeOut }} />
