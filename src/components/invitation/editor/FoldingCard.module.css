@@ -86,3 +86,33 @@
     pointer-events: none;
     mix-blend-mode: soft-light;
 }
+
+/* bóng cái bìa đang lật đổ xuống ruột thiệp */
+.cast {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(90deg, rgb(10 15 40 / .42), rgb(10 15 40 / 0) 60%);
+}
+
+/* bìa tối dần về phía gáy khi dựng lên */
+.shadeOut,
+.shadeIn {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+.shadeOut { background: linear-gradient(90deg, rgb(10 15 40 / .6), rgb(10 15 40 / 0) 75%); }
+.shadeIn { background: linear-gradient(270deg, rgb(10 15 40 / .5), rgb(10 15 40 / 0) 70%); }
+
+/* chế độ xem: chạm vào thiệp để mở / lật tiếp */
+.tap {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+.tap:focus-visible { outline: 3px solid #0b57d0; outline-offset: 4px; }

@@ -1,224 +1,190 @@
-// =====================================================================
-// DỮ LIỆU MẪU: thay danh mục, sản phẩm, giá, ảnh bằng dữ liệu thật của iCards.
-// Sau này có API/CMS chỉ cần đổi nội dung các hàm get* bên dưới,
-// các trang không phải sửa.
-// =====================================================================
+// Dữ liệu cửa hàng. Giá, thời gian là số liệu minh họa, thay bằng số liệu thật.
 
-export type Tone = { bg: string; ink: string };
+export type ThumbKind = "paper" | "qr" | "standee" | "envelope" | "message" | "gift";
+export type ShopCategoryId = "print" | "onsite" | "digital";
 
-export type ShopCategory = { slug: string; label: string };
+export const SHOP_CATEGORIES: { id: ShopCategoryId; label: string }[] = [
+  { id: "print", label: "In ấn" },
+  { id: "onsite", label: "Đón khách tại sự kiện" },
+  { id: "digital", label: "Gửi thiệp online" },
+];
+
+export type Variant = { id: string; label: string; price: number };
 
 export type Product = {
   slug: string;
   name: string;
-  excerpt: string;
-  category: string; // slug của ShopCategory
-  price: number;
-  compareAt?: number; // giá gốc (nếu đang giảm)
-  badge?: "Mới" | "Bán chạy";
-  rating: number;
-  sold: number;
-  date: string; // ISO
-  tone: Tone;
-  image?: string; // ví dụ "/shop/thiep-cuoi-in.jpg" trong thư mục public
-  features: string[];
+  category: ShopCategoryId;
+  summary: string;
+  description: string;
+  thumb: ThumbKind;
+  tone: { bg: string; ink: string };
+  variants: Variant[];
+  shipping: "ship" | "digital";
+  leadTime: string;
+  highlights: string[];
+  specs: { label: string; value: string }[];
 };
 
-export const ALL_LABEL = "Tất cả";
-
-export const SHOP_CATEGORIES: ShopCategory[] = [
-  { slug: "thiep-in", label: "Thiệp in" },
-  { slug: "qua-tang", label: "Quà tặng" },
-  { slug: "phu-kien", label: "Phụ kiện QR & NFC" },
-  { slug: "combo", label: "Combo tiết kiệm" },
-];
-
-export const SORTS = [
-  { value: "popular", label: "Phổ biến" },
-  { value: "newest", label: "Mới nhất" },
-  { value: "price-asc", label: "Giá thấp → cao" },
-  { value: "price-desc", label: "Giá cao → thấp" },
-] as const;
-
-export type SortValue = (typeof SORTS)[number]["value"];
+export const CHECKOUT_HREF = "/checkout"; // trang thanh toán làm ở bước sau
+export const MAX_QTY = 99;
 
 export const PRODUCTS: Product[] = [
   {
-    slug: "thiep-cuoi-in-ep-kim",
-    name: "Thiệp cưới in ép kim",
-    excerpt: "Giấy mỹ thuật dày, ép kim vàng sang trọng, kèm QR mở thiệp online.",
-    category: "thiep-in",
-    price: 12000,
-    compareAt: 15000,
-    badge: "Bán chạy",
-    rating: 4.9,
-    sold: 1280,
-    date: "2026-08-12",
+    slug: "in-thiep-giay",
+    name: "Thiệp giấy in theo mẫu",
+    category: "print",
+    summary: "In thiệp giấy đúng mẫu online của bạn, có mã QR dẫn đến thiệp điện tử.",
+    description:
+      "Một số khách lớn tuổi vẫn muốn cầm thiệp giấy trên tay. Chúng tôi in lại đúng mẫu bạn đã chọn, thêm mã QR để khách quét là mở thiệp online, xem bản đồ và xác nhận tham dự.",
+    thumb: "paper",
     tone: { bg: "#E8EEF6", ink: "#27548A" },
-    features: ["Giấy mỹ thuật 300gsm", "Ép kim vàng/bạc", "Tích hợp QR thiệp online", "Tối thiểu 50 thiệp"],
+    variants: [
+      { id: "50", label: "50 thiệp", price: 450000 },
+      { id: "100", label: "100 thiệp", price: 790000 },
+      { id: "200", label: "200 thiệp", price: 1390000 },
+    ],
+    shipping: "ship",
+    leadTime: "5 đến 7 ngày làm việc",
+    highlights: ["In offset trên giấy mỹ thuật", "Mã QR dẫn đến thiệp online", "Gửi bản chạy thử qua Zalo trước khi in"],
+    specs: [
+      { label: "Kích thước", value: "12 x 17 cm" },
+      { label: "Chất liệu", value: "Giấy mỹ thuật 300 gsm" },
+      { label: "Hoàn thiện", value: "Cán mờ, bo góc" },
+    ],
   },
   {
-    slug: "thiep-moi-su-kien-toi-gian",
-    name: "Thiệp mời sự kiện tối giản",
-    excerpt: "Thiết kế gọn, hiện đại cho sinh nhật, khai trương, hội nghị.",
-    category: "thiep-in",
-    price: 6500,
-    badge: "Mới",
-    rating: 4.7,
-    sold: 420,
-    date: "2026-10-05",
-    tone: { bg: "#FDECEC", ink: "#B42318" },
-    features: ["In offset 2 mặt", "Cán màng mờ", "Giao nhanh 3–5 ngày", "Tối thiểu 30 thiệp"],
+    slug: "phong-bi-mung",
+    name: "Phong bì kèm tên khách",
+    category: "print",
+    summary: "Phong bì in sẵn tên khách để gửi thiệp giấy gọn gàng.",
+    description:
+      "Phong bì in tên người nhận theo danh sách khách mời, nên bạn không phải viết tay từng cái. Phù hợp khi gửi thiệp giấy qua đường bưu điện hoặc phát tận tay.",
+    thumb: "envelope",
+    tone: { bg: "#FBEDEE", ink: "#B5485D" },
+    variants: [
+      { id: "50", label: "50 phong bì", price: 175000 },
+      { id: "100", label: "100 phong bì", price: 320000 },
+    ],
+    shipping: "ship",
+    leadTime: "3 đến 5 ngày làm việc",
+    highlights: ["In tên từ danh sách khách mời", "Hai màu giấy để chọn", "Có thể kèm con dấu"],
+    specs: [
+      { label: "Kích thước", value: "13 x 18 cm" },
+      { label: "Chất liệu", value: "Giấy kraft hoặc giấy trắng 120 gsm" },
+    ],
   },
   {
-    slug: "bao-li-xi-thiep-cuoi",
-    name: "Bao lì xì & phong bì thiệp cưới",
-    excerpt: "Phong bì đồng bộ với mẫu thiệp, in logo đôi tân hôn.",
-    category: "thiep-in",
-    price: 3500,
-    rating: 4.6,
-    sold: 760,
-    date: "2026-06-20",
-    tone: { bg: "#FFF4E5", ink: "#B54708" },
-    features: ["Đồng bộ thiết kế thiệp", "In tên cô dâu chú rể", "Nhiều khổ phong bì"],
+    slug: "hop-qua-cam-on",
+    name: "Hộp quà cảm ơn",
+    category: "print",
+    summary: "Hộp nhỏ đựng quà tặng khách, in lời cảm ơn và mã QR sổ lưu bút.",
+    description:
+      "Món quà nhỏ cuối buổi tiệc. Nắp hộp in lời cảm ơn của gia đình và mã QR dẫn đến album ảnh hoặc sổ lưu bút, để khách còn có chỗ xem lại ảnh sau sự kiện.",
+    thumb: "gift",
+    tone: { bg: "#E6F3F3", ink: "#1F7373" },
+    variants: [
+      { id: "50", label: "50 hộp", price: 650000 },
+      { id: "100", label: "100 hộp", price: 1190000 },
+    ],
+    shipping: "ship",
+    leadTime: "7 đến 10 ngày làm việc",
+    highlights: ["Hộp giấy cứng gấp sẵn", "In lời cảm ơn theo nội dung của bạn", "Mã QR dẫn đến album"],
+    specs: [
+      { label: "Kích thước", value: "9 x 9 x 5 cm" },
+      { label: "Chất liệu", value: "Giấy cứng 350 gsm" },
+    ],
   },
   {
-    slug: "hop-qua-cam-on-khach-moi",
-    name: "Hộp quà cảm ơn khách mời",
-    excerpt: "Hộp quà nhỏ xinh kèm thẻ cảm ơn in tên riêng từng khách.",
-    category: "qua-tang",
-    price: 45000,
-    compareAt: 55000,
-    badge: "Bán chạy",
-    rating: 4.8,
-    sold: 310,
-    date: "2026-09-02",
-    tone: { bg: "#EAF6EE", ink: "#067647" },
-    features: ["Hộp cứng cao cấp", "Thẻ cảm ơn cá nhân hoá", "Có thể thêm nến/kẹo"],
+    slug: "standee-qr",
+    name: "Standee đón khách có mã QR",
+    category: "onsite",
+    summary: "Standee đặt ở cửa tiệc để khách quét mã, xem sơ đồ bàn và gửi lời chúc.",
+    description:
+      "Đặt ở lối vào, standee có tên hai họ, ảnh cưới và mã QR dẫn đến trang sự kiện. Khách quét để xem sơ đồ chỗ ngồi, chụp ảnh chung và viết sổ lưu bút.",
+    thumb: "standee",
+    tone: { bg: "#FFF1DF", ink: "#9A5A12" },
+    variants: [
+      { id: "a3", label: "Khổ A3 để bàn", price: 290000 },
+      { id: "a1", label: "Khổ A1 đứng", price: 690000 },
+    ],
+    shipping: "ship",
+    leadTime: "3 đến 5 ngày làm việc",
+    highlights: ["In UV bền màu", "Chân đứng gấp gọn", "Mã QR dẫn đến trang sự kiện"],
+    specs: [
+      { label: "Chất liệu", value: "Foam và decal in UV" },
+      { label: "Kèm theo", value: "Chân đứng, túi vận chuyển" },
+    ],
   },
   {
-    slug: "khung-anh-qr-guest-book",
-    name: "Khung ảnh QR Guest Book",
-    excerpt: "Khách quét QR để gửi lời chúc và ảnh ngay tại tiệc.",
-    category: "qua-tang",
-    price: 180000,
-    rating: 4.8,
-    sold: 95,
-    date: "2026-10-18",
-    badge: "Mới",
-    tone: { bg: "#F3EEFB", ink: "#6941C6" },
-    features: ["Khung gỗ/acrylic", "QR tuỳ biến theo sự kiện", "Gom lời chúc về dashboard"],
+    slug: "the-qr-khach-moi",
+    name: "Thẻ QR cho từng khách",
+    category: "onsite",
+    summary: "Thẻ nhỏ có mã QR riêng, khách đưa ở cửa để check-in nhanh.",
+    description:
+      "Mỗi thẻ gắn với một khách trong danh sách. Khi quét, hệ thống đánh dấu khách đã đến và hiện tên bàn. Thẻ có thể kẹp vào thiệp giấy hoặc phát tại bàn đón khách.",
+    thumb: "qr",
+    tone: { bg: "#EAF4EE", ink: "#1D5B35" },
+    variants: [
+      { id: "100", label: "100 thẻ", price: 350000 },
+      { id: "300", label: "300 thẻ", price: 890000 },
+    ],
+    shipping: "ship",
+    leadTime: "4 đến 6 ngày làm việc",
+    highlights: ["In tên và số bàn của từng khách", "Dùng với tính năng check-in QR", "Giấy dày, không nhàu"],
+    specs: [
+      { label: "Kích thước", value: "5,5 x 9 cm" },
+      { label: "Chất liệu", value: "Giấy 300 gsm, cán mờ" },
+    ],
   },
   {
-    slug: "the-nfc-mo-thiep",
-    name: "Thẻ NFC mở thiệp mời",
-    excerpt: "Chạm điện thoại là mở thiệp online, không cần cài app.",
-    category: "phu-kien",
-    price: 35000,
-    rating: 4.7,
-    sold: 540,
-    date: "2026-07-14",
-    tone: { bg: "#E8EEF6", ink: "#27548A" },
-    features: ["Chip NFC NTAG215", "Tương thích iPhone & Android", "Ghi sẵn link thiệp"],
-  },
-  {
-    slug: "standee-qr-check-in",
-    name: "Standee QR check-in",
-    excerpt: "Standee để bàn/đứng sàn cho quầy đón khách và check-in nhanh.",
-    category: "phu-kien",
-    price: 220000,
-    compareAt: 260000,
-    rating: 4.9,
-    sold: 188,
-    date: "2026-05-30",
-    tone: { bg: "#FDECEC", ink: "#B42318" },
-    features: ["In UV chống bay màu", "Kèm QR check-in", "Khổ A4 – A2"],
-  },
-  {
-    slug: "combo-cuoi-tron-goi",
-    name: "Combo cưới trọn gói",
-    excerpt: "Thiệp in + thiệp online + thẻ NFC + QR mừng cưới trong một gói.",
-    category: "combo",
-    price: 1490000,
-    compareAt: 1890000,
-    badge: "Bán chạy",
-    rating: 5,
-    sold: 142,
-    date: "2026-09-25",
-    tone: { bg: "#FFF4E5", ink: "#B54708" },
-    features: ["100 thiệp in ép kim", "Thiệp online không giới hạn khách", "50 thẻ NFC", "Hỗ trợ thiết kế 1–1"],
-  },
-  {
-    slug: "combo-su-kien-doanh-nghiep",
-    name: "Combo sự kiện doanh nghiệp",
-    excerpt: "Thiệp mời, standee check-in và báo cáo khách tham dự.",
-    category: "combo",
-    price: 2390000,
-    rating: 4.8,
-    sold: 64,
-    date: "2026-10-10",
-    badge: "Mới",
-    tone: { bg: "#EAF6EE", ink: "#067647" },
-    features: ["200 thiệp in", "2 standee QR", "Dashboard check-in realtime"],
+    slug: "goi-tin-zalo",
+    name: "Gói tin nhắn gửi thiệp",
+    category: "digital",
+    summary: "Mua trước lượt gửi link thiệp qua Zalo hoặc SMS cho khách mời.",
+    description:
+      "Mỗi lượt gửi là một tin nhắn có link thiệp mang tên riêng của khách. Gói được cộng vào tài khoản ngay sau khi thanh toán, dùng cho bất kỳ sự kiện nào của bạn.",
+    thumb: "message",
+    tone: { bg: "#EEEAFB", ink: "#5B43B8" },
+    variants: [
+      { id: "500", label: "500 tin", price: 250000 },
+      { id: "1000", label: "1.000 tin", price: 450000 },
+      { id: "3000", label: "3.000 tin", price: 1200000 },
+    ],
+    shipping: "digital",
+    leadTime: "Cộng vào tài khoản ngay",
+    highlights: ["Không giới hạn thời gian sử dụng", "Dùng được cho nhiều sự kiện", "Xem được ai đã mở thiệp"],
+    specs: [
+      { label: "Kênh gửi", value: "Zalo và SMS" },
+      { label: "Hiệu lực", value: "Không hết hạn" },
+    ],
   },
 ];
 
-// ---------------------------------------------------------------- helpers
-
-export function getShopCategory(param?: string): ShopCategory | undefined {
-  if (!param) return undefined;
-  const v = param.trim().toLowerCase();
-  if (v === ALL_LABEL.toLowerCase()) return undefined;
-  return SHOP_CATEGORIES.find((c) => c.slug === v || c.label.toLowerCase() === v);
-}
-
-export function getSort(param?: string): SortValue {
-  return SORTS.find((s) => s.value === param)?.value ?? "popular";
-}
-
-export function getProducts(opts: { category?: string; sort?: SortValue; q?: string } = {}): Product[] {
-  const { category, sort = "popular", q } = opts;
-  const needle = q?.trim().toLowerCase();
-
-  const list = PRODUCTS.filter(
-    (p) =>
-      (!category || p.category === category) &&
-      (!needle || p.name.toLowerCase().includes(needle) || p.excerpt.toLowerCase().includes(needle)),
-  );
-
-  return [...list].sort((a, b) => {
-    switch (sort) {
-      case "newest":
-        return b.date.localeCompare(a.date);
-      case "price-asc":
-        return a.price - b.price;
-      case "price-desc":
-        return b.price - a.price;
-      default:
-        return b.sold - a.sold;
-    }
-  });
-}
-
-export function countByCategory(slug?: string): number {
-  return slug ? PRODUCTS.filter((p) => p.category === slug).length : PRODUCTS.length;
+export function getProducts(category?: ShopCategoryId): Product[] {
+  return category ? PRODUCTS.filter((p) => p.category === category) : PRODUCTS;
 }
 
 export function getProduct(slug: string): Product | undefined {
   return PRODUCTS.find((p) => p.slug === slug);
 }
 
-export function getRelatedProducts(p: Product, limit = 3): Product[] {
-  return PRODUCTS.filter((x) => x.slug !== p.slug && x.category === p.category)
-    .concat(PRODUCTS.filter((x) => x.slug !== p.slug && x.category !== p.category))
-    .slice(0, limit);
+export function getVariant(product: Product, variantId: string): Variant | undefined {
+  return product.variants.find((v) => v.id === variantId);
 }
 
-export function formatVND(n: number): string {
-  return new Intl.NumberFormat("vi-VN").format(n) + "đ";
+export function priceFrom(product: Product): number {
+  return Math.min(...product.variants.map((v) => v.price));
 }
 
-export function discountPercent(p: Product): number | null {
-  if (!p.compareAt || p.compareAt <= p.price) return null;
-  return Math.round((1 - p.price / p.compareAt) * 100);
+export function getRelatedProducts(slug: string, limit = 3): Product[] {
+  const current = getProduct(slug);
+  if (!current) return [];
+  const same = PRODUCTS.filter((p) => p.slug !== slug && p.category === current.category);
+  const rest = PRODUCTS.filter((p) => p.slug !== slug && p.category !== current.category);
+  return [...same, ...rest].slice(0, limit);
+}
+
+export function isShopCategory(value: string | undefined): value is ShopCategoryId {
+  return SHOP_CATEGORIES.some((c) => c.id === value);
 }

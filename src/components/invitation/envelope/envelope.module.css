@@ -14,20 +14,40 @@
     --noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n' x='0' y='0' width='100%25' height='100%25'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .5 -.17'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>");
 }
 
-/* Thiệp nằm sau phong bì */
-.card {
+/* Thế giới 3D chung: lưng phong bì (z 0) < thiệp (z 1 → 100) < mặt trước phong bì (z 2) */
+.world {
     position: absolute;
-    background: #fff;
-    box-shadow: 0 24px 60px rgb(0 0 0 / .5);
-    overflow: hidden;
+    inset: 0;
+    perspective: 1800px;
+    perspective-origin: 320px 400px;
+    transform-style: preserve-3d;
 }
 
-.card>img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+/* mỗi tấm phong bì là MỘT mặt phẳng trong thế giới 3D (bên trong tự phẳng hoá) */
+.plane {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
 }
+
+.cardPlane {
+    position: absolute;
+    pointer-events: none;
+}
+
+/* vùng chạm để rút thiệp ra */
+.cardHit {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    cursor: pointer;
+    border-radius: 2px;
+}
+.cardHit:focus-visible { outline: 3px solid #0b57d0; outline-offset: 3px; }
+
+/* chỉ những phần tử có .hit / .piece mới nhận chạm (clip-path cũng cắt cả vùng chạm) */
+.hit,
+.face.hit { pointer-events: auto; cursor: pointer; }
 
 .placeholder {
     display: grid;
@@ -56,7 +76,7 @@
 .envelope {
     position: absolute;
     transform-style: preserve-3d;
-    pointer-events: auto;
+    pointer-events: none;
 }
 
 .face {
@@ -65,6 +85,7 @@
     border-radius: 3px;
     transform-style: preserve-3d;
     backface-visibility: hidden;
+    pointer-events: none;
 }
 
 .face * {
@@ -73,7 +94,6 @@
 
 .back {
     transform: rotateY(180deg);
-    cursor: pointer;
 }
 
 .paper {
@@ -172,6 +192,8 @@
     position: absolute;
     inset: 0;
     background-color: var(--env);
+    pointer-events: auto;
+    cursor: pointer;
 }
 
 .pl {
@@ -235,11 +257,4 @@
     position: absolute;
     inset: 0;
     clip-path: polygon(3.5% 0, 96.5% 0, 50% 88%);
-}
-
-/* nhóm phong bì + bóng đổ, dùng để cho phong bì tụt xuống khi thiệp được lấy ra */
-.drop {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
 }
