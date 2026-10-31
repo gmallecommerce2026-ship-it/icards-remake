@@ -12,7 +12,7 @@ import type { PageId } from './useEditorStore';
  *   bìa đóng   mở hẳn    khép bìa     lật sang mặt sau
  * Các trang dừng ở: cover = 0 · inside = 1 · back = 2
  */
-export const STOPS: Record<PageId, number> = { cover: 0, inside: 1, back: 2 };
+export const STOPS: Record<PageId, number> = { cover: 0, insideLeft: 1, inside: 1, back: 2 };
 export const VIEW_AT: PageId[] = ['cover', 'inside', 'back'];
 
 export type CardMotion = {

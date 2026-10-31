@@ -17,7 +17,12 @@ import p from './CardPanel.module.css';
 
 export type CardTab = 'templates' | 'elements' | 'text' | 'background' | 'uploads' | 'draw';
 
-const PAGE_LABEL: Record<PageId, string> = { cover: 'Mặt ngoài', inside: 'Mặt trong', back: 'Mặt sau' };
+const PAGE_LABEL: Record<PageId, string> = { 
+  cover: 'Mặt ngoài', 
+  insideLeft: 'Trang trái', 
+  inside: 'Trang phải', 
+  back: 'Mặt sau' 
+};
 
 /* ------------------------------------------------------------------ */
 function Search({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {

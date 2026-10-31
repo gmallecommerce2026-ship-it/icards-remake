@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { PAGE } from '../envelope/envelope.data';
 import type { InvitationTemplate } from '@/lib/templates';
 
-export type PageId = 'cover' | 'inside' | 'back';
+export type PageId = 'cover' | 'insideLeft' | 'inside' | 'back';
 export type Align = 'left' | 'center' | 'right';
 
 export type CardEl = {
@@ -71,6 +71,7 @@ const DEFAULT_PAGES: Record<PageId, CardEl[]> = {
   cover: [
     { id: 'c-title', kind: 'text', x: 50, y: 250, w: 400, h: 120, rot: 0, text: 'Bạn được mời!', font: 'Playfair Display', size: 64, bold: true, color: '#2b2b2e', align: 'center' },
   ],
+  insideLeft: [],
   inside: [
     { id: 'i-title', kind: 'text', x: 50, y: 200, w: 400, h: 60, rot: 0, text: 'Thời gian & Địa điểm', font: 'Playfair Display', size: 40, bold: true, color: '#2b2b2e', align: 'center' },
     { id: 'i-body', kind: 'text', x: 50, y: 300, w: 400, h: 60, rot: 0, text: 'Thứ Bảy, 20:00\nĐịa chỉ của bạn ở đây', font: 'Be Vietnam Pro', size: 24, bold: false, color: '#4d4d4d', align: 'center' },
@@ -88,7 +89,7 @@ function fromTemplate(t: InvitationTemplate): Snap {
   });
   const names = m.titleLines.filter((l) => l.trim() !== '&');
   return {
-    backdrops: { cover: c.bg, inside: c.bg, back: c.soft },
+    backdrops: { cover: c.bg, insideLeft: c.bg, inside: c.bg, back: c.soft },
     pages: {
       cover: [
         text('c-kicker', 150, { text: m.kicker, size: 22, color: c.accent }),
@@ -97,6 +98,7 @@ function fromTemplate(t: InvitationTemplate): Snap {
         text('c-n2', 410, { text: names[1] ?? '', font: 'Playfair Display', size: 64, bold: true }),
         text('c-date', 560, { text: m.date, size: 20, color: c.accent }),
       ],
+      insideLeft: [],
       inside: [
         text('i-msg', 130, { text: m.message, size: 22 }),
         text('i-h', 290, { text: 'Thời gian & Địa điểm', font: 'Playfair Display', size: 34, bold: true }),
@@ -111,7 +113,7 @@ function fromTemplate(t: InvitationTemplate): Snap {
   };
 }
 
-export const PAGES: PageId[] = ['cover', 'inside', 'back'];
+export const PAGES: PageId[] = ['cover', 'insideLeft', 'inside', 'back'];
 
 const mapPages = (s: Snap, fn: (l: CardEl[]) => CardEl[]) =>
   Object.fromEntries(PAGES.map((p) => [p, fn(s.pages[p])])) as Record<PageId, CardEl[]>;
@@ -126,7 +128,7 @@ export const useEditorStore = create<State>((set, get) => {
 
   return {
     pages: DEFAULT_PAGES,
-    backdrops: { cover: '#fffaf0', inside: '#ffffff', back: '#fffaf0' },
+    backdrops: { cover: '#fffaf0', insideLeft: '#ffffff', inside: '#ffffff', back: '#fffaf0' },
     page: 'cover',
     selectedId: null,
     editingId: null,
