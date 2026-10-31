@@ -79,6 +79,31 @@ const ss = (a: number, b: number, x: number) => {
   return u * u * (3 - 2 * u);
 };
 
+
+/* ------------------------------------------------------------------ */
+/*  CHẾ ĐỘ "GÓI THIỆP" (prop `send`): chuyển động KHÔNG chạy theo thời gian mà bám theo một MotionValue  */
+/*  tiến độ 0 → 1 (thường là tiến độ cuộn trang, như ImmersiveScrollHero). Cuộn xuôi = đút thiệp vào,   */
+/*  đóng nắp, xoay ra mặt trước. Cuộn ngược = chạy đúng hành trình ngược lại.                          */
+/*  Tại p = 0 cảnh KHỚP TUYỆT ĐỐI với trạng thái chỉnh sửa (thiệp ra ngoài, nắp mở, mặt nắp quay ra).  */
+/*  Muốn nhanh / chậm từng đoạn chỉ cần sửa các mốc dưới đây.                                         */
+/* ------------------------------------------------------------------ */
+export const SEND_RANGE = {
+  card: [0.06, 0.44],   // thiệp xoay ngang rồi trượt xuống miệng phong bì (t: 1 → 0)
+  sink: [0.44, 0.54],   // thiệp chìm hẳn vào trong phong bì (rise: 1 → 0)
+  flap: [0.5, 0.74],    // nắp gập xuống (180° → 0°) và nảy nhẹ một nhịp
+  flip: [0.76, 0.95],   // phong bì xoay ra MẶT TRƯỚC (có tem + tên người nhận)
+} as const;
+
+function sendFlapAngle(p: number) {
+  const [a, b] = SEND_RANGE.flap;
+  const u = clamp01((p - a) / (b - a));
+  if (u <= 0) return 180;
+  const w = Math.min(1, u / 0.8);
+  const closing = 180 * (1 - w * w * (3 - 2 * w));
+  const bounce = u > 0.8 ? 5 * Math.sin(Math.PI * ((u - 0.8) / 0.2)) : 0;
+  return closing + bounce;
+}
+
 type Props = {
   card?: ReactNode;                         // nội dung thiệp (tỉ lệ 5:7)
   envelopeColor: string;                    // hex 6 ký tự
@@ -94,6 +119,10 @@ type Props = {
   onCardClick?: () => void;                 // chạm vào thiệp đang nằm trong phong bì -> rút ra
   onRecipientChange?: (v: string) => void;   // có => tên người nhận ở mặt trước sửa được ngay trên phong bì
   onSwap?: (to: 'card' | 'envelope') => void;     // thiệp đã rút ra: chạm vào vật nào thì vật đó muốn lên trước
+  /** có => chuyển động bám theo tiến độ này (0..1) thay vì chạy theo thời gian; bỏ qua mọi animation theo props */
+  send?: MotionValue<number>;
+  /** gọi một lần khi cảnh đã đo xong khung chứa và hiện hình */
+  onReady?: () => void;
 };
 
 function isLight(hex: string) {
@@ -118,7 +147,7 @@ function Rotor({ flip, origin, children, innerRef }: { flip: MotionValue<number>
 
 export function EnvelopeScene({
   card, envelopeColor, liner, stampId, recipientName = 'Tên người nhận',
-  side, flapOpen, cardFront = false, focus = 'card', openAmt, onEnvClick, onCardClick, onSwap, onRecipientChange,
+  side, flapOpen, cardFront = false, focus = 'card', openAmt, onEnvClick, onCardClick, onSwap, onRecipientChange, send, onReady,
 }: Props) {
   // Hiệu ứng là tính năng cốt lõi của thiệp: luôn chạy, kể cả khi hệ điều hành bật "giảm chuyển động"
   // (trước đây reduce=true làm mọi animation có duration 0 nên hai vật nhảy thẳng sang vị trí mới)
@@ -165,13 +194,15 @@ export function EnvelopeScene({
 
   // Lật phong bì
   useEffect(() => {
+    if (send) return;
     const c = animate(flip, side === 'front' ? 0 : 180, { duration: reduce ? 0 : 1.15, ease: [0.45, 0, 0.2, 1] });
     return () => c.stop();
-  }, [side, reduce, flip]);
+  }, [side, reduce, flip, send]);
 
   // Nắp phong bì: MỞ = bật lên hơi quá rồi lắng xuống (giấy có độ đàn hồi); ĐÓNG = rơi theo trọng lực (nhanh dần),
   // chạm thân phong bì thì nảy nhẹ 1-2 lần rồi nằm phẳng
   useEffect(() => {
+    if (send) return;
     const from = flapRot.get(), to = flapOpen ? 180 : 0;
     if (Math.abs(from - to) < 1) { dbg('flap:skip (đã ở đúng góc, KHÔNG chạy animation)', { from, to, flapOpen }); flapRot.set(to); return; }
     const k = Math.max(0.35, Math.abs(from - to) / 180);
@@ -181,33 +212,57 @@ export function EnvelopeScene({
       ? animate(flapRot, [from, 188, 180], { duration: reduce ? 0 : 1.2 * k, times: [0, 0.72, 1], ease: [[0.3, 0, 0.2, 1], 'easeInOut'], onComplete: done('done') })
       : animate(flapRot, [from, 0, 7, 0, 1.5, 0], { duration: reduce ? 0 : 1.15 * k + 0.35, times: [0, 0.6, 0.74, 0.86, 0.94, 1], ease: [[0.6, 0, 0.9, 0.5], 'easeOut', 'easeIn', 'easeOut', 'easeIn'], onComplete: done('done') });
     return () => { dbg('flap:animate:cleanup (bị dừng/huỷ)', { rot: flapRot.get() }); c.stop(); };
-  }, [flapOpen, reduce, flapRot]);
+  }, [flapOpen, reduce, flapRot, send]);
 
   // Thiệp trồi lên khỏi miệng phong bì SAU khi nắp đã mở; khi đóng nắp thì thiệp chìm xuống TRƯỚC
   useEffect(() => {
+    if (send) return;
     const c = animate(rise, flapOpen ? 1 : 0, {
       duration: reduce ? 0 : flapOpen ? 0.95 : 0.75,
       delay: reduce ? 0 : flapOpen ? 0.6 : 0,
       ease: [0.4, 0, 0.2, 1],
     });
     return () => c.stop();
-  }, [flapOpen, reduce, rise]);
+  }, [flapOpen, reduce, rise, send]);
 
   // Rút thiệp ra / đút thiệp vào: cùng một hành trình, chạy xuôi hoặc ngược
   useEffect(() => {
+    if (send) return;
     // t chạy tuyến tính; độ mềm do từng chặng (smoothstep) bên dưới đảm nhiệm
     // thời lượng tỉ lệ với quãng còn lại: bị ngắt giữa chừng thì quay đầu ngay, không phải chạy lại cả 2.6s
     const to = cardFront ? 1 : 0;
     const c = animate(t, to, { duration: reduce ? 0 : Math.max(0.3, 2.6 * Math.abs(to - t.get())), ease: 'linear' });
     return () => c.stop();
-  }, [cardFront, reduce, t]);
+  }, [cardFront, reduce, t, send]);
 
   // Đảo vị trí thiệp <-> phong bì (hai vật đổi chỗ, bay vòng cung quanh nhau)
   useEffect(() => {
+    if (send) return;
     const to = focus === 'envelope' ? 1 : 0;
     const c = animate(fv, to, { duration: reduce ? 0 : Math.max(0.4, 1.6 * Math.abs(to - fv.get())), ease: [0.45, 0, 0.2, 1] });
     return () => c.stop();
-  }, [focus, reduce, fv]);
+  }, [focus, reduce, fv, send]);
+
+  // Chế độ gói thiệp: mọi giá trị chuyển động suy ra trực tiếp từ tiến độ `send` (không có animation riêng)
+  useEffect(() => {
+    if (!send) return;
+    const apply = (p: number) => {
+      const [c0, c1] = SEND_RANGE.card, [s0, s1] = SEND_RANGE.sink, [f0, f1] = SEND_RANGE.flip;
+      t.set(1 - clamp01((p - c0) / (c1 - c0)));
+      rise.set(1 - ss(s0, s1, p));
+      flapRot.set(sendFlapAngle(p));
+      flip.set(180 * (1 - ss(f0, f1, p)));
+      fv.set(0);
+    };
+    apply(send.get());
+    return send.on('change', apply);
+  }, [send, t, rise, flapRot, flip, fv]);
+
+  // báo cho cha biết cảnh đã hiện hình (để cha ẩn bản đang đứng dưới mà không bị chớp)
+  const readyCb = useRef(onReady);
+  useEffect(() => { readyCb.current = onReady; }, [onReady]);
+  const isReady = !!dim;
+  useEffect(() => { if (isReady) readyCb.current?.(); }, [isReady]);
 
   /* ---------- THIỆP ----------
      RÚT RA  (t 0 → 1):

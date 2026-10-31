@@ -10,7 +10,7 @@ import { ROUTES } from '@/lib/routes';
 import { EnvelopeScene } from './EnvelopeScene';
 import { dbg } from './flapDebug';
 import { Stamp, STAMPS } from './Stamp';
-import { ENVELOPES, LINERS, PAGE, TONES, type Tone } from './envelope.data';
+import { ENVELOPES, LINERS, TONES, type Tone } from './envelope.data';
 import { FoldingCard } from '../editor/FoldingCard';
 import { useCardMotion } from '../editor/useCardMotion';
 import { CardPanel, type CardTab } from '../editor/CardPanel';
@@ -83,6 +83,9 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
   const [ready, setReady] = useState(false);
   const [saved, setSaved] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [sendOpen, setSendOpen] = useState(false);   // đã bấm "Tiếp theo": mở màn gói thiệp + cấu hình thiệp online
+  const [sendPending, setSendPending] = useState(false);   // đã bấm "Tiếp theo" nhưng editor còn đang đưa thiệp về tư thế chuẩn (khép bìa, rút thiệp, mở nắp...)
+  const [sceneHidden, setSceneHidden] = useState(false);   // lớp phủ đã hiện cảnh của nó -> ẩn bản dưới này (tránh hai cảnh chồng nhau)
+  const sceneBoxRef = useRef<HTMLDivElement>(null);
   const [settled, setSettled] = useState(editable); // thiệp đã rút ra xong, đứng yên -> mới cho chỉnh sửa
   const [focus, setFocus] = useState<'card' | 'envelope'>('card');   // vật nào đang đứng TRƯỚC (quyết định sidebar)
   const [swapping, setSwapping] = useState(false);   // đang chạy hiệu ứng đảo thiệp <-> phong bì: bỏ qua chạm tiếp
@@ -334,14 +337,32 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
   // ---- Bấm "Tiếp theo": chốt chữ đang gõ, lưu bản nháp thiết kế, rồi mở màn gói thiệp (xoay ngang → nhét vào phong bì → đóng nắp → tự cuộn xuống phần cấu hình thiệp online)
   const router = useRouter();
   const handleNext = () => {
+    if (sendPending || sendOpen) return;
     stopPlay();
-    cancelLock();
     const a = document.activeElement;
     if (a instanceof HTMLElement) a.blur();          // chốt ô chữ đang gõ vào store trước khi lưu
     useEditorStore.getState().select(null);
     saveNow();
-    setSendOpen(true);
+
+    // Lớp phủ nối tiếp NGAY từ cảnh đang đứng trong canvas, nên cảnh phải ở tư thế chuẩn trước:
+    // thiệp khép bìa, đã rút ra đứng trước, nắp mở, phong bì quay mặt nắp. Nếu chưa thì tự đưa về
+    // (dùng chính các animation sẵn có của editor) rồi mới chạy tiếp.
+    let wait = 0;
+    if (view !== 'cover') { setView('cover'); wait = Math.max(wait, closeWait()); }
+    if (!inCard || focus !== 'card' || !cardFront) {
+      cancelLock();
+      selectTab(lastCard.current);                   // đảo thiệp lên trước (rút ra khỏi phong bì nếu đang cất) + lật về mặt nắp
+      wait = Math.max(wait, (cardFront ? 1800 : (flapOpen ? 0 : 1700) + 2500) + (side === 'front' ? 1300 : 0));
+    } else {
+      cancelLock();
+      if (side !== 'back') { setSide('back'); wait = Math.max(wait, 1400); }
+    }
+    if (!flapOpen) { setFlapOpen(true); wait = Math.max(wait, 1800); }
+    if (wait === 0) { setSendOpen(true); return; }
+    setSendPending(true);
+    later(wait + 150, () => { setSendPending(false); setSendOpen(true); });
   };
+  const closeSend = () => { setSendOpen(false); setSceneHidden(false); };
   // thông tin sự kiện gợi ý sẵn từ mẫu đang dùng (người dùng sửa tiếp ở bước sau)
   const eventInitial: Partial<EventInfo> | undefined = template
     ? {
@@ -388,7 +409,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
               <button type="button" aria-pressed={mode === 'preview'} onClick={() => { stopPlay(); setMode('preview'); useEditorStore.getState().select(null); }}>Xem thử</button>
             </div>
           )}
-          {editable && <button type="button" className={d.save} onClick={handleNext}>Tiếp theo</button>}
+          {editable && <button type="button" className={d.save} onClick={handleNext} disabled={sendPending || sendOpen}>Tiếp theo</button>}
         </div>
       </header>
       <div className={d.body}>
@@ -432,7 +453,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
           </button>
         )}
 
-        <motion.div className={d.scene} style={{ rotateX: tiltOn ? rx : 0, rotateY: tiltOn ? ry : 0, transformPerspective: 1600 }}>
+        <motion.div ref={sceneBoxRef} className={d.scene} style={{ rotateX: tiltOn ? rx : 0, rotateY: tiltOn ? ry : 0, transformPerspective: 1600, visibility: sceneHidden ? 'hidden' : 'visible' }}>
           {ready && <EnvelopeScene
             card={<FoldingCard cm={cm} view={view} editable={canEdit} gesture={cardFront && focus === 'card' && settled && !swapping} onViewChange={onViewChange} />}
             envelopeColor={env.color}
@@ -479,13 +500,16 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
         <InvitationSendFlow
           open={sendOpen}
           card={<CardFaceStatic pageId="cover" />}
-          cardAspect={PAGE.h / PAGE.w}
+          getSceneRect={() => sceneBoxRef.current?.getBoundingClientRect() ?? null}
           envelopeColor={env.color}
           liner={liner.background}
+          stampId={stampId}
+          recipientName={recipientName}
+          onSceneReady={() => setSceneHidden(true)}
           initial={eventInitial}
           onSave={saveEvent}
           onAddGuests={(data) => { saveEvent(data); router.push(ROUTES.invitationManagement); }}
-          onClose={() => setSendOpen(false)}
+          onClose={closeSend}
         />
       )}
     </div>
