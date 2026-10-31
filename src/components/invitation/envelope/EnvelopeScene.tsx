@@ -6,6 +6,7 @@ import { animate, motion, useMotionValue, useSpring, useTransform, useVelocity, 
 import { Stamp } from './Stamp';
 import { EnvelopeFlap } from './EnvelopeFlap';
 import { WaxSeal, SEAL_PRESS_AT } from './WaxSeal';
+import { getPaperGrain } from './paperGrain';
 import { createCamera, type CamKey } from './cinematic';
 import { FlapDebugPanel } from './FlapDebugPanel';
 import { dbg } from './flapDebug';
@@ -37,7 +38,7 @@ const FLAP_H = ENV.h * 0.58;
 const POSE = {
   sealed: { cx: CX, cy: CY + 6, s: S_IN },
   peek: { cx: CX, cy: ENV.y - 100 + IN_HALF_H, s: S_IN },
-  slid: { cx: CX, cy: ENV.y + 20 - IN_HALF_H, s: S_IN },
+  slid: { cx: CX, cy: ENV.y - 14 - IN_HALF_H, s: S_IN },
   outClosed: { cx: 270, cy: 352, s: 1.0 },          // thiệp ở TRƯỚC: lệch trái, phong bì lùi chéo phía sau bên phải
   behind: { cx: 548, cy: 292, s: 0.78 },            // thiệp ở SAU phong bì: chéo phải-trên
   outOpen: { cx: CX + (CARD_W * 0.84) / 2, cy: 340, s: 0.84 },   // bìa mở: cả hai trang cân giữa khung
@@ -46,8 +47,8 @@ const POSE = {
 // Phong bì khi thiệp đã rút ra: [thiệp ở trước, phong bì ở trước]
 const ENV_LAYOUT = { x: [130, -60], y: [70, 110], s: [0.86, 1] };
 const ENV_PUSH = 150;    // phong bì lùi ra sau theo trục z (thiệp luôn ở phía trước)
-const T_SLIDE = 0.4;     // mốc của t: thiệp (đang nằm ngang) đã trượt hết khỏi miệng phong bì
-const T_TURN = 0.34;     // từ mốc này thiệp bắt đầu xoay dọc + bay vòng cung ra trước
+const T_SLIDE = 0.5;     // mốc của t: thiệp (đang nằm ngang) đã trượt hết khỏi miệng phong bì
+const T_TURN = 0.5;      // từ mốc này thiệp bắt đầu xoay dọc + bay vòng cung ra trước
 const BOW = -60;         // độ phình của quỹ đạo vòng cung (px, sang trái)
 const Z_BUMP = 170;
 const ORB_X = 190;       // đổi chỗ kiểu quỹ đạo: tới nửa đường hai vật văng sang 2 bên (thiệp trái, phong bì phải) rồi mới đổi trước/sau
@@ -90,12 +91,12 @@ const ss = (a: number, b: number, x: number) => {
 /*  Muốn nhanh / chậm từng đoạn chỉ cần sửa các mốc dưới đây.                                         */
 /* ------------------------------------------------------------------ */
 export const SEND_RANGE = {
-  show: [0.05, 0.26],   // thiệp tiến sát camera, nghiêng nhiều góc để khoe mặt bìa ngoài
-  card: [0.26, 0.50],   // thiệp xoay ngang rồi trượt xuống miệng phong bì (t: 1 → 0)
-  sink: [0.50, 0.58],   // thiệp hạ hẳn xuống đáy túi (vẫn nhìn thấy qua miệng nắp mở)
-  flap: [0.56, 0.74],   // nắp gập xuống (180° → 0°) và nảy nhẹ một nhịp
-  seal: [0.75, 0.89],   // sáp loang, con dấu đồng đóng xuống mép niêm phong, để lại dấu iCards
-  flip: [0.91, 0.98],   // phong bì xoay ra MẶT TRƯỚC (có tem + tên người nhận)
+  show: [0.05, 0.27],   // thiệp tiến sát camera, nghiêng nhiều góc để khoe mặt bìa ngoài
+  card: [0.27, 0.50],   // thiệp xoay ngang rồi trượt xuống miệng phong bì (t: 1 → 0)
+  sink: [0.50, 0.585],  // thiệp hạ hẳn xuống đáy túi (nắp VẪN MỞ HẲN 180°)
+  flap: [0.60, 0.76],   // nắp gập xuống - chỉ bắt đầu SAU khi thiệp đã chìm hẳn (không bao giờ chồng với sink)
+  seal: [0.77, 0.90],   // sáp loang, con dấu đồng đóng xuống mép niêm phong, để lại dấu iCards
+  flip: [0.92, 0.985],  // phong bì xoay ra MẶT TRƯỚC (có tem + tên người nhận)
 } as const;
 
 /* Kích thước + vị trí con dấu trên mũi nắp (px thiết kế): tâm đĩa hơi cao hơn mũi để sáp phủ kín đỉnh chữ V */
@@ -107,23 +108,26 @@ const SEAL_TOP = SEAL_CY - SEAL_D / 2;
    Nhịp: tiến nhẹ khi thiệp khoe mặt bìa → lùi toàn cảnh khi thiệp xoay ngang → áp sát miệng phong bì → nhìn chếch
          từ trên khi nắp gập → THẲNG GÓC (top-down) vào mép niêm phong khi đóng dấu → lùi ra, vòng một cung khi lật mặt trước. */
 const SEAL_FY = ENV.y + SEAL_CY - CY;
+/* fx < 0 ⇒ vật thể trượt sang PHẢI khung hình (chữ nằm bên trái); fx > 0 ⇒ vật thể sang TRÁI (chữ nằm bên phải).
+   Bố cục "đảo bên" theo từng bước: B1 phải · B2 trái · B3 phải · B4 chính giữa (macro dấu sáp). */
 const CAM_KEYS: CamKey[] = [
-  { p: 0.00, s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0, fy: 0 },
-  { p: 0.05, s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0, fy: 0 },
-  { p: 0.12, s: 1.04, rx: -2, ry: 6,   rz: 0.4,  fx: 0, fy: -6 },
-  { p: 0.20, s: 1.06, rx: 2,  ry: -6,  rz: -0.4, fx: 0, fy: 0 },
-  { p: 0.27, s: 0.92, rx: 6,  ry: 0,   rz: 0,    fx: 0, fy: -10 },
-  { p: 0.36, s: 1.00, rx: 4,  ry: -14, rz: 1.2,  fx: 0, fy: 15 },
-  { p: 0.46, s: 1.30, rx: 6,  ry: -5,  rz: 0,    fx: 0, fy: -45 },
-  { p: 0.54, s: 1.32, rx: 12, ry: 5,   rz: 0,    fx: 0, fy: -35 },
-  { p: 0.62, s: 1.25, rx: 14, ry: 9,   rz: -0.8, fx: 0, fy: -30 },
-  { p: 0.71, s: 1.38, rx: 6,  ry: -4,  rz: 0,    fx: 0, fy: SEAL_FY * 0.5 },
-  { p: 0.76, s: 1.75, rx: 1,  ry: 0,   rz: 0,    fx: 0, fy: SEAL_FY },
-  { p: 0.82, s: 2.05, rx: 0,  ry: 0,   rz: 0,    fx: 0, fy: SEAL_FY },
-  { p: 0.88, s: 2.20, rx: 0,  ry: 0,   rz: 0,    fx: 0, fy: SEAL_FY },
-  { p: 0.92, s: 1.75, rx: -2, ry: -12, rz: 0.8,  fx: 0, fy: SEAL_FY * 0.4 },
-  { p: 0.98, s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0, fy: 0 },
-  { p: 1.00, s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0, fy: 0 },
+  { p: 0.00, s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0,    fy: 0 },
+  { p: 0.05, s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0,    fy: 0 },
+  { p: 0.12, s: 1.08, rx: -2, ry: -10, rz: 1.0,  fx: -110, fy: -6 },
+  { p: 0.20, s: 1.18, rx: 2,  ry: 9,   rz: -1.0, fx: -160, fy: 2 },
+  { p: 0.27, s: 1.02, rx: 3,  ry: -2,  rz: 0.3,  fx: -60,  fy: -4 },
+  { p: 0.36, s: 1.08, rx: 4,  ry: 12,  rz: 1.2,  fx: 140,  fy: 8 },
+  { p: 0.45, s: 1.18, rx: 6,  ry: -6,  rz: -0.8, fx: 110,  fy: -26 },
+  { p: 0.53, s: 1.18, rx: 9,  ry: 8,   rz: 0.6,  fx: 50,   fy: -28 },
+  { p: 0.61, s: 1.20, rx: 12, ry: -11, rz: -1.0, fx: -120, fy: -28 },
+  { p: 0.69, s: 1.34, rx: 14, ry: 6,   rz: 0.8,  fx: -90,  fy: -30 },
+  { p: 0.75, s: 1.34, rx: 8,  ry: -3,  rz: 0,    fx: -25,  fy: SEAL_FY * 0.5 },
+  { p: 0.79, s: 1.78, rx: 1,  ry: 0,   rz: 0,    fx: 0,    fy: SEAL_FY },
+  { p: 0.85, s: 2.08, rx: 0,  ry: 0,   rz: 0,    fx: 0,    fy: SEAL_FY },
+  { p: 0.90, s: 2.20, rx: 0,  ry: 0,   rz: 0,    fx: 0,    fy: SEAL_FY },
+  { p: 0.94, s: 1.70, rx: -2, ry: -12, rz: 0.8,  fx: 0,    fy: SEAL_FY * 0.4 },
+  { p: 0.985,s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0,    fy: 0 },
+  { p: 1.00, s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0,    fy: 0 },
 ];
 const camAt = createCamera(CAM_KEYS);
 /** rung nhẹ khi sáp chạm nắp (px thiết kế), tắt dần */
@@ -218,9 +222,16 @@ export function EnvelopeScene({
   const camRX = useTransform(cam, (c) => c.rx);
   const camRY = useTransform(cam, (c) => c.ry);
   const camRZ = useTransform(cam, (c) => c.rz);
-  const camX = useTransform(cam, (c) => -c.fx * c.s);
+  const shiftK = useMotionValue(1);                 // 0 (điện thoại) … 1 (màn rộng): mức đẩy vật thể sang một bên
+  const camX = useTransform([cam, shiftK] as MotionValue<any>[], ([c, k]: any[]) => -(c as CamKey).fx * (c as CamKey).s * (k as number));
   const camY = useTransform([cam, shake] as MotionValue<any>[], ([c, sh]: any[]) => -(c as CamKey).fy * (c as CamKey).s + (sh as number) * (c as CamKey).s);
   const open = openAmt ?? idleOpen;
+  // VÂN SẦN giấy có SẴN ngay từ editor (không đột ngột xuất hiện lúc chuyển cảnh). Trung tính về màu (overlay trên xám 50%),
+  // nên nhìn xa không đổi sắc; càng zoom gần càng đậm lên.
+  const [grain, setGrain] = useState<string | null>(null);
+  useEffect(() => { setGrain(getPaperGrain()); }, []);
+  const GRAIN_BASE = 0.22;
+  const grainOp = useTransform(camScale, (c) => (send ? GRAIN_BASE + (1 - GRAIN_BASE) * ss(1.05, 2.0, c) : GRAIN_BASE));
 
   const rad = Math.PI / 180;
   const sheen = useTransform(flip, (v) => 0.5 * Math.abs(Math.sin(2 * v * rad)));
@@ -238,9 +249,11 @@ export function EnvelopeScene({
       if (w < 1 || h < 1) return;
       // fit theo CẢ chiều rộng lẫn chiều cao khung chứa -> không bao giờ tràn / bị cắt cạnh dưới
       setDim({ k: Math.min(1.3, w / DW, h / DH), w, h });
+      shiftK.set(clamp01((w - 640) / 560));
     });
     ro.observe(el);
     return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // (debug) ghi lại mỗi lần props điều khiển thay đổi
@@ -266,7 +279,7 @@ export function EnvelopeScene({
     const done = (name: string) => () => dbg('flap:animate:' + name, { rot: flapRot.get(), curl: curl.get() });
     const c = flapOpen
       ? animate(flapRot, [from, 188, 180], { duration: reduce ? 0 : 1.2 * k, times: [0, 0.72, 1], ease: [[0.3, 0, 0.2, 1], 'easeInOut'], onComplete: done('done') })
-      : animate(flapRot, [from, 0, 7, 0, 1.5, 0], { duration: reduce ? 0 : 1.15 * k + 0.35, times: [0, 0.6, 0.74, 0.86, 0.94, 1], ease: [[0.6, 0, 0.9, 0.5], 'easeOut', 'easeIn', 'easeOut', 'easeIn'], onComplete: done('done') });
+      : animate(flapRot, [from, 0, 7, 0, 1.5, 0], { duration: reduce ? 0 : 1.15 * k + 0.35, delay: reduce ? 0 : 1.0, times: [0, 0.6, 0.74, 0.86, 0.94, 1], ease: [[0.6, 0, 0.9, 0.5], 'easeOut', 'easeIn', 'easeOut', 'easeIn'], onComplete: done('done') });
     return () => { dbg('flap:animate:cleanup (bị dừng/huỷ)', { rot: flapRot.get() }); c.stop(); };
   }, [flapOpen, reduce, flapRot, send]);
 
@@ -274,8 +287,8 @@ export function EnvelopeScene({
   useEffect(() => {
     if (send) return;
     const c = animate(rise, flapOpen ? 1 : 0, {
-      duration: reduce ? 0 : flapOpen ? 0.95 : 0.75,
-      delay: reduce ? 0 : flapOpen ? 0.6 : 0,
+      duration: reduce ? 0 : flapOpen ? 1.2 : 0.95,
+      delay: reduce ? 0 : flapOpen ? 0.95 : 0,
       ease: [0.4, 0, 0.2, 1],
     });
     return () => c.stop();
@@ -287,7 +300,7 @@ export function EnvelopeScene({
     // t chạy tuyến tính; độ mềm do từng chặng (smoothstep) bên dưới đảm nhiệm
     // thời lượng tỉ lệ với quãng còn lại: bị ngắt giữa chừng thì quay đầu ngay, không phải chạy lại cả 2.6s
     const to = cardFront ? 1 : 0;
-    const c = animate(t, to, { duration: reduce ? 0 : Math.max(0.3, 2.6 * Math.abs(to - t.get())), ease: 'linear' });
+    const c = animate(t, to, { duration: reduce ? 0 : Math.max(0.4, 4.0 * Math.abs(to - t.get())), ease: 'linear' });
     return () => c.stop();
   }, [cardFront, reduce, t, send]);
 
@@ -304,9 +317,13 @@ export function EnvelopeScene({
     if (!send) return;
     const apply = (p: number) => {
       const [c0, c1] = SEND_RANGE.card, [s0, s1] = SEND_RANGE.sink, [f0, f1] = SEND_RANGE.flip, [w0, w1] = SEND_RANGE.seal, [h0, h1] = SEND_RANGE.show;
-      t.set(1 - clamp01((p - c0) / (c1 - c0)));
-      rise.set(1 - ss(s0, s1, p));
-      flapRot.set(sendFlapAngle(p));
+      const ang = sendFlapAngle(p);
+      // CỔNG AN TOÀN: nắp chưa mở gần hết (<150°) thì thiệp bị ép nằm im dưới túi → không thể xuyên qua nắp
+      // dù cuộn ngược rất nhanh hay lò xo tiến độ vọt qua mốc
+      const gate = clamp01((ang - 150) / 20);
+      t.set((1 - clamp01((p - c0) / (c1 - c0))) * gate);
+      rise.set((1 - ss(s0, s1, p)) * gate);
+      flapRot.set(ang);
       flip.set(180 * (1 - ss(f0, f1, p)));
       fv.set(0);
       sealP.set(clamp01((p - w0) / (w1 - w0)));
@@ -343,7 +360,7 @@ export function EnvelopeScene({
   const cardX = useTransform([swing, open, fv, showB, sway], ([u, op, f, b, w]: number[]) => {
     const closed = lerp(POSE.outClosed.cx, POSE.behind.cx, f);
     const outX = lerp(closed, POSE.outOpen.cx, op * (1 - f));
-    return lerp(POSE.sealed.cx, outX, u) + BOW * Math.sin(Math.PI * u) * (1 - f) - ORB_X * Math.sin(Math.PI * f) * u - CARD_CX + (CX - POSE.outClosed.cx) * 0.8 * b + 92 * b * w;
+    return lerp(POSE.sealed.cx, outX, u) + BOW * Math.sin(Math.PI * u) * (1 - f) - ORB_X * Math.sin(Math.PI * f) * u - CARD_CX + (CX - POSE.outClosed.cx) * 0.8 * b + 56 * b * w;
   });
   const cardY = useTransform([slide, swing, rise, open, fv, showB, sway], ([sl, u, r, op, f, b, w]: number[]) => {
     const inY = lerp(POSE.sealed.cy, POSE.peek.cy, r);
@@ -369,8 +386,9 @@ export function EnvelopeScene({
   // z-index: lưng phong bì = 1 · thiệp (đang trong) = 2 · mặt trước phong bì = 3
   // bóng thiệp nhiều lớp: sát giấy (tiếp xúc) + mềm + xa; thiệp càng "nhấc" gần camera bóng càng xa và nhoè, lệch ngược chiều nghiêng
   const cardShadow = useTransform([showB, showRY, swing], ([b, ry, u]: number[]) => {
-    const ox = -ry * 0.9, oy = 5 + 46 * b + 10 * Math.sin(Math.PI * u);
-    return `${ox * 0.2}px ${oy * 0.2}px 2px rgb(0 0 0 / .28), ${ox * 0.6}px ${oy * 0.6}px ${10 + 22 * b}px -1px rgb(0 0 0 / .32), ${ox}px ${oy}px ${26 + 44 * b}px -6px rgb(0 0 0 / .42), ${ox * 1.8}px ${oy * 1.9}px ${60 + 70 * b}px -14px rgb(0 0 0 / .5)`;
+    const ox = -ry * 0.9, oy = 18 + 40 * b + 10 * Math.sin(Math.PI * u);
+    // lớp đầu = đúng bóng của thiệp trong editor (0 18px 50px / .45) → p = 0 không có bước nhảy; các lớp sau chỉ hiện dần khi thiệp nhấc lên
+    return `${ox * 0.5}px ${oy}px ${50 + 40 * b}px rgb(0 0 0 / .45), ${ox * 0.2}px ${oy * 0.2}px 2px rgb(0 0 0 / ${0.28 * b}), ${ox * 1.8}px ${oy * 1.9}px ${60 + 70 * b}px -14px rgb(0 0 0 / ${0.5 * b})`;
   });
   const cardLayer = useTransform([t, fv], ([v, f]: number[]) => (ss(T_SLIDE, 1, v) < 0.001 ? 2 : f < 0.5 ? 4 : 0));
   // Chế độ gói thiệp: thiệp KHÔNG mờ đi - nó nằm gọn trong phong bì (bị mảnh trước + nắp che) tới lúc đóng nắp xong
@@ -402,7 +420,7 @@ export function EnvelopeScene({
   /* ---------- PHONG BÌ: tụt xuống + lùi ra sau để nhường chỗ cho thiệp, nhưng vẫn thấy được (chạm để cất thiệp) ---------- */
   const uOut = useTransform(t, (v) => ss(T_SLIDE, 1, v));
   const flapAmt = useTransform([flapRot, backAmt], ([fr, ba]: number[]) => clamp01(fr / 180) * ba);
-  const envX = useTransform([uOut, fv, showB, sway], ([u, f, b, w]: number[]) => u * (lerp(ENV_LAYOUT.x[0], ENV_LAYOUT.x[1], f) + ORB_X * Math.sin(Math.PI * f)) - 118 * b * w);   // ngược chiều thiệp
+  const envX = useTransform([uOut, fv, showB, sway], ([u, f, b, w]: number[]) => u * (lerp(ENV_LAYOUT.x[0], ENV_LAYOUT.x[1], f) + ORB_X * Math.sin(Math.PI * f)) - 70 * b * w);   // ngược chiều thiệp
   const envY = useTransform([uOut, fv, flapAmt], ([u, f, fa]: number[]) =>
     u * (lerp(ENV_LAYOUT.y[0], ENV_LAYOUT.y[1], f) * fa + SWAP_ARC * Math.sin(Math.PI * f)));
   const envS = useTransform([uOut, fv, showB], ([u, f, b]: number[]) => (1 + u * (lerp(ENV_LAYOUT.s[0], ENV_LAYOUT.s[1], f) - 1)) * (1 - ORB_DIP * Math.sin(Math.PI * f) * u) * (1 - 0.06 * b));
@@ -532,12 +550,10 @@ export function EnvelopeScene({
             }}
           >
             {card ?? <div className={s.placeholder}>Thiệp của bạn</div>}
-            {send && (
-              <div className={s.glareClip}>
-                <div className={s.paper3d} />
-                <motion.div className={s.glare} style={{ x: glareX, opacity: glareOp }} />
-              </div>
-            )}
+            <div className={s.glareClip}>
+              <motion.div className={s.paper3d} style={{ opacity: grainOp, backgroundImage: grain ? `${grain}, linear-gradient(135deg, rgb(255 255 255 / .06), transparent 40%, rgb(0 0 0 / .05))` : undefined }} />
+              {send && <motion.div className={s.glare} style={{ x: glareX, opacity: glareOp }} />}
+            </div>
             {onCardClick && (
               <div
                 className={s.cardHit}

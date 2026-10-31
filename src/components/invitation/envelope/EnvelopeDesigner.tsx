@@ -183,15 +183,15 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
   function cancelLock() { clearTimeout(lockTimer.current); setSwapping(false); }
   // Người dùng chạm khi hiệu ứng cũ còn chạy: hủy hẹn giờ + bỏ khóa rồi làm theo ý mới NGAY (animation tự quay đầu từ vị trí hiện tại)
   function interrupt() { stopPlay(); cancelLock(); }
-  const SWAP_MS = 2500;        // thời lượng đoạn thiệp bay (khớp animate t = 2.3s trong EnvelopeScene)
+  const SWAP_MS = 4000;        // thời lượng đoạn thiệp bay (khớp animate t = 2.3s trong EnvelopeScene)
   function pullOut(then?: () => void) {
     if (cardFront) { then?.(); return; }
     useEditorStore.getState().select(null);
     let wait = 0;
-    if (!flapOpen) { setFlapOpen(true); wait = 1700; }
+    if (!flapOpen) { setFlapOpen(true); wait = 2200; }
     lock(wait + SWAP_MS);
     later(wait, () => setCardFront(true));
-    if (then) later(wait + 2500, then);
+    if (then) later(wait + SWAP_MS, then);
   }
   // thời gian khép thiệp về bìa (bìa đóng) trước khi đút vào phong bì
   function closeWait() { return view === 'cover' ? 0 : view === 'back' ? 2700 : 1400; }   // 'inside' và 'insideLeft' cùng là cặp trang giữa
@@ -267,7 +267,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!cardFront) { setSettled(false); return; }
-    const id = setTimeout(() => setSettled(true), 2500);
+    const id = setTimeout(() => setSettled(true), 4000);
     return () => clearTimeout(id);
   }, [cardFront]);
   useEffect(() => () => { timers.current.forEach(clearTimeout); clearTimeout(lockTimer.current); }, []);

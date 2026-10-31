@@ -22,12 +22,12 @@ import { EVENT_FONT_VARS, EventDetailsEditor, type EventDetailsEditorProps } fro
 /*                                                                      */
 /*   p = 0   : trùng khớp với khung chỉnh sửa (blend liền)              */
 /*   0 → .1  : cảnh lướt về giữa màn hình, nền tối phủ dần lên giao diện */
-/*   .05-.26 : thiệp TIẾN SÁT CAMERA, nghiêng nhiều góc khoe mặt bìa ngoài */
-/*   .26-.50 : thiệp xoay ngang, trượt xuống, đút vào phong bì          */
-/*   .50-.74 : thiệp nằm gọn trong túi (không mờ), nắp phong bì gập xuống */
-/*   .75-.89 : sáp loang trên mép niêm phong, CON DẤU ĐỒNG đóng xuống     */
+/*   .05-.27 : thiệp TIẾN SÁT CAMERA, nghiêng nhiều góc khoe mặt bìa ngoài */
+/*   .27-.50 : thiệp xoay ngang, trượt xuống, đút vào phong bì          */
+/*   .50-.585: thiệp chìm hẳn xuống túi (nắp còn MỞ HẲN) · .60-.76: nắp gập xuống (không chồng nhau) */
+/*   .77-.90 : sáp loang trên mép niêm phong, CON DẤU ĐỒNG đóng xuống     */
 /*             (nhìn thẳng từ trên xuống), nhấc lên để lại dấu iCards     */
-/*   .91-.98 : phong bì xoay ra MẶT TRƯỚC (tem + tên người nhận)        */
+/*   .92-.985: phong bì xoay ra MẶT TRƯỚC (tem + tên người nhận)        */
 /*   sau đó  : phần cấu hình thiệp online trượt lên                     */
 /*  Suốt hành trình "máy quay" trong EnvelopeScene (CAM_KEYS) dolly / orbit: */
 /*  toàn cảnh → áp sát miệng phong bì → nhìn từ trên xuống → macro vào dấu sáp */
@@ -45,9 +45,9 @@ const INK = "#F5F1E8";
 const STAGE_BG = "linear-gradient(to bottom, #454547 0%, #1c1c1c 55%, #000 100%)";
 
 /** vùng ghim cao TRACK_VH (% màn hình) → quãng cuộn để chạy hiệu ứng = TRACK_VH − 100 (% màn hình) */
-const TRACK_VH = 640;
+const TRACK_VH = 900;
 /** thời gian tự cuộn qua phần hiệu ứng, và qua đoạn chuyển sang nội dung (giây) */
-const AUTO_SECONDS = 11;
+const AUTO_SECONDS = 20;
 const AUTO_TAIL_SECONDS = 1.1;
 /** kích thước thiết kế của EnvelopeScene (khớp DW / DH trong EnvelopeScene) - dùng để suy ra độ phóng của khung canvas */
 const DW = 720;
@@ -57,7 +57,7 @@ const fitK = (w: number, h: number) => Math.min(1.3, w / DW, h / DH);
 const SMOOTH = cubicBezier(0.45, 0, 0.25, 1);
 type Bezier = [number, number, number, number];
 const IN_OUT: Bezier = [0.45, 0, 0.2, 1];
-const AUTO_EASE: Bezier = [0.4, 0, 0.25, 1];
+const AUTO_EASE: Bezier = [0.25, 0.2, 0.75, 0.8];
 
 export type InvitationSendFlowProps = Pick<EventDetailsEditorProps, "initial" | "guests" | "onSave" | "onAddGuests"> & {
   open: boolean;
@@ -141,7 +141,7 @@ function FlowBody({
        1) lò xo gần tới hạn (ζ ≈ 1.1) → không văng quá 0, đuôi tắt dần ngắn;
        2) KHÔNG đóng lớp phủ ngay khi scrollTop về 0 (lúc đó p còn ở xa, cảnh đang ở giữa chừng nên đóng là
           "nhảy" thẳng về cảnh editor) - mà đợi p thực sự chạy về ~0, khi cảnh trùng khớp editor mới đóng. */
-  const pSpring = useSpring(scrollYProgress, { stiffness: 150, damping: 27, mass: 0.7, restDelta: 0.0004, restSpeed: 0.002 });
+  const pSpring = useSpring(scrollYProgress, { stiffness: 110, damping: 26, mass: 0.8, restDelta: 0.0004, restSpeed: 0.002 });
   const p = useTransform(pSpring, (v) => Math.min(1, Math.max(0, v)));
 
   // lướt cảnh từ khung canvas về giữa màn hình + phủ nền tối lên giao diện editor
@@ -329,6 +329,8 @@ function FlowBody({
           <motion.div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[4.5dvh] origin-top bg-black" style={{ scaleY: bars }} />
           <motion.div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[4.5dvh] origin-bottom bg-black" style={{ scaleY: bars }} />
 
+          <motion.div aria-hidden={false} style={{ opacity: hintWrapping }} className="absolute inset-0 z-20 pointer-events-none"><Captions p={p} /></motion.div>
+
           <motion.button
             type="button"
             onClick={back}
@@ -340,7 +342,6 @@ function FlowBody({
 
           <div className="pointer-events-none absolute inset-x-0 bottom-[8dvh] z-20 flex flex-col items-center text-center" style={{ color: INK }}>
             <motion.div style={{ opacity: hintWrapping }} className="absolute bottom-0 flex flex-col items-center gap-1">
-<Captions p={p} />
               <button
                 type="button"
                 onClick={skip}
@@ -377,29 +378,42 @@ function FlowBody({
 
 
 /* Chú thích từng bước: kicker nhỏ + tiêu đề serif nghiêng + vạch đỏ mảnh, trượt nhẹ vào/ra theo tiến độ */
-const CAPTIONS = [
-  { a: 0.06, b: 0.27, k: "Bước 1 / 4", t: "Mặt bìa thiệp của bạn", d: "Xem lần cuối trước khi gửi" },
-  { a: 0.28, b: 0.5, k: "Bước 2 / 4", t: "Đưa thiệp vào phong bì", d: "Thiệp nằm gọn, không bị nhàu" },
-  { a: 0.5, b: 0.74, k: "Bước 3 / 4", t: "Gập nắp phong bì", d: "Khép lại thật cẩn thận" },
-  { a: 0.75, b: 0.93, k: "Bước 4 / 4", t: "Niêm phong bằng dấu sáp iCards", d: "Dấu ấn dành riêng cho thiệp của bạn" },
+type Side = "left" | "right" | "center";
+const CAPTIONS: { a: number; b: number; k: string; t: string; d: string; side: Side }[] = [
+  // vật thể ở bên PHẢI → chữ bên TRÁI, rồi đảo bên theo từng bước (khớp CAM_KEYS trong EnvelopeScene)
+  { a: 0.06, b: 0.28, k: "Bước 1 / 4", t: "Mặt bìa thiệp của bạn", d: "Xem lần cuối trước khi gửi", side: "left" },
+  { a: 0.29, b: 0.52, k: "Bước 2 / 4", t: "Đưa thiệp vào phong bì", d: "Thiệp nằm gọn, không bị nhàu", side: "right" },
+  { a: 0.53, b: 0.76, k: "Bước 3 / 4", t: "Gập nắp phong bì", d: "Khép lại thật cẩn thận", side: "left" },
+  { a: 0.77, b: 0.93, k: "Bước 4 / 4", t: "Niêm phong bằng dấu sáp iCards", d: "Dấu ấn dành riêng cho thiệp của bạn", side: "center" },
 ];
 
 function Caption({ p, c }: { p: MotionValue<number>; c: (typeof CAPTIONS)[number] }) {
-  const opacity = useTransform(p, [c.a, c.a + 0.03, c.b - 0.03, c.b], [0, 1, 1, 0]);
+  const opacity = useTransform(p, [c.a, c.a + 0.035, c.b - 0.03, c.b], [0, 1, 1, 0]);
   const y = useTransform(p, [c.a, c.a + 0.04, c.b - 0.04, c.b], [14, 0, 0, -10]);
+  const dir = c.side === "left" ? -1 : c.side === "right" ? 1 : 0;
+  const x = useTransform(p, [c.a, c.a + 0.05, c.b - 0.04, c.b], [dir * 36, 0, 0, dir * 22]);
+  // màn rộng: chữ nằm hẳn một bên, đối diện với thiệp · điện thoại: chữ ở dưới, giữa
+  const pos =
+    c.side === "left" ? "md:left-[7vw] md:items-start md:text-left"
+    : c.side === "right" ? "md:right-[7vw] md:items-end md:text-right"
+    : "md:inset-x-0 md:mx-auto md:items-center md:text-center";
+  const place = c.side === "center" ? "md:bottom-[16dvh]" : "md:top-1/2 md:-translate-y-1/2";
   return (
-    <motion.div style={{ opacity, y }} className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-1">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/55">{c.k}</span>
-      <p className="text-xl italic leading-tight" style={{ fontFamily: "var(--ev-serif), 'Cormorant Garamond', serif" }} aria-live="polite">{c.t}</p>
-      <span className="h-px w-10" style={{ background: CRIMSON }} />
-      <span className="text-xs text-white/60">{c.d}</span>
-    </motion.div>
+    <div className={`absolute inset-x-0 bottom-[14dvh] flex justify-center md:inset-x-auto md:bottom-auto md:w-[min(30vw,430px)] ${place}`}
+         style={c.side === "center" ? { left: 0, right: 0, width: "auto" } : undefined}>
+      <motion.div style={{ opacity, y, x }} className={`flex flex-col items-center gap-1 text-center md:gap-2 ${pos}`}>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/55">{c.k}</span>
+        <p className="text-xl italic leading-tight md:text-4xl" style={{ fontFamily: "var(--ev-serif), 'Cormorant Garamond', serif" }} aria-live="polite">{c.t}</p>
+        <span className="h-px w-10 md:w-14" style={{ background: CRIMSON }} />
+        <span className="text-xs text-white/60 md:text-sm">{c.d}</span>
+      </motion.div>
+    </div>
   );
 }
 
 function Captions({ p }: { p: MotionValue<number> }) {
   return (
-    <div className="relative mb-1 h-[78px] w-[min(90vw,440px)]">
+    <div className="pointer-events-none absolute inset-0 z-20">
       {CAPTIONS.map((c) => <Caption key={c.k} p={p} c={c} />)}
     </div>
   );
