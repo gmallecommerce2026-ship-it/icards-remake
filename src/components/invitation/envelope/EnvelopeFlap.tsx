@@ -13,6 +13,11 @@ import s from './envelope.module.css';
  *  - tự tính độ sáng theo góc nghiêng so với nguồn sáng (tối dần khi dựng đứng, loé sáng khi
  *    lật qua ~50°), nên mắt đọc được hình khối.
  *
+ * Cái làm nắp trông "3D thật" không chỉ là các dải: nó còn cần
+ *  - tâm phối cảnh (perspective-origin) của phong bì hạ THẤP hơn thân phong bì -> khi nắp dựng lên theo
+ *    trục z, đỉnh nắp được "nâng" lên màn hình như nhìn từ góc chếch phía trên, thay vì co dẹt thành 1 đường;
+ *  - độ uốn `curl` phụ thuộc góc + vận tốc (xem EnvelopeScene) nên giấy oằn khi mở nhanh, rung khi đóng sập.
+ *
  * Quy tắc 3D quan trọng: mọi tầng cha của dải phải giữ `transform-style: preserve-3d`, và
  * `clip-path` KHÔNG được đặt trực tiếp lên lớp đang xoay (Chrome sẽ cắt lệch) mà đặt trên
  * phần tử con phẳng `.clipbox` bên trong.
@@ -65,6 +70,9 @@ type Ctx = {
   liner: string;             // CSS background lớp lót
   rot: MotionValue<number>;  // góc mở của bản lề (0 = đóng, 180 = mở hẳn)
   curl: MotionValue<number>; // tổng độ uốn từ gốc tới mũi (độ, âm = mũi bị tụt lại phía sau)
+  className?: string;        // thêm vào dải gốc (vd. class `hit` để nhận chạm)
+  onClick?: () => void;
+  visibility?: MotionValue<'visible' | 'hidden'>;
 };
 
 function Skin({ i, inner, ctx }: { i: number; inner: boolean; ctx: Ctx }) {
@@ -73,6 +81,8 @@ function Skin({ i, inner, ctx }: { i: number; inner: boolean; ctx: Ctx }) {
   // Góc tuyệt đối của dải này = góc bản lề + phần uốn tích luỹ tới nó
   const theta = useTransform([rot, curl], ([r, c]: number[]) => r + c * cum);
   const shade = useTransform(theta, inner ? toneIn : toneOut);
+  // nếp gấp chỉ hiện khi nắp đã hé: nắp đóng phải liền một khối với thân, không có vệt sáng/tối ở bản lề
+  const creaseOp = useTransform(theta, (d) => clamp((d - 4) / 22, 0, 1));
   const offset = { top: -i * seg, height: h };
 
   return (
@@ -80,7 +90,7 @@ function Skin({ i, inner, ctx }: { i: number; inner: boolean; ctx: Ctx }) {
       <div className={s.clipbox} style={{ clipPath: bandClip(i, seg, h) }}>
         <div className={`${s.skinBody} ${inner ? s.bodyIn : s.bodyOut}`} style={offset} />
         {inner && <div className={s.skinBody} style={{ ...offset, background: liner, clipPath: LINER_CLIP }} />}
-        {!inner && i === 0 && <div className={s.crease} />}
+        {!inner && i === 0 && <motion.div className={s.crease} style={{ opacity: creaseOp }} />}
         <motion.div className={s.shade} style={{ backgroundColor: shade }} />
       </div>
     </div>
@@ -88,11 +98,12 @@ function Skin({ i, inner, ctx }: { i: number; inner: boolean; ctx: Ctx }) {
 }
 
 function Strip({ i, ctx }: { i: number; ctx: Ctx }) {
-  const { seg, rot, curl } = ctx;
+  const { seg, rot, curl, className, onClick, visibility } = ctx;
   const joint = useTransform(curl, (c) => (c * i) / SUM);
-  const style = i === 0 ? { rotateX: rot, z: 2, height: seg } : { rotateX: joint, height: seg };
+  const style = i === 0 ? { rotateX: rot, z: 2, height: seg, visibility } : { rotateX: joint, height: seg };
+  const cls = i === 0 ? (className ? `${s.flap} ${className}` : s.flap) : s.seg;
   return (
-    <motion.div className={i === 0 ? s.flap : s.seg} style={style}>
+    <motion.div className={cls} style={style} onClick={i === 0 ? onClick : undefined}>
       <Skin i={i} inner={false} ctx={ctx} />
       <Skin i={i} inner ctx={ctx} />
       {i < N - 1 && <Strip i={i + 1} ctx={ctx} />}
@@ -100,11 +111,14 @@ function Strip({ i, ctx }: { i: number; ctx: Ctx }) {
   );
 }
 
-export function EnvelopeFlap({ height, liner, rot, curl }: {
+export function EnvelopeFlap({ height, liner, rot, curl, className, onClick, visibility }: {
   height: number;
   liner: string;
   rot: MotionValue<number>;
   curl: MotionValue<number>;
+  className?: string;
+  onClick?: () => void;
+  visibility?: MotionValue<'visible' | 'hidden'>;
 }) {
-  return <Strip i={0} ctx={{ h: height, seg: height / N, liner, rot, curl }} />;
+  return <Strip i={0} ctx={{ h: height, seg: height / N, liner, rot, curl, className, onClick, visibility }} />;
 }

@@ -77,7 +77,7 @@
 .stage3d {
     position: absolute;
     inset: 0;
-    perspective: 1800px;
+    perspective: 1500px; /* khớp PERSP trong EnvelopeScene */
     pointer-events: none;
 }
 
@@ -283,4 +283,67 @@
 
 .name[contenteditable='true']:focus {
     outline: 2px solid rgb(47 107 255 / .85);
+}
+
+/* ------------------------------------------------------------------ */
+/* NẮP PHONG BÌ NHIỀU DẢI (EnvelopeFlap): dải gốc dùng .flap ở trên,    */
+/* các dải sau là .seg, mỗi dải treo vào đáy dải trước bằng bản lề.     */
+/* ------------------------------------------------------------------ */
+.seg {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    transform-origin: 50% 0;
+    transform-style: preserve-3d;
+    backface-visibility: visible; /* ghi đè `.face *` - dải phải luôn vẽ, chỉ từng mặt giấy mới ẩn lưng */
+}
+
+.skin {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+}
+
+.skinIn {
+    transform: rotateY(180deg);
+}
+
+/* clip-path đặt trên phần tử PHẲNG này, không đặt lên lớp đang xoay */
+.clipbox {
+    position: absolute;
+    inset: 0;
+}
+
+.skinBody {
+    position: absolute;
+    left: 0;
+    right: 0;
+}
+
+.bodyOut {
+    background-color: var(--env);
+    /* nhẹ tay: khi đóng, nắp phải cùng tông màu với thân phong bì (độ đậm nhạt do .shade theo góc lo) */
+    background-image: var(--noise), linear-gradient(180deg, rgb(255 255 255 / .05), rgb(0 0 0 / .06));
+}
+
+.bodyIn {
+    background-color: var(--env);
+    background-image: var(--noise), linear-gradient(0deg, rgb(255 255 255 / .1), rgb(0 0 0 / .1));
+}
+
+/* nếp gấp ở bản lề: một vệt sáng mảnh + một vệt tối ngay dưới */
+.crease {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 5px;
+    background: linear-gradient(to bottom, rgb(255 255 255 / .55) 0 1px, rgb(0 0 0 / .22) 1px, transparent 100%);
+}
+
+.shade {
+    position: absolute;
+    inset: 0 0 -2px 0;
+    pointer-events: none;
 }
