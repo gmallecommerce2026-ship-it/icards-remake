@@ -11,13 +11,20 @@ import c from './FoldingCard.module.css';
 
 type Props = {
   cm: CardMotion;            // open / turn do useCardMotion điều phối
-  view: PageId;              // trang đang là đích: bìa · trang giữa · mặt sau
+  view: PageId;              // trang đang là đích: bìa · trang giữa (trái + phải) · mặt sau
   editable: boolean;
   gesture?: boolean;         // cho phép nhấn giữ + kéo để lật trang
   onViewChange?: (v: PageId) => void;
 };
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
+
+/**
+ * Những vùng KHÔNG được khởi động cử chỉ lật trang: đối tượng trên thiệp, lớp vẽ, ô đang gõ chữ, ô nhập / nút.
+ * Nhờ vậy kéo trên đối tượng = di chuyển đối tượng, kéo trong ô chữ = bôi chọn chữ, kéo khi đang vẽ = vẽ nét;
+ * chỉ kéo ở VÙNG TRỐNG mới lật trang, và không cần khoá user-select toàn cục.
+ */
+const NO_TURN = '[data-el],[data-draw],[data-no-turn],[contenteditable="true"],input,textarea,select,button,a';
 
 /** Lấp đầy khung cha, tự scale từ hệ thiết kế 500×700. */
 export function FoldingCard({ cm, view, editable, gesture = false, onViewChange }: Props) {
@@ -27,6 +34,9 @@ export function FoldingCard({ cm, view, editable, gesture = false, onViewChange 
   const backBg = useEditorStore((s) => s.backdrops.back);
   const coverBg = useEditorStore((s) => s.backdrops.cover);
   const insideBg = useEditorStore((s) => s.backdrops.inside);
+  const leftBg = useEditorStore((s) => s.backdrops.insideLeft);
+  const activePage = useEditorStore((s) => s.page);
+  const drawing = useEditorStore((s) => s.draw.on);
 
   useEffect(() => {
     const el = box.current;
@@ -59,17 +69,31 @@ export function FoldingCard({ cm, view, editable, gesture = false, onViewChange 
   const hop = useTransform(turn, (v) => -16 * Math.sin(Math.PI * v));
 
   const showFront = view !== 'back';
+  // Trang giữa mở ra thành 2 trang: TRÁI (mặt trong của bìa) + PHẢI (ruột thiệp). Cả hai cùng chỉnh được,
+  // trang nào vừa được chạm vào sẽ thành trang đang chỉnh (PageEditor tự kích hoạt).
+  const spread = view === 'inside' || view === 'insideLeft';
   const editCover = canEdit && view === 'cover';
-  const editInside = canEdit && view === 'inside';
+  const editLeft = canEdit && spread;
+  const editInside = canEdit && spread;
   const editBack = canEdit && view === 'back';
 
   /* ---- Nhấn giữ + kéo: sang TRÁI để lật tới (bìa → trang giữa → mặt sau), sang PHẢI để lật lùi.
           Thiệp bám theo tay (scrub); thả tay thì tự hoàn tất hoặc quay lại tuỳ theo độ kéo / vận tốc. */
   function onPointerDown(ev: RPointerEvent) {
-    if (!gesture || cm.busy) return;
+    if (!gesture || cm.busy || !ev.isPrimary) return;
     if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+    const t = ev.target;
+    if (t instanceof Element && t.closest(NO_TURN)) return;          // đang tương tác với đối tượng / chữ / nút
+    if (useEditorStore.getState().draw.on) return;                    // đang ở chế độ vẽ: kéo = vẽ, không lật trang
     const el = box.current;
     if (!el) return;
+
+    // Bấm vào vùng trống lúc đang gõ chữ: chốt nội dung ô chữ trước (preventDefault bên dưới sẽ chặn blur tự nhiên)
+    const a = document.activeElement;
+    if (a instanceof HTMLElement && a.isContentEditable) a.blur();
+    // Chuột: chặn bôi đen / kéo ảnh ma ngay từ lúc nhấn, chỉ ở vùng trống - thay cho user-select:none toàn cục
+    if (ev.pointerType === 'mouse') ev.preventDefault();
+
     const unit = el.getBoundingClientRect().width * 0.75;   // kéo ~75% bề rộng thiệp = một trang
     const sx = ev.clientX, sy = ev.clientY;
     const startPos = cm.pos.get();
@@ -109,24 +133,28 @@ export function FoldingCard({ cm, view, editable, gesture = false, onViewChange 
     window.addEventListener('pointercancel', end);
   }
 
+  const showActive = (pg: PageId) => canEdit && spread && activePage === pg;
+
   return (
     <div
       ref={box}
       onPointerDown={onPointerDown}
-      onDragStart={(ev) => ev.preventDefault()}
+      onDragStart={(ev) => {
+        // chặn kéo ảnh ma, nhưng vẫn cho kéo-thả chữ đang bôi chọn trong ô đang gõ
+        if (!(ev.target instanceof Element && ev.target.closest('[contenteditable="true"]'))) ev.preventDefault();
+      }}
       style={{
         position: 'absolute', inset: 0,
         touchAction: gesture ? 'pan-y' : undefined,
-        cursor: gesture ? (dragging ? 'grabbing' : 'grab') : undefined,
-        userSelect: 'none', WebkitUserSelect: 'none',
+        cursor: gesture ? (dragging ? 'grabbing' : drawing ? undefined : 'grab') : undefined,
       }}
     >
       <div className={c.stage} style={{ transform: `scale(${k})` }}>
         <motion.div className={c.flipper} style={{ rotateY: turnDeg, rotateX: tilt, scale: pop, y: hop }}>
           {/* Mặt trước + ruột thiệp */}
           <motion.div className={c.front} style={{ opacity: frontAlpha, pointerEvents: showFront ? 'auto' : 'none' }}>
-            {/* Ruột thiệp (nằm dưới) */}
-            <div className={c.sheet} data-editable={editInside} style={{ background: insideBg }}>
+            {/* Ruột thiệp = TRANG PHẢI (nằm dưới) */}
+            <div className={c.sheet} data-editable={editInside} data-active={showActive('inside')} style={{ background: insideBg }}>
               <motion.div style={{ position: 'absolute', inset: 0, visibility: insideVis }}>
                 <PageEditor pageId="inside" editable={editInside} />
               </motion.div>
@@ -139,7 +167,9 @@ export function FoldingCard({ cm, view, editable, gesture = false, onViewChange 
                 <PageEditor pageId="cover" editable={editCover} />
                 <motion.div aria-hidden className={c.shadeOut} style={{ opacity: shadeOut }} />
               </div>
-              <div className={`${c.face} ${c.back}`}>
+              {/* Mặt trong của bìa = TRANG TRÁI. Đã xoay sẵn 180° nên khi bìa mở hẳn thì chữ đọc đúng chiều */}
+              <div className={`${c.face} ${c.back} ${c.leftPage}`} data-editable={editLeft} data-active={showActive('insideLeft')} style={{ background: leftBg }}>
+                <PageEditor pageId="insideLeft" editable={editLeft} />
                 <motion.div aria-hidden className={c.shadeIn} style={{ opacity: shadeIn }} />
               </div>
             </motion.div>

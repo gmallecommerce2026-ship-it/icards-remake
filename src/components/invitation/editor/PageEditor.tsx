@@ -34,7 +34,7 @@ export function FrameView({ el }: { el: CardEl }) {
 }
 
 /** Lớp phủ nhận nét vẽ tay khi đang ở tab Vẽ. Tọa độ quy về hệ thiết kế 500×700. */
-function DrawLayer({ rootRef }: { rootRef: RefObject<HTMLDivElement | null> }) {
+function DrawLayer({ rootRef, pageId }: { rootRef: RefObject<HTMLDivElement | null>; pageId: PageId }) {
   const cfg = useEditorStore((s) => s.draw);
   const [pts, setPts] = useState<[number, number][]>([]);
   const live = useRef<[number, number][]>([]);
@@ -47,8 +47,11 @@ function DrawLayer({ rootRef }: { rootRef: RefObject<HTMLDivElement | null> }) {
   function down(ev: RPointerEvent) {
     if (!rootRef.current) return;
     ev.preventDefault();
+    ev.stopPropagation();                       // nét vẽ ngang không được kích hoạt cử chỉ lật trang của FoldingCard
     ev.currentTarget.setPointerCapture(ev.pointerId);
-    useEditorStore.getState().select(null);
+    const st = useEditorStore.getState();
+    if (st.page !== pageId) st.setPage(pageId); // trang trái / phải: vẽ lên trang nào thì trang đó thành trang đang chỉnh
+    st.select(null);
     live.current = [at(ev)];
     setPts(live.current);
   }
@@ -68,7 +71,7 @@ function DrawLayer({ rootRef }: { rootRef: RefObject<HTMLDivElement | null> }) {
   const d = pts.length ? 'M' + pts.map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join('L') : '';
   const marker = cfg.tool === 'marker';
   return (
-    <div className={e.drawLayer} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} aria-label="Vùng vẽ tay">
+    <div className={e.drawLayer} data-draw="" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} aria-label="Vùng vẽ tay">
       <svg viewBox={`0 0 ${PAGE.w} ${PAGE.h}`} width="100%" height="100%" style={{ overflow: 'visible', pointerEvents: 'none' }} aria-hidden>
         {d && <path d={d} fill="none" stroke={cfg.color} strokeWidth={marker ? cfg.size * 2.4 : cfg.size} strokeOpacity={marker ? 0.45 : 1} strokeLinecap="round" strokeLinejoin="round" />}
       </svg>
@@ -158,7 +161,7 @@ function ElNode({ el, editable, selected, rootRef, setGuides }: {
   const flip = { transform: `scale(${el.flipX ? -1 : 1}, ${el.flipY ? -1 : 1})` };
 
   return (
-    <div ref={ref} className={e.node} style={style}
+    <div ref={ref} className={e.node} style={style} data-el="" data-selected={selected}
       onPointerDown={(ev) => begin(ev, 'move')}
       onDoubleClick={() => editable && el.kind === 'text' && useEditorStore.getState().edit(el.id)}>
       {el.kind === 'text' && (
@@ -209,17 +212,32 @@ function ElNode({ el, editable, selected, rootRef, setGuides }: {
 export function PageEditor({ pageId, editable }: { pageId: PageId; editable: boolean }) {
   const root = useRef<HTMLDivElement>(null);
   const els = useEditorStore((s) => s.pages[pageId]);
-  const drawing = useEditorStore((s) => s.draw.on && s.page === pageId);
+  const drawing = useEditorStore((s) => s.draw.on);   // lớp vẽ có mặt ở MỌI trang đang chỉnh được (trang trái + phải)
   const selectedId = useEditorStore((s) => s.selectedId);
   const [guides, setGuides] = useState<Guides>({ v: false, h: false });
 
+  // Chạm vào trang nào (đối tượng, vùng trống hay lớp vẽ) thì trang đó thành trang đang chỉnh.
+  // Chạy ở pha capture nên xong TRƯỚC khi đối tượng được chọn; chốt ô chữ đang gõ ở trang kia để không mất nội dung.
+  function activate() {
+    if (!editable) return;
+    const st = useEditorStore.getState();
+    if (st.page === pageId) return;
+    const a = document.activeElement;
+    if (a instanceof HTMLElement && a.isContentEditable) a.blur();
+    st.setPage(pageId);
+  }
+
   return (
     <div ref={root} className={e.page} data-editable={editable}
+      onPointerDownCapture={activate}
       onPointerDown={(ev) => { if (editable && ev.target === ev.currentTarget) useEditorStore.getState().select(null); }}>
+      {editable && els.length === 0 && !drawing && (
+        <p className={e.emptyHint} aria-hidden>Trang trống · thêm chữ, ảnh hoặc hình từ thanh công cụ bên trái</p>
+      )}
       {els.map((el) => (
         <ElNode key={el.id} el={el} editable={editable} selected={editable && selectedId === el.id} rootRef={root} setGuides={setGuides} />
       ))}
-      {editable && drawing && <DrawLayer rootRef={root} />}
+      {editable && drawing && <DrawLayer rootRef={root} pageId={pageId} />}
       {editable && guides.v && <i className={e.guideV} />}
       {editable && guides.h && <i className={e.guideH} />}
     </div>

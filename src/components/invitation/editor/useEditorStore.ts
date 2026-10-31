@@ -261,6 +261,14 @@ export const useEditorStore = create<State>((set, get) => {
       ...(record ? push(s) : { past: [], future: [] }),
       ...fromTemplate(t), tplName: t.name, page: 'cover', selectedId: null, editingId: null,
     })),
-    hydrate: (d) => set({ pages: d.pages, backdrops: d.backdrops, selectedId: null, editingId: null, past: [], future: [] }),
+    // bản nháp lưu từ trước khi có trang trái không có khoá insideLeft: bù khoá thiếu để PageEditor không bị crash
+    hydrate: (d) => {
+      const pg: Partial<Snap['pages']> = d.pages, bd: Partial<Snap['backdrops']> = d.backdrops;
+      set({
+        pages: { cover: [], insideLeft: [], inside: [], back: [], ...pg },
+        backdrops: { cover: '#fffaf0', insideLeft: bd.inside ?? '#ffffff', inside: '#ffffff', back: '#fffaf0', ...bd },
+        selectedId: null, editingId: null, past: [], future: [],
+      });
+    },
   };
 });

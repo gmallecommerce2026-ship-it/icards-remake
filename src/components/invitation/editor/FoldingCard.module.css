@@ -46,6 +46,25 @@
     box-shadow: 0 18px 50px rgb(0 0 0 / .45);
 }
 
+/* trang trái (mặt trong của bìa): bóng nếp gấp nằm sát gáy = cạnh PHẢI trong hệ toạ độ đã xoay 180° */
+.leftPage::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 26px;
+    background: linear-gradient(270deg, rgb(0 0 0 / .2), transparent);
+    pointer-events: none;
+}
+
+/* trang đang chỉnh trên cặp trang mở: viền xanh nhạt để biết nút thêm / nền sẽ tác động vào trang nào */
+.sheet[data-active='true'],
+.face[data-active='true'] {
+    outline: 2px solid rgb(47 107 255 / .55);
+    outline-offset: -2px;
+}
+
 /* khi đang chỉnh sửa, cho phần tử tràn ra ngoài để thấy tay nắm ở mép thiệp */
 .sheet[data-editable='true'],
 .face[data-editable='true'] {

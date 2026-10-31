@@ -166,7 +166,7 @@ export function EnvelopeDesigner({ recipientName, editable = false, templateSlug
     if (then) later(wait + 2500, then);
   }
   // thời gian khép thiệp về bìa (bìa đóng) trước khi đút vào phong bì
-  function closeWait() { return view === 'cover' ? 0 : view === 'inside' ? 1400 : 2700; }
+  function closeWait() { return view === 'cover' ? 0 : view === 'back' ? 2700 : 1400; }   // 'inside' và 'insideLeft' cùng là cặp trang giữa
   function onViewChange(v: PageId) { stopPlay(); setView(v); }
   // chạm vào phong bì: thiệp đang ở ngoài thì CẤT VÀO; ngược lại chạm vào mặt địa chỉ thì lật phong bì, chạm vào mặt nắp thì đóng/mở nắp
   function onEnvClick(face: 'front' | 'back') {
@@ -411,7 +411,7 @@ export function EnvelopeDesigner({ recipientName, editable = false, templateSlug
               ? 'Chạm vào tấm thiệp phía sau để chuyển sang chỉnh sửa thiệp'
               : cardFront
               ? (canEdit || (editable && mode === 'edit')
-                  ? 'Nhấn giữ vùng trống của thiệp rồi kéo sang trái / phải để lật trang · chạm vào phong bì phía sau để chỉnh phong bì'
+                  ? 'Kéo đối tượng để di chuyển · nhấn giữ vùng trống rồi kéo sang trái / phải để lật trang · chạm vào phong bì phía sau để chỉnh phong bì'
                   : 'Nhấn giữ thiệp rồi kéo sang trái để mở, sang phải để đóng · chạm vào phong bì phía sau để cất thiệp')
               : flapOpen ? 'Chạm vào tấm thiệp để lấy ra · chạm vào nắp để đóng phong bì' : 'Chạm vào phong bì để mở nắp'}
           </p>
@@ -419,7 +419,7 @@ export function EnvelopeDesigner({ recipientName, editable = false, templateSlug
 
         {cardFront && (
           <div className={d.dots} aria-hidden>
-            {DOTS.map((v) => <i key={v} data-on={view === v} />)}
+            {DOTS.map((v) => <i key={v} data-on={view === v || (v === 'inside' && view === 'insideLeft')} />)}
           </div>
         )}
       </main>
