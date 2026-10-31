@@ -5,6 +5,8 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEv
 import { animate, motion, useMotionValue, useSpring, useTransform, useVelocity, type MotionValue } from 'motion/react';
 import { Stamp } from './Stamp';
 import { EnvelopeFlap } from './EnvelopeFlap';
+import { FlapDebugPanel } from './FlapDebugPanel';
+import { dbg } from './flapDebug';
 import s from './envelope.module.css';
 
 /* ------------------------------------------------------------------ */
@@ -59,7 +61,7 @@ const PAN_SLID = CY - (POSE.slid.cy - IN_HALF_H + ENV.y + ENV.h) / 2;
 /* Máy quay của phong bì: tâm phối cảnh hạ THẤP hơn thân phong bì (như nhìn từ góc chếch phía trên).
    Thân phong bì nằm ở z = 0 nên không bị méo; chỉ phần nhô theo trục z (nắp đang dựng) mới được nâng lên màn hình,
    nên nắp đọc được là một tấm giấy đang LẬT LÊN thay vì co dẹt thành một đường. */
-const PERSP = 1500;                  // khớp `.stage3d { perspective }` trong envelope.module.css
+const PERSP = 3000;                  // khớp `.stage3d { perspective }` trong envelope.module.css
 const PERSP_DROP = ENV.h * 1.2;      // tâm phối cảnh thấp hơn tâm phong bì chừng này (px)
 const HINGE_TO_ORIGIN = ENV.h / 2 + PERSP_DROP;
 /** độ nâng (px, thiết kế) của mũi nắp so với bản lề tại góc `deg`, khi nhìn mặt nắp */
@@ -106,8 +108,8 @@ const onKey = (fn?: () => void) => (e: KeyboardEvent) => {
  *  nên khớp tuyệt đối với nhau; thiệp chen vào GIỮA hai tấm theo trục z. */
 function Rotor({ flip, origin, children, innerRef }: { flip: MotionValue<number>; origin: MotionValue<string>; children: ReactNode; innerRef?: React.Ref<HTMLDivElement> }) {
   return (
-    <motion.div className={s.stage3d} style={{ perspectiveOrigin: origin }}>
-      <motion.div ref={innerRef} className={s.envelope} style={{ left: ENV.x, top: ENV.y, width: ENV.w, height: ENV.h, rotateY: flip }}>
+    <motion.div className={s.stage3d} data-stage3d style={{ perspectiveOrigin: origin }}>
+      <motion.div ref={innerRef} className={s.envelope} data-envelope style={{ left: ENV.x, top: ENV.y, width: ENV.w, height: ENV.h, rotateY: flip }}>
         {children}
       </motion.div>
     </motion.div>
@@ -136,7 +138,6 @@ export function EnvelopeScene({
   const open = openAmt ?? idleOpen;
 
   const rad = Math.PI / 180;
-  const groundX = useTransform(flip, (v) => 0.3 + 0.7 * Math.abs(Math.cos(v * rad)));
   const sheen = useTransform(flip, (v) => 0.5 * Math.abs(Math.sin(2 * v * rad)));
   const flapShadow = useTransform(flapRot, [0, 45], [1, 0]);
   // Nắp đóng nằm TRÊN thiệp (tấm trước), nắp mở nằm SAU thiệp (tấm lưng). Đổi tấm ở đúng 90° - lúc nắp dựng
@@ -157,6 +158,11 @@ export function EnvelopeScene({
     return () => ro.disconnect();
   }, []);
 
+  // (debug) ghi lại mỗi lần props điều khiển thay đổi
+  useEffect(() => {
+    dbg('props', { side, flapOpen, cardFront, focus, flapRot: flapRot.get(), flip: flip.get() });
+  }, [side, flapOpen, cardFront, focus, flapRot, flip]);
+
   // Lật phong bì
   useEffect(() => {
     const c = animate(flip, side === 'front' ? 0 : 180, { duration: reduce ? 0 : 1.15, ease: [0.45, 0, 0.2, 1] });
@@ -167,12 +173,14 @@ export function EnvelopeScene({
   // chạm thân phong bì thì nảy nhẹ 1-2 lần rồi nằm phẳng
   useEffect(() => {
     const from = flapRot.get(), to = flapOpen ? 180 : 0;
-    if (Math.abs(from - to) < 1) { flapRot.set(to); return; }
+    if (Math.abs(from - to) < 1) { dbg('flap:skip (đã ở đúng góc, KHÔNG chạy animation)', { from, to, flapOpen }); flapRot.set(to); return; }
     const k = Math.max(0.35, Math.abs(from - to) / 180);
+    dbg('flap:animate:start', { from, to, flapOpen, k, reduce });
+    const done = (name: string) => () => dbg('flap:animate:' + name, { rot: flapRot.get(), curl: curl.get() });
     const c = flapOpen
-      ? animate(flapRot, [from, 188, 180], { duration: reduce ? 0 : 1.2 * k, times: [0, 0.72, 1], ease: [[0.3, 0, 0.2, 1], 'easeInOut'] })
-      : animate(flapRot, [from, 0, 7, 0, 1.5, 0], { duration: reduce ? 0 : 1.15 * k + 0.35, times: [0, 0.6, 0.74, 0.86, 0.94, 1], ease: [[0.6, 0, 0.9, 0.5], 'easeOut', 'easeIn', 'easeOut', 'easeIn'] });
-    return () => c.stop();
+      ? animate(flapRot, [from, 188, 180], { duration: reduce ? 0 : 1.2 * k, times: [0, 0.72, 1], ease: [[0.3, 0, 0.2, 1], 'easeInOut'], onComplete: done('done') })
+      : animate(flapRot, [from, 0, 7, 0, 1.5, 0], { duration: reduce ? 0 : 1.15 * k + 0.35, times: [0, 0.6, 0.74, 0.86, 0.94, 1], ease: [[0.6, 0, 0.9, 0.5], 'easeOut', 'easeIn', 'easeOut', 'easeIn'], onComplete: done('done') });
+    return () => { dbg('flap:animate:cleanup (bị dừng/huỷ)', { rot: flapRot.get() }); c.stop(); };
   }, [flapOpen, reduce, flapRot]);
 
   // Thiệp trồi lên khỏi miệng phong bì SAU khi nắp đã mở; khi đóng nắp thì thiệp chìm xuống TRƯỚC
@@ -277,6 +285,7 @@ export function EnvelopeScene({
   // Thiệp đã rút ra: việc ĐỔI CHỖ do `tap` bên dưới lo (không dựa vào click của từng mảnh phong bì), nên ở đây bỏ qua
   const envClick = (face: 'front' | 'back') => (e?: { stopPropagation: () => void }) => {
     e?.stopPropagation();
+    dbg('scene:envClick', { face, cardFront, focus, blocked: cardFront && focus === 'card' });
     if (cardFront && focus === 'card') return;
     onEnvClick?.(face);
   };
@@ -361,14 +370,15 @@ export function EnvelopeScene({
         <motion.div className={s.world} style={{ y: pan, perspectiveOrigin: `${CX}px ${CY}px` }}>
           {/* ===== TẤM LƯNG: giấy phong bì, lớp lót, nắp ĐÃ MỞ (nằm sau thiệp) ===== */}
           <motion.div className={s.plane} style={{ x: envX, y: envY, scale: envS, z: backZ, zIndex: 1, rotateY: envRotY, rotateX: envRotX }}>
-            <motion.div className={s.ground} style={{ left: ENV.x, top: ENV.y, width: ENV.w, height: ENV.h, scaleX: groundX }} />
             <Rotor flip={flip} origin={persp} innerRef={envRef}>
+              {/* bóng đổ nằm TRONG khối xoay: cùng rotateY + perspective với phong bì nên luôn khít, không bị đuổi trễ */}
+              <div className={s.ground} />
               <div className={`${s.face} ${s.back}`}>
                 <div className={s.paper} />
                 <div className={s.interior} style={{ background: liner }} />
                 <EnvelopeFlap
                   height={FLAP_H} liner={liner} rot={flapRot} curl={curl}
-                  visibility={flapBackVis} className={s.hit} onClick={() => envClick('back')()}
+                  visibility={flapBackVis} sheet="back" className={s.hit} onClick={() => envClick('back')()}
                 />
               </div>
             </Rotor>
@@ -450,7 +460,7 @@ export function EnvelopeScene({
                 <motion.div className={s.flapShadow} style={{ opacity: flapShadow }}><i /></motion.div>
                 <EnvelopeFlap
                   height={FLAP_H} liner={liner} rot={flapRot} curl={curl}
-                  visibility={flapFrontVis} className={s.hit}
+                  visibility={flapFrontVis} sheet="front" className={s.hit}
                 />
                 <motion.div className={s.sheen} style={{ opacity: sheen }} />
               </div>
@@ -458,6 +468,15 @@ export function EnvelopeScene({
           </motion.div>
         </motion.div>
       </div>
+      <FlapDebugPanel
+        sceneRef={box}
+        flapRot={flapRot} curl={curl} flip={flip} t={t} rise={rise} backAmt={backAmt}
+        info={{
+          side, flapOpen, cardFront, focus, scale: dim?.k, container: dim ? `${Math.round(dim.w)}x${Math.round(dim.h)}` : null,
+          ENV, FLAP_H, FLAP_STRIPS: 10, PERSP, PERSP_DROP, HINGE_TO_ORIGIN,
+          note: 'FLAP_H / PERSP = tỉ lệ độ sâu: nắp cao FLAP_H px, camera cách PERSP px',
+        }}
+      />
     </div>
   );
 }

@@ -25,6 +25,8 @@ import s from './envelope.module.css';
 
 const N = 10;                          // số dải giấy
 const SUM = (N * (N - 1)) / 2;         // trọng số uốn tăng dần về phía mũi nắp
+export const FLAP_N = N;               // (debug) dùng ở FlapDebugPanel
+export const FLAP_SUM = SUM;
 const RAD = Math.PI / 180;
 const OVERLAP = 1.2;                   // px chồng mép giữa hai dải để không hở đường nối
 const LINER_INSET = 3.5;               // lề lớp lót (%)
@@ -73,6 +75,7 @@ type Ctx = {
   className?: string;        // thêm vào dải gốc (vd. class `hit` để nhận chạm)
   onClick?: () => void;
   visibility?: MotionValue<'visible' | 'hidden'>;
+  sheet?: 'back' | 'front';  // (debug) tấm nào chứa nắp này
 };
 
 function Skin({ i, inner, ctx }: { i: number; inner: boolean; ctx: Ctx }) {
@@ -87,23 +90,30 @@ function Skin({ i, inner, ctx }: { i: number; inner: boolean; ctx: Ctx }) {
 
   return (
     <div className={inner ? `${s.skin} ${s.skinIn}` : s.skin}>
-      <div className={s.clipbox} style={{ clipPath: bandClip(i, seg, h) }}>
+      <div className={s.clipbox} data-clipbox style={{ clipPath: bandClip(i, seg, h) }}>
         <div className={`${s.skinBody} ${inner ? s.bodyIn : s.bodyOut}`} style={offset} />
         {inner && <div className={s.skinBody} style={{ ...offset, background: liner, clipPath: LINER_CLIP }} />}
         {!inner && i === 0 && <motion.div className={s.crease} style={{ opacity: creaseOp }} />}
-        <motion.div className={s.shade} style={{ backgroundColor: shade }} />
+        <motion.div className={s.shade} data-shade style={{ backgroundColor: shade }} />
       </div>
     </div>
   );
 }
 
 function Strip({ i, ctx }: { i: number; ctx: Ctx }) {
-  const { seg, rot, curl, className, onClick, visibility } = ctx;
+  const { seg, rot, curl, className, onClick, visibility, sheet } = ctx;
   const joint = useTransform(curl, (c) => (c * i) / SUM);
   const style = i === 0 ? { rotateX: rot, z: 2, height: seg, visibility } : { rotateX: joint, height: seg };
   const cls = i === 0 ? (className ? `${s.flap} ${className}` : s.flap) : s.seg;
   return (
-    <motion.div className={cls} style={style} onClick={i === 0 ? onClick : undefined}>
+    <motion.div
+      className={cls}
+      style={style}
+      onClick={i === 0 ? onClick : undefined}
+      data-seg={i}
+      data-flap-root={i === 0 ? '' : undefined}
+      data-sheet={i === 0 ? sheet : undefined}
+    >
       <Skin i={i} inner={false} ctx={ctx} />
       <Skin i={i} inner ctx={ctx} />
       {i < N - 1 && <Strip i={i + 1} ctx={ctx} />}
@@ -111,7 +121,7 @@ function Strip({ i, ctx }: { i: number; ctx: Ctx }) {
   );
 }
 
-export function EnvelopeFlap({ height, liner, rot, curl, className, onClick, visibility }: {
+export function EnvelopeFlap({ height, liner, rot, curl, className, onClick, visibility, sheet }: {
   height: number;
   liner: string;
   rot: MotionValue<number>;
@@ -119,6 +129,7 @@ export function EnvelopeFlap({ height, liner, rot, curl, className, onClick, vis
   className?: string;
   onClick?: () => void;
   visibility?: MotionValue<'visible' | 'hidden'>;
+  sheet?: 'back' | 'front';
 }) {
-  return <Strip i={0} ctx={{ h: height, seg: height / N, liner, rot, curl, className, onClick, visibility }} />;
+  return <Strip i={0} ctx={{ h: height, seg: height / N, liner, rot, curl, className, onClick, visibility, sheet }} />;
 }

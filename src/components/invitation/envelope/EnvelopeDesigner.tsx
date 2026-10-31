@@ -7,6 +7,7 @@ import { motion, useMotionValue, useSpring } from 'motion/react';
 import { getTemplateBySlug } from '@/lib/templates';
 import { ROUTES } from '@/lib/routes';
 import { EnvelopeScene } from './EnvelopeScene';
+import { dbg } from './flapDebug';
 import { Stamp, STAMPS } from './Stamp';
 import { ENVELOPES, LINERS, TONES, type Tone } from './envelope.data';
 import { FoldingCard } from '../editor/FoldingCard';
@@ -100,6 +101,20 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
     return null;
   });
 
+  // Xoay phong bì ra MẶT TRƯỚC (mặt có tem): nắp đóng lại cùng lúc đang xoay; xoay về mặt nắp thì trả nắp về trạng thái trước đó
+  const flapBeforeFront = useRef<boolean | null>(null);
+  const flapOpenRef = useRef(flapOpen);
+  flapOpenRef.current = flapOpen;
+  useEffect(() => {
+    if (side === 'front') {
+      flapBeforeFront.current = flapOpenRef.current;
+      setFlapOpen(false);
+    } else if (flapBeforeFront.current !== null) {
+      if (flapBeforeFront.current) setFlapOpen(true);
+      flapBeforeFront.current = null;
+    }
+  }, [side]);
+
   // Nạp phông chữ một lần (thiệp dùng cả ở chế độ xem)
   useEffect(() => {
     if (document.getElementById('inv-fonts')) return;
@@ -178,7 +193,10 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
   function onEnvClick(face: 'front' | 'back') {
     if (cardFront && focus === 'card') return;   // phong bì nằm sau thiệp: việc đảo lên trước do onSwap (chạm theo hình học) lo
     interrupt();
-    if (cardFront) { if (face === 'front' && !editable) setSide('back'); } // phong bì đã ở trước (trình chỉnh sửa: chạm mặt địa chỉ = sửa tên, lật bằng nút Lật)
+    dbg('designer:onEnvClick', { face, cardFront, focus, flapOpen, editable });
+    // phong bì đã ở trước (trình chỉnh sửa: chạm mặt địa chỉ = sửa tên, lật bằng nút Lật); chạm mặt nắp = đóng/mở nắp
+    // (trước đây nhánh này bỏ qua mặt nắp nên khi thiệp đã rút ra thì nắp KHÔNG BAO GIỜ đóng được)
+    if (cardFront) { if (face === 'front') { if (!editable) setSide('back'); } else setFlapOpen((v) => !v); }
     else if (face === 'front') { if (!editable) setSide('back'); }
     else setFlapOpen((v) => !v);
   }
