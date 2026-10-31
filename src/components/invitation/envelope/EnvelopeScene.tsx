@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
-import { animate, motion, useMotionValue, useReducedMotion, useTransform, type MotionValue } from 'motion/react';
+import { animate, motion, useMotionValue, useTransform, type MotionValue } from 'motion/react';
 import { Stamp } from './Stamp';
 import s from './envelope.module.css';
 
@@ -45,6 +45,9 @@ const T_SLIDE = 0.4;     // mốc của t: thiệp (đang nằm ngang) đã trư
 const T_TURN = 0.34;     // từ mốc này thiệp bắt đầu xoay dọc + bay vòng cung ra trước
 const BOW = -60;         // độ phình của quỹ đạo vòng cung (px, sang trái)
 const Z_BUMP = 170;
+const ORB_X = 190;       // đổi chỗ kiểu quỹ đạo: tới nửa đường hai vật văng sang 2 bên (thiệp trái, phong bì phải) rồi mới đổi trước/sau
+const ORB_DIP = 0.14;    // cả hai lùi xa ~14% ở giữa quỹ đạo -> cảm giác có chiều sâu, không đè nhau lúc hoán đổi z-index
+const ORB_YAW = 26;      // xoay quanh trục dọc ngược chiều nhau khi lướt qua
 const SWAP_ARC = 70;     // khi đổi chỗ: thiệp nhấc lên, phong bì hạ xuống từng ấy px để hai vật lướt qua nhau không chồng lên nhau
 
 /* "Máy quay" đi theo nội dung: nắp mở / thiệp trượt lên làm cụm cao hơn nên cả cảnh được kéo xuống
@@ -72,6 +75,8 @@ type Props = {
   openAmt?: MotionValue<number>;            // 0..1: bìa thiệp mở bao nhiêu (để thiệp trượt sang phải nhường chỗ cho bìa)
   onEnvClick?: (face: 'front' | 'back') => void;  // chạm vào phong bì
   onCardClick?: () => void;                 // chạm vào thiệp đang nằm trong phong bì -> rút ra
+  onRecipientChange?: (v: string) => void;   // có => tên người nhận ở mặt trước sửa được ngay trên phong bì
+  onSwap?: (to: 'card' | 'envelope') => void;     // thiệp đã rút ra: chạm vào vật nào thì vật đó muốn lên trước
 };
 
 function isLight(hex: string) {
@@ -96,9 +101,11 @@ function Rotor({ flip, children, innerRef }: { flip: MotionValue<number>; childr
 
 export function EnvelopeScene({
   card, envelopeColor, liner, stampId, recipientName = 'Tên người nhận',
-  side, flapOpen, cardFront = false, focus = 'card', openAmt, onEnvClick, onCardClick,
+  side, flapOpen, cardFront = false, focus = 'card', openAmt, onEnvClick, onCardClick, onSwap, onRecipientChange,
 }: Props) {
-  const reduce = useReducedMotion();
+  // Hiệu ứng là tính năng cốt lõi của thiệp: luôn chạy, kể cả khi hệ điều hành bật "giảm chuyển động"
+  // (trước đây reduce=true làm mọi animation có duration 0 nên hai vật nhảy thẳng sang vị trí mới)
+  const reduce = false;
   const pmId = useId().replace(/:/g, '');
   const box = useRef<HTMLDivElement>(null);
   const envRef = useRef<HTMLDivElement>(null);
@@ -119,6 +126,8 @@ export function EnvelopeScene({
   const flapShadow = useTransform(flapRot, [0, 45], [1, 0]);
   // Nắp đóng nằm TRÊN thiệp (tấm trước), nắp mở nằm SAU thiệp (tấm lưng). Đổi tấm ở đúng 90° - lúc nắp dựng
   // thẳng đứng, chỉ còn là một đường mảnh - nên không thấy giật.
+  // ánh sáng trên mặt nắp đổi theo góc gập (tối nhất khi nắp dựng đứng, sáng dần khi nằm phẳng)
+  const flapLight = useTransform(flapRot, (v) => `brightness(${(1 - 0.3 * Math.sin(Math.min(180, Math.max(0, v)) * rad)).toFixed(3)})`);
   const flapBackVis = useTransform(flapRot, (v) => (v > 90 ? 'visible' : 'hidden'));
   const flapFrontVis = useTransform(flapRot, (v) => (v > 90 ? 'hidden' : 'visible'));
 
@@ -141,9 +150,15 @@ export function EnvelopeScene({
     return () => c.stop();
   }, [side, reduce, flip]);
 
-  // Nắp phong bì: đóng/mở chậm, như đang gập giấy thật trong không gian
+  // Nắp phong bì: MỞ = bật lên hơi quá rồi lắng xuống (giấy có độ đàn hồi); ĐÓNG = rơi theo trọng lực (nhanh dần),
+  // chạm thân phong bì thì nảy nhẹ 1-2 lần rồi nằm phẳng
   useEffect(() => {
-    const c = animate(flapRot, flapOpen ? 180 : 0, { duration: reduce ? 0 : 1.35, ease: [0.4, 0, 0.2, 1] });
+    const from = flapRot.get(), to = flapOpen ? 180 : 0;
+    if (Math.abs(from - to) < 1) { flapRot.set(to); return; }
+    const k = Math.max(0.35, Math.abs(from - to) / 180);
+    const c = flapOpen
+      ? animate(flapRot, [from, 188, 180], { duration: reduce ? 0 : 1.2 * k, times: [0, 0.72, 1], ease: [[0.3, 0, 0.2, 1], 'easeInOut'] })
+      : animate(flapRot, [from, 0, 7, 0, 1.5, 0], { duration: reduce ? 0 : 1.15 * k + 0.35, times: [0, 0.6, 0.74, 0.86, 0.94, 1], ease: [[0.6, 0, 0.9, 0.5], 'easeOut', 'easeIn', 'easeOut', 'easeIn'] });
     return () => c.stop();
   }, [flapOpen, reduce, flapRot]);
 
@@ -160,13 +175,16 @@ export function EnvelopeScene({
   // Rút thiệp ra / đút thiệp vào: cùng một hành trình, chạy xuôi hoặc ngược
   useEffect(() => {
     // t chạy tuyến tính; độ mềm do từng chặng (smoothstep) bên dưới đảm nhiệm
-    const c = animate(t, cardFront ? 1 : 0, { duration: reduce ? 0 : 2.6, ease: 'linear' });
+    // thời lượng tỉ lệ với quãng còn lại: bị ngắt giữa chừng thì quay đầu ngay, không phải chạy lại cả 2.6s
+    const to = cardFront ? 1 : 0;
+    const c = animate(t, to, { duration: reduce ? 0 : Math.max(0.3, 2.6 * Math.abs(to - t.get())), ease: 'linear' });
     return () => c.stop();
   }, [cardFront, reduce, t]);
 
   // Đảo vị trí thiệp <-> phong bì (hai vật đổi chỗ, bay vòng cung quanh nhau)
   useEffect(() => {
-    const c = animate(fv, focus === 'envelope' ? 1 : 0, { duration: reduce ? 0 : 1.6, ease: [0.45, 0, 0.2, 1] });
+    const to = focus === 'envelope' ? 1 : 0;
+    const c = animate(fv, to, { duration: reduce ? 0 : Math.max(0.4, 1.6 * Math.abs(to - fv.get())), ease: [0.45, 0, 0.2, 1] });
     return () => c.stop();
   }, [focus, reduce, fv]);
 
@@ -180,7 +198,7 @@ export function EnvelopeScene({
   const cardX = useTransform([swing, open, fv], ([u, op, f]: number[]) => {
     const closed = lerp(POSE.outClosed.cx, POSE.behind.cx, f);
     const outX = lerp(closed, POSE.outOpen.cx, op * (1 - f));
-    return lerp(POSE.sealed.cx, outX, u) + BOW * Math.sin(Math.PI * u) * (1 - f) - CARD_CX;
+    return lerp(POSE.sealed.cx, outX, u) + BOW * Math.sin(Math.PI * u) * (1 - f) - ORB_X * Math.sin(Math.PI * f) * u - CARD_CX;
   });
   const cardY = useTransform([slide, swing, rise, open, fv], ([sl, u, r, op, f]: number[]) => {
     const inY = lerp(POSE.sealed.cy, POSE.peek.cy, r);
@@ -191,11 +209,11 @@ export function EnvelopeScene({
   });
   const cardScale = useTransform([swing, open, fv], ([u, op, f]: number[]) => {
     const closed = lerp(POSE.outClosed.s, POSE.behind.s, f);
-    return lerp(POSE.sealed.s, lerp(closed, POSE.outOpen.s, op * (1 - f)), u);
+    return lerp(POSE.sealed.s, lerp(closed, POSE.outOpen.s, op * (1 - f)), u) * (1 - ORB_DIP * Math.sin(Math.PI * f) * u);
   });
   const cardRotZ = useTransform(swing, (u) => -90 * (1 - u));      // -90° = nằm ngang · 0° = đứng thẳng
   const cardRotX = useTransform(swing, (u) => -16 * Math.sin(Math.PI * u));
-  const cardRotY = useTransform(swing, (u) => 38 * Math.sin(Math.PI * u));
+  const cardRotY = useTransform([swing, fv], ([u, f]: number[]) => 38 * Math.sin(Math.PI * u) + ORB_YAW * Math.sin(Math.PI * f) * u);
   // z = 1 nằm GIỮA lưng phong bì (z 0) và mặt trước (z 2); ra ngoài thì lên trước (z 100) hoặc lùi hẳn ra sau phong bì (z -160)
   const cardZ = useTransform([t, fv], ([v, f]: number[]) => {
     const u = ss(T_SLIDE, 1, v);
@@ -215,45 +233,93 @@ export function EnvelopeScene({
   /* ---------- PHONG BÌ: tụt xuống + lùi ra sau để nhường chỗ cho thiệp, nhưng vẫn thấy được (chạm để cất thiệp) ---------- */
   const uOut = useTransform(t, (v) => ss(T_SLIDE, 1, v));
   const flapAmt = useTransform([flapRot, backAmt], ([fr, ba]: number[]) => clamp01(fr / 180) * ba);
-  const envX = useTransform([uOut, fv], ([u, f]: number[]) => u * lerp(ENV_LAYOUT.x[0], ENV_LAYOUT.x[1], f));
+  const envX = useTransform([uOut, fv], ([u, f]: number[]) => u * (lerp(ENV_LAYOUT.x[0], ENV_LAYOUT.x[1], f) + ORB_X * Math.sin(Math.PI * f)));
   const envY = useTransform([uOut, fv, flapAmt], ([u, f, fa]: number[]) =>
     u * (lerp(ENV_LAYOUT.y[0], ENV_LAYOUT.y[1], f) * fa + SWAP_ARC * Math.sin(Math.PI * f)));
-  const envS = useTransform([uOut, fv], ([u, f]: number[]) => 1 + u * (lerp(ENV_LAYOUT.s[0], ENV_LAYOUT.s[1], f) - 1));
+  const envS = useTransform([uOut, fv], ([u, f]: number[]) => (1 + u * (lerp(ENV_LAYOUT.s[0], ENV_LAYOUT.s[1], f) - 1)) * (1 - ORB_DIP * Math.sin(Math.PI * f) * u));
   const backZ = useTransform([t, fv], ([v, f]: number[]) => -ENV_PUSH * ss(T_SLIDE, 0.9, v) * (1 - ss(0.35, 0.65, f)));
   const frontZ = useTransform(backZ, (v) => v + 2);
   // hai vật nghiêng ngược chiều nhau trong lúc bay -> cảm giác xoay quanh nhau trong không gian
   const arc = useTransform(t, (v) => Math.sin(Math.PI * ss(T_TURN - 0.05, 1, v)) * 0.6);   // chỉ nghiêng thoáng qua khi rút/cất thiệp
-  const envRotY = useTransform(arc, (a) => -22 * a);
+  const envRotY = useTransform([arc, fv, uOut], ([a, f, u]: number[]) => -22 * a - ORB_YAW * Math.sin(Math.PI * f) * u);
   const envRotX = useTransform(arc, (a) => 8 * a);
 
   const vars = { '--env': envelopeColor, '--ink': isLight(envelopeColor) ? '#17171a' : '#ffffff' } as CSSProperties;
-  const envClick = (face: 'front' | 'back') => (e?: { stopPropagation: () => void }) => { e?.stopPropagation(); onEnvClick?.(face); };
-  // Thiệp đang ở phía trước: bấm vào BẤT KỲ chỗ nào thuộc phong bì (kể cả phần bị hit-test 3D bỏ sót) -> đảo phong bì lên trước
-  const hit = (r: DOMRect | undefined, e: React.MouseEvent) =>
-    !!r && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-  // hình bao của phong bì, cộng thêm phần nắp đang dựng lên phía trên
-  const envRect = () => {
-    const r = envRef.current?.getBoundingClientRect();
-    if (!r) return undefined;
-    const ext = flapOpen && side === 'back' ? (r.height / ENV.h) * FLAP_H : 0;
-    return new DOMRect(r.left, r.top - ext, r.width, r.height + ext);
+  // Thiệp đã rút ra: việc ĐỔI CHỖ do `tap` bên dưới lo (không dựa vào click của từng mảnh phong bì), nên ở đây bỏ qua
+  const envClick = (face: 'front' | 'back') => (e?: { stopPropagation: () => void }) => {
+    e?.stopPropagation();
+    if (cardFront && focus === 'card') return;
+    onEnvClick?.(face);
   };
-  // Hai vật chồng nhau: bấm vật nằm SAU (phần lộ ra) -> đảo nó lên trước
-  const onSceneClick = (e: React.MouseEvent) => {
-    if (!cardFront) return;
-    if (focus === 'card') {
-      if (cardRef.current?.contains(e.target as Node)) return;
-      if (hit(envRect(), e)) onEnvClick?.('front');
-    } else if (!hit(envRect(), e) && hit(cardRef.current?.getBoundingClientRect(), e)) {
-      onCardClick?.();
+
+  /* ---------- CHẠM ĐỂ ĐỔI CHỖ ----------
+     Trước đây dùng `click` + hit-test DOM của các mảnh 3D (clip-path, backface-hidden, pointer-events:none...) nên có
+     những điểm "chạm trượt" - phải bấm vài lần. Giờ: ghi nhận lúc nhấn, tới lúc nhả (và tay không xê dịch) thì tự tính
+     xem chạm trúng VẬT NÀO bằng hình học thật trên màn hình: phong bì = thân + nắp tam giác đang dựng,
+     thiệp = khung thiệp (+ trang trái khi bìa đang mở). Vật đứng trước được xét trước. */
+  const TAP_SLOP = 10;
+  const nameRef = useRef<HTMLParagraphElement>(null);
+  const tapRef = useRef<{ id: number; x: number; y: number; inCard: boolean } | null>(null);
+  const inRect = (r: DOMRect, x: number, y: number) => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  const hitEnvelope = (x: number, y: number) => {
+    const r = envRef.current?.getBoundingClientRect();
+    if (!r) return false;
+    if (inRect(r, x, y)) return true;
+    // nắp đang dựng lên phía trên thân phong bì (chỉ khi nhìn mặt nắp): vùng tam giác, đỉnh ở trên cùng
+    const up = Math.max(0, -Math.cos(flapRot.get() * rad)) * backAmt.get();
+    const ext = (r.height / ENV.h) * FLAP_H * up;
+    if (ext > 4 && y >= r.top - ext && y < r.top) {
+      const half = (r.width / 2) * ((y - (r.top - ext)) / ext);
+      return Math.abs(x - (r.left + r.width / 2)) <= half + 8;
     }
+    return false;
+  };
+  const hitCard = (x: number, y: number, downInside: boolean) => {
+    if (downInside) return true;
+    const r = cardRef.current?.getBoundingClientRect();
+    if (!r) return false;
+    const extra = open.get() > 0.01 ? r.width : 0;      // bìa đang mở: trang trái nằm ngoài khung thiệp
+    return inRect(new DOMRect(r.left - extra, r.top, r.width + extra, r.height), x, y);
+  };
+  const onTapDown = (e: React.PointerEvent) => {
+    tapRef.current = null;
+    if (!e.isPrimary) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    tapRef.current = { id: e.pointerId, x: e.clientX, y: e.clientY, inCard: !!cardRef.current?.contains(e.target as Node) };
+  };
+  const onTapUp = (e: React.PointerEvent) => {
+    const d = tapRef.current;
+    tapRef.current = null;
+    if (!d || d.id !== e.pointerId) return;
+    if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > TAP_SLOP) return;   // kéo / vẽ / bôi chữ, không phải chạm
+    // Mặt địa chỉ đang quay ra trước: chạm vào tên người nhận = SỬA CHỮ (tính bằng hình học, không phụ thuộc hit-test 3D)
+    const nr = nameRef.current?.getBoundingClientRect();
+    if (onRecipientChange && side === 'front' && (!cardFront || focus === 'envelope') && nr && inRect(nr, e.clientX, e.clientY)) {
+      const n = nameRef.current!;
+      if (document.activeElement !== n) {
+        n.focus();
+        const r = document.createRange();
+        r.selectNodeContents(n);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(r);
+      }
+      return;
+    }
+    if (!cardFront || !onSwap) return;
+    const inCard = hitCard(e.clientX, e.clientY, d.inCard);
+    const inEnv = hitEnvelope(e.clientX, e.clientY);
+    const tapped = focus === 'card'
+      ? (inCard ? 'card' : inEnv ? 'envelope' : null)
+      : (inEnv ? 'envelope' : inCard ? 'card' : null);
+    if (tapped) onSwap(tapped);
   };
 
   const cardPeeking = !cardFront && flapOpen;
   const flapLabel = cardFront ? 'Cất thiệp vào phong bì' : flapOpen ? 'Đóng nắp phong bì' : 'Mở nắp phong bì';
 
   return (
-    <div ref={box} className={s.fit} onClick={onSceneClick}>
+    <div ref={box} className={s.fit} onPointerDownCapture={onTapDown} onPointerUpCapture={onTapUp} onPointerCancelCapture={() => { tapRef.current = null; }}>
       <div
         className={s.scene}
         style={{
@@ -277,9 +343,9 @@ export function EnvelopeScene({
                   style={{ rotateX: flapRot, z: 2, visibility: flapBackVis }}
                   onClick={envClick('back')}
                 >
-                  <div className={`${s.flapFace} ${s.flapIn}`}>
+                  <motion.div className={`${s.flapFace} ${s.flapIn}`} style={{ filter: flapLight }}>
                     <div className={s.flapLiner} style={{ background: liner }} />
-                  </div>
+                  </motion.div>
                 </motion.div>
               </div>
             </Rotor>
@@ -329,7 +395,18 @@ export function EnvelopeScene({
                     <path key={y} d={`M0 ${y}q10-5 20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0`} fill="none" stroke="currentColor" strokeWidth="1.4" />
                   ))}
                 </svg>
-                <p className={s.name}>{recipientName}</p>
+                <p
+                  key={recipientName}
+                  ref={nameRef}
+                  className={s.name}
+                  contentEditable={!!onRecipientChange}
+                  suppressContentEditableWarning
+                  spellCheck={false}
+                  onPointerDown={onRecipientChange ? (e) => e.stopPropagation() : undefined}
+                  onClick={onRecipientChange ? (e) => e.stopPropagation() : undefined}
+                  onKeyDown={onRecipientChange ? (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } } : undefined}
+                  onBlur={onRecipientChange ? (e) => onRecipientChange(e.currentTarget.innerText.replace(/\s+/g, ' ').trim() || 'Tên người nhận') : undefined}
+                >{recipientName}</p>
                 <motion.div className={s.sheen} style={{ opacity: sheen }} />
               </div>
 
@@ -352,7 +429,7 @@ export function EnvelopeScene({
                   className={`${s.flap} ${s.hit}`}
                   style={{ rotateX: flapRot, z: 2, visibility: flapFrontVis }}
                 >
-                  <div className={`${s.flapFace} ${s.flapOut}`} />
+                  <motion.div className={`${s.flapFace} ${s.flapOut}`} style={{ filter: flapLight }} />
                 </motion.div>
                 <motion.div className={s.sheen} style={{ opacity: sheen }} />
               </div>

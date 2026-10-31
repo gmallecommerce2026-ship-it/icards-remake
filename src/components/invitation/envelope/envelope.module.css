@@ -44,11 +44,18 @@
     cursor: pointer;
     border-radius: 2px;
 }
-.cardHit:focus-visible { outline: 3px solid #0b57d0; outline-offset: 3px; }
+
+.cardHit:focus-visible {
+    outline: 3px solid #0b57d0;
+    outline-offset: 3px;
+}
 
 /* chỉ những phần tử có .hit / .piece mới nhận chạm (clip-path cũng cắt cả vùng chạm) */
 .hit,
-.face.hit { pointer-events: auto; cursor: pointer; }
+.face.hit {
+    pointer-events: auto;
+    cursor: pointer;
+}
 
 .placeholder {
     display: grid;
@@ -258,4 +265,22 @@
     position: absolute;
     inset: 0;
     clip-path: polygon(3.5% 0, 96.5% 0, 50% 88%);
+}
+
+/* tên người nhận sửa được ngay trên phong bì */
+.name[contenteditable='true'] {
+    cursor: text;
+    user-select: text;
+    -webkit-user-select: text;
+    outline: 1.5px dashed transparent;
+    outline-offset: 6px;
+    border-radius: 4px;
+}
+
+.name[contenteditable='true']:hover {
+    outline-color: rgb(47 107 255 / .6);
+}
+
+.name[contenteditable='true']:focus {
+    outline: 2px solid rgb(47 107 255 / .85);
 }

@@ -2,7 +2,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { animate, useMotionValue, useReducedMotion, useTransform, type MotionValue } from 'motion/react';
+import { animate, useMotionValue, useTransform, type MotionValue } from 'motion/react';
 import type { PageId } from './useEditorStore';
 
 /**
@@ -29,7 +29,9 @@ const sm = (x: number) => {
 };
 
 export function useCardMotion(view: PageId): CardMotion {
-  const reduce = useReducedMotion();
+  // Hiệu ứng là tính năng cốt lõi của thiệp: luôn chạy, kể cả khi hệ điều hành bật "giảm chuyển động"
+  // (trước đây reduce=true làm mọi animation có duration 0 nên hai vật nhảy thẳng sang vị trí mới)
+  const reduce = false;
   const pos = useMotionValue(STOPS[view]);
   const [busy, setBusy] = useState(false);
   const ctl = useRef<ReturnType<typeof animate> | null>(null);

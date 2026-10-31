@@ -133,6 +133,11 @@ export function FoldingCard({ cm, view, editable, gesture = false, onViewChange 
     window.addEventListener('pointercancel', end);
   }
 
+  // Chỉ MỘT mặt được nhận chuột tại mỗi thời điểm. Trước đây ruột thiệp (.sheet) nằm ngay dưới bìa, cách đúng 1px theo trục z,
+  // nên khi bìa đóng trình duyệt hay trả về .sheet thay vì mặt bìa -> đối tượng trên bìa không hover / chọn được, chỉ kéo lật được.
+  const onCover = view === 'cover';
+  const none = { pointerEvents: 'none' as const };
+
   const showActive = (pg: PageId) => canEdit && spread && activePage === pg;
 
   return (
@@ -154,7 +159,7 @@ export function FoldingCard({ cm, view, editable, gesture = false, onViewChange 
           {/* Mặt trước + ruột thiệp */}
           <motion.div className={c.front} style={{ opacity: frontAlpha, pointerEvents: showFront ? 'auto' : 'none' }}>
             {/* Ruột thiệp = TRANG PHẢI (nằm dưới) */}
-            <div className={c.sheet} data-editable={editInside} data-active={showActive('inside')} style={{ background: insideBg }}>
+            <div className={c.sheet} data-editable={editInside} data-active={showActive('inside')} style={{ background: insideBg, ...(onCover ? none : null) }}>
               <motion.div style={{ position: 'absolute', inset: 0, visibility: insideVis }}>
                 <PageEditor pageId="inside" editable={editInside} />
               </motion.div>
@@ -163,12 +168,12 @@ export function FoldingCard({ cm, view, editable, gesture = false, onViewChange 
 
             {/* Bìa: lật quanh gáy bên trái - chỉ xoay, không dịch ngang nên không bao giờ tách khỏi ruột */}
             <motion.div className={c.cover} style={{ rotateY: coverRot, z: 1 }}>
-              <div className={c.face} data-editable={editCover} style={{ background: coverBg }}>
+              <div className={c.face} data-editable={editCover} style={{ background: coverBg, ...(onCover ? null : none) }}>
                 <PageEditor pageId="cover" editable={editCover} />
                 <motion.div aria-hidden className={c.shadeOut} style={{ opacity: shadeOut }} />
               </div>
               {/* Mặt trong của bìa = TRANG TRÁI. Đã xoay sẵn 180° nên khi bìa mở hẳn thì chữ đọc đúng chiều */}
-              <div className={`${c.face} ${c.back} ${c.leftPage}`} data-editable={editLeft} data-active={showActive('insideLeft')} style={{ background: leftBg }}>
+              <div className={`${c.face} ${c.back} ${c.leftPage}`} data-editable={editLeft} data-active={showActive('insideLeft')} style={{ background: leftBg, ...(onCover ? none : null) }}>
                 <PageEditor pageId="insideLeft" editable={editLeft} />
                 <motion.div aria-hidden className={c.shadeIn} style={{ opacity: shadeIn }} />
               </div>

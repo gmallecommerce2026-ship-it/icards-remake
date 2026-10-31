@@ -59,7 +59,8 @@ type Props = { recipientName?: string; editable?: boolean; templateSlug?: string
 const DOTS: PageId[] = ['cover', 'inside', 'back'];
 const draftKey = (slug?: string | null) => `icards:draft:${slug ?? 'blank'}`;
 
-export function EnvelopeDesigner({ recipientName, editable = false, templateSlug }: Props) {
+export function EnvelopeDesigner({ recipientName: recipientProp, editable = false, templateSlug }: Props) {
+  const [recipientName, setRecipientName] = useState(recipientProp);
   const template = templateSlug ? getTemplateBySlug(templateSlug) : undefined;
   const [tab, setTab] = useState<Tab>(editable ? 'elements' : 'envelope');
   const lastCard = useRef<CardTab>('elements');   // tab thiệp / phong bì dùng gần nhất, để quay lại đúng chỗ khi đổi qua lại
@@ -82,6 +83,7 @@ export function EnvelopeDesigner({ recipientName, editable = false, templateSlug
   const [swapping, setSwapping] = useState(false);   // đang chạy hiệu ứng đảo thiệp <-> phong bì: bỏ qua chạm tiếp
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const lockTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const swapPending = useRef(false);   // đã bấm đổi sang phong bì nhưng thiệp còn đang khép bìa (focus chưa kịp đổi)
   const stageRef = useRef<HTMLElement>(null);
   const cm = useCardMotion(view);
 
@@ -150,11 +152,15 @@ export function EnvelopeDesigner({ recipientName, editable = false, templateSlug
   const later = (ms: number, fn: () => void) => { timers.current.push(setTimeout(fn, ms)); };
 
   // Thiệp chưa ra khỏi phong bì thì: mở nắp (nếu đang đóng) -> rút thiệp ra -> rồi mới chạy việc tiếp theo
+  // `swapping` CHỈ khóa việc chỉnh sửa / kéo lật trang trong lúc thiệp đang bay; KHÔNG được nuốt thao tác chạm của người dùng
   function lock(ms: number) {
     clearTimeout(lockTimer.current);
     setSwapping(true);
     lockTimer.current = setTimeout(() => setSwapping(false), ms);
   }
+  function cancelLock() { clearTimeout(lockTimer.current); setSwapping(false); }
+  // Người dùng chạm khi hiệu ứng cũ còn chạy: hủy hẹn giờ + bỏ khóa rồi làm theo ý mới NGAY (animation tự quay đầu từ vị trí hiện tại)
+  function interrupt() { stopPlay(); cancelLock(); }
   const SWAP_MS = 2500;        // thời lượng đoạn thiệp bay (khớp animate t = 2.3s trong EnvelopeScene)
   function pullOut(then?: () => void) {
     if (cardFront) { then?.(); return; }
@@ -170,17 +176,26 @@ export function EnvelopeDesigner({ recipientName, editable = false, templateSlug
   function onViewChange(v: PageId) { stopPlay(); setView(v); }
   // chạm vào phong bì: thiệp đang ở ngoài thì CẤT VÀO; ngược lại chạm vào mặt địa chỉ thì lật phong bì, chạm vào mặt nắp thì đóng/mở nắp
   function onEnvClick(face: 'front' | 'back') {
-    if (playing || swapping) return;
-    stopPlay();
-    if (cardFront && focus === 'card') selectTab(editable ? lastEnv.current : 'envelope');   // phong bì đang nằm sau thiệp -> đảo lên trước
-    else if (cardFront) { if (face === 'front') setSide('back'); } // phong bì đã ở trước
-    else if (face === 'front') setSide('back');
+    if (cardFront && focus === 'card') return;   // phong bì nằm sau thiệp: việc đảo lên trước do onSwap (chạm theo hình học) lo
+    interrupt();
+    if (cardFront) { if (face === 'front' && !editable) setSide('back'); } // phong bì đã ở trước (trình chỉnh sửa: chạm mặt địa chỉ = sửa tên, lật bằng nút Lật)
+    else if (face === 'front') { if (!editable) setSide('back'); }
     else setFlapOpen((v) => !v);
+  }
+  // Thiệp đã rút ra, chạm vào vật đứng SAU -> đổi chỗ ngay (không bị khóa, không phải bấm lại)
+  function onSwap(to: 'card' | 'envelope') {
+    if (to === 'envelope') {
+      if (focus === 'envelope' || swapPending.current) return;   // đang đổi rồi
+      interrupt();
+      selectTab(editable ? lastEnv.current : 'envelope');
+    } else {
+      if (focus === 'card' && !swapPending.current) return;
+      bringCardFront();
+    }
   }
   // Thiệp nằm sau phong bì: ĐẢO thiệp lên trước = chạy hiệu ứng rút thiệp + chuyển sang bộ tab của thiệp
   function bringCardFront() {
-    if (playing || swapping) return;
-    stopPlay();
+    interrupt();
     setFocus('card');
     if (editable) selectTab(lastCard.current); else pullOut();
   }
@@ -192,6 +207,7 @@ export function EnvelopeDesigner({ recipientName, editable = false, templateSlug
   }
   function selectTab(t: Tab) {
     stopPlay();
+    cancelLock();
     setTab(t); setQuery(''); setTone(null);
     useEditorStore.getState().select(null);
     if (isCardTab(t)) {
@@ -211,13 +227,16 @@ export function EnvelopeDesigner({ recipientName, editable = false, templateSlug
     }
     if (!cardFront) { setFocus('envelope'); pullOut(); return; }   // đang trong phong bì: rút ra và đặt phía sau
     lock(closeWait() + 1800);
-    later(closeWait(), () => setFocus('envelope'));
+    const wait = closeWait();
+    if (wait > 0) swapPending.current = true;
+    later(wait, () => { swapPending.current = false; setFocus('envelope'); });
   }
 
   // ---- Phát thử toàn bộ hiệu ứng: phong bì đóng → mở nắp → rút thiệp → mở thiệp → mặt sau
   function stopPlay() {
     timers.current.forEach(clearTimeout);
     timers.current = [];
+    swapPending.current = false;   // hẹn giờ đổi chỗ (nếu có) đã bị hủy cùng
     setPlaying(false);
   }
   // thiệp chỉ cho chỉnh sửa khi đã rút ra xong và đứng yên
@@ -391,6 +410,7 @@ export function EnvelopeDesigner({ recipientName, editable = false, templateSlug
             liner={liner.background}
             stampId={stampId}
             recipientName={recipientName}
+            onRecipientChange={editable ? setRecipientName : undefined}
             side={side}
             flapOpen={flapOpen}
             cardFront={cardFront}
@@ -398,6 +418,7 @@ export function EnvelopeDesigner({ recipientName, editable = false, templateSlug
             openAmt={cm.open}
             onEnvClick={onEnvClick}
             onCardClick={bringCardFront}
+            onSwap={onSwap}
           />}
         </motion.div>
 

@@ -20,7 +20,8 @@
 }
 
 /* rê chuột lên đối tượng chưa chọn: viền gợi ý để biết kéo vào đây là di chuyển đối tượng (không lật trang) */
-.page[data-editable='true'] .node[data-selected='false']:hover {
+.page[data-editable='true'] .node[data-selected='false']:hover,
+.page[data-editable='true'] .node[data-selected='false'][data-hot='true'] {
     outline: 1.5px solid rgb(47 107 255 / .6);
     outline-offset: 4px;
 }

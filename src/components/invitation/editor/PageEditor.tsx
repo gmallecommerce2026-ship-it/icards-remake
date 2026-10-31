@@ -227,9 +227,45 @@ export function PageEditor({ pageId, editable }: { pageId: PageId; editable: boo
     st.setPage(pageId);
   }
 
+  /* Trình duyệt đôi khi trả về chính .page làm target của pointerdown / hover dù ngay dưới con trỏ có đối tượng
+     (hit-test thật lệch với elementsFromPoint do các lớp 3D chồng nhau của bìa) -> đối tượng không chọn / hover được, chỉ lật trang.
+     Nên tự tìm đối tượng nằm trên cùng dưới con trỏ rồi chuyển sự kiện cho nó. */
+  function topNode(x: number, y: number): HTMLElement | null {
+    const r = root.current;
+    if (!r) return null;
+    for (const n of document.elementsFromPoint(x, y)) {
+      if (n === r) return null;
+      if (r.contains(n)) return n as HTMLElement;
+    }
+    return null;
+  }
+  function redirectDown(ev: RPointerEvent) {
+    if (!editable || ev.target !== ev.currentTarget) return;
+    const t = topNode(ev.clientX, ev.clientY);
+    if (!t) return;
+    ev.stopPropagation();
+    t.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true, cancelable: true, composed: true, view: window,
+      clientX: ev.clientX, clientY: ev.clientY, screenX: ev.screenX, screenY: ev.screenY,
+      pointerId: ev.pointerId, pointerType: ev.pointerType, isPrimary: ev.isPrimary,
+      button: ev.button, buttons: ev.buttons, pressure: ev.pressure, ctrlKey: ev.ctrlKey, shiftKey: ev.shiftKey, altKey: ev.altKey, metaKey: ev.metaKey,
+    }));
+  }
+  const hot = useRef<HTMLElement | null>(null);
+  function hover(ev: RPointerEvent | null) {
+    const t = ev && editable && ev.target === ev.currentTarget ? topNode(ev.clientX, ev.clientY)?.closest<HTMLElement>('[data-el]') ?? null : null;
+    if (t === hot.current) return;
+    hot.current?.removeAttribute('data-hot');
+    hot.current = t;
+    t?.setAttribute('data-hot', 'true');
+    if (root.current) root.current.style.cursor = t ? 'move' : '';
+  }
+
   return (
     <div ref={root} className={e.page} data-editable={editable}
-      onPointerDownCapture={activate}
+      onPointerDownCapture={(ev) => { activate(); redirectDown(ev); }}
+      onPointerMove={hover}
+      onPointerLeave={() => hover(null)}
       onPointerDown={(ev) => { if (editable && ev.target === ev.currentTarget) useEditorStore.getState().select(null); }}>
       {editable && els.length === 0 && !drawing && (
         <p className={e.emptyHint} aria-hidden>Trang trống · thêm chữ, ảnh hoặc hình từ thanh công cụ bên trái</p>
