@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   animate,
   cubicBezier,
@@ -10,6 +10,7 @@ import {
   useSpring,
   useTransform,
   type AnimationPlaybackControls,
+  type MotionValue,
 } from "motion/react";
 import { ArrowDown, ChevronLeft } from "lucide-react";
 import { EnvelopeScene } from "@/components/invitation/envelope/EnvelopeScene";
@@ -21,10 +22,15 @@ import { EVENT_FONT_VARS, EventDetailsEditor, type EventDetailsEditorProps } fro
 /*                                                                      */
 /*   p = 0   : trùng khớp với khung chỉnh sửa (blend liền)              */
 /*   0 → .1  : cảnh lướt về giữa màn hình, nền tối phủ dần lên giao diện */
-/*   .06-.44 : thiệp xoay ngang, trượt xuống, đút vào phong bì          */
-/*   .44-.74 : thiệp chìm hẳn, nắp phong bì gập xuống                   */
-/*   .76-.95 : phong bì xoay ra MẶT TRƯỚC (tem + tên người nhận)        */
+/*   .05-.27 : thiệp TIẾN SÁT CAMERA, nghiêng nhiều góc khoe mặt bìa ngoài */
+/*   .27-.50 : thiệp xoay ngang, trượt xuống, đút vào phong bì          */
+/*   .50-.585: thiệp chìm hẳn xuống túi (nắp còn MỞ HẲN) · .60-.76: nắp gập xuống (không chồng nhau) */
+/*   .77-.90 : sáp loang trên mép niêm phong, CON DẤU ĐỒNG đóng xuống     */
+/*             (nhìn thẳng từ trên xuống), nhấc lên để lại dấu iCards     */
+/*   .92-.985: phong bì xoay ra MẶT TRƯỚC (tem + tên người nhận)        */
 /*   sau đó  : phần cấu hình thiệp online trượt lên                     */
+/*  Suốt hành trình "máy quay" trong EnvelopeScene (CAM_KEYS) dolly / orbit: */
+/*  toàn cảnh → áp sát miệng phong bì → nhìn từ trên xuống → macro vào dấu sáp */
 /*  (các mốc của cảnh nằm ở SEND_RANGE trong EnvelopeScene)             */
 /*                                                                      */
 /*  Cũng như ImmersiveScrollHero, hiệu ứng bám theo tiến độ CUỘN: lúc   */
@@ -39,9 +45,9 @@ const INK = "#F5F1E8";
 const STAGE_BG = "linear-gradient(to bottom, #454547 0%, #1c1c1c 55%, #000 100%)";
 
 /** vùng ghim cao TRACK_VH (% màn hình) → quãng cuộn để chạy hiệu ứng = TRACK_VH − 100 (% màn hình) */
-const TRACK_VH = 400;
+const TRACK_VH = 900;
 /** thời gian tự cuộn qua phần hiệu ứng, và qua đoạn chuyển sang nội dung (giây) */
-const AUTO_SECONDS = 5.2;
+const AUTO_SECONDS = 20;
 const AUTO_TAIL_SECONDS = 1.1;
 /** kích thước thiết kế của EnvelopeScene (khớp DW / DH trong EnvelopeScene) - dùng để suy ra độ phóng của khung canvas */
 const DW = 720;
@@ -51,7 +57,7 @@ const fitK = (w: number, h: number) => Math.min(1.3, w / DW, h / DH);
 const SMOOTH = cubicBezier(0.45, 0, 0.25, 1);
 type Bezier = [number, number, number, number];
 const IN_OUT: Bezier = [0.45, 0, 0.2, 1];
-const AUTO_EASE: Bezier = [0.4, 0, 0.25, 1];
+const AUTO_EASE: Bezier = [0.25, 0.2, 0.75, 0.8];
 
 export type InvitationSendFlowProps = Pick<EventDetailsEditorProps, "initial" | "guests" | "onSave" | "onAddGuests"> & {
   open: boolean;
@@ -59,6 +65,8 @@ export type InvitationSendFlowProps = Pick<EventDetailsEditorProps, "initial" | 
   card: ReactNode;
   /** trả về khung (getBoundingClientRect) của cảnh thiệp + phong bì đang nằm trong canvas editor */
   getSceneRect: () => DOMRect | null;
+  /** khung của vùng canvas (nền tối) trong editor: nền của lớp phủ bắt đầu ĐÚNG khung này rồi mới nở ra toàn màn hình (không còn vệt sáng/tối lướt qua) */
+  getStageRect?: () => DOMRect | null;
   /** màu + lớp lót + tem + tên người nhận người dùng đã chọn trong editor */
   envelopeColor: string;
   liner: string;
@@ -75,7 +83,7 @@ export function InvitationSendFlow({ open, ...rest }: InvitationSendFlowProps) {
 }
 
 function FlowBody({
-  card, getSceneRect, envelopeColor, liner, stampId, recipientName, onSceneReady,
+  card, getSceneRect, getStageRect, envelopeColor, liner, stampId, recipientName, onSceneReady,
   initial, guests, onSave, onAddGuests, onClose,
 }: Omit<InvitationSendFlowProps, "open">) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -85,6 +93,7 @@ function FlowBody({
   const holdOpen = useRef(false);   // đang tua lại để xem lại hiệu ứng: đừng đóng
   const closed = useRef(false);
   const [ready, setReady] = useState(false);
+  const [shown, setShown] = useState(false);   // cảnh của lớp phủ đã vẽ xong ≥ 1 khung → mới hiện + mới ẩn bản dưới (chống chớp)
 
   /* ---------- khung của cảnh trong editor → phép biến đổi để cảnh của lớp phủ TRÙNG khít lúc p = 0 ---------- */
   const from = useMemo(() => {
@@ -101,6 +110,20 @@ function FlowBody({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* khung canvas của editor → nền lớp phủ khớp từng pixel lúc p = 0 */
+  const stage = useMemo(() => {
+    const r = getStageRect?.();
+    if (!r || r.width < 1 || r.height < 1) return null;
+    const vw = document.documentElement.clientWidth, vh = window.innerHeight;
+    return { l: r.left, t: r.top, r: vw - r.right, b: vh - r.bottom };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // luôn bắt đầu ở p = 0 (đúng tư thế editor), kể cả khi trình duyệt khôi phục vị trí cuộn cũ
+  useLayoutEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, []);
+
   // khoá cuộn trang phía sau editor
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -114,15 +137,27 @@ function FlowBody({
   /* ---------- TIẾN ĐỘ = vị trí cuộn trong vùng ghim (như ImmersiveScrollHero) ---------- */
   const { scrollYProgress } = useScroll({ container: scrollRef, target: trackRef, offset: ["start start", "end end"] });
   const { scrollY } = useScroll({ container: scrollRef });
-  const p = useSpring(scrollYProgress, { stiffness: 70, damping: 24, mass: 0.7, restDelta: 0.0004 });
+  /* Lò xo làm mượt tiến độ. Hai điểm quan trọng để cuộn NGƯỢC NHANH không bị giật:
+       1) lò xo gần tới hạn (ζ ≈ 1.1) → không văng quá 0, đuôi tắt dần ngắn;
+       2) KHÔNG đóng lớp phủ ngay khi scrollTop về 0 (lúc đó p còn ở xa, cảnh đang ở giữa chừng nên đóng là
+          "nhảy" thẳng về cảnh editor) - mà đợi p thực sự chạy về ~0, khi cảnh trùng khớp editor mới đóng. */
+  const pSpring = useSpring(scrollYProgress, { stiffness: 110, damping: 26, mass: 0.8, restDelta: 0.0004, restSpeed: 0.002 });
+  const p = useTransform(pSpring, (v) => Math.min(1, Math.max(0, v)));
 
   // lướt cảnh từ khung canvas về giữa màn hình + phủ nền tối lên giao diện editor
   const settle = useTransform(p, [0, 0.1], [0, 1], { ease: SMOOTH });
   const wx = useTransform(settle, [0, 1], [from.x, 0]);
   const wy = useTransform(settle, [0, 1], [from.y, 0]);
   const wScale = useTransform(settle, [0, 1], [from.s, 1]);
-  const hintWrapping = useTransform(p, [0.1, 0.16, 0.88, 0.94], [0, 1, 1, 0]);
-  const hintDone = useTransform(p, [0.95, 0.99], [0, 1]);
+  const bgL = useTransform(settle, (v) => (stage ? stage.l * (1 - v) : 0));
+  const bgT = useTransform(settle, (v) => (stage ? stage.t * (1 - v) : 0));
+  const bgR = useTransform(settle, (v) => (stage ? stage.r * (1 - v) : 0));
+  const bgB = useTransform(settle, (v) => (stage ? stage.b * (1 - v) : 0));
+  const hintWrapping = useTransform(p, [0.1, 0.16, 0.93, 0.97], [0, 1, 1, 0]);
+  const hintDone = useTransform(p, [0.985, 0.999], [0, 1]);
+  // điện ảnh: viền tối + dải đen trên/dưới, đậm nhất khi máy áp sát dấu sáp
+  const vignette = useTransform(p, [0, 0.1, 0.3, 0.7, 0.8, 0.92, 1], [0, 0.35, 0.5, 0.75, 1, 0.5, 0.25]);
+  const bars = useTransform(p, [0.06, 0.16, 0.93, 0.99], [0, 1, 1, 0]);
 
   /* ---------- TỰ CUỘN ---------- */
   const stopAuto = useCallback(() => {
@@ -194,12 +229,35 @@ function FlowBody({
     onClose();
   }, [stopAuto, onClose]);
 
-  // vừa hiện hình xong thì chờ một nhịp rồi tự cuộn
+  /** chỉ đóng khi người dùng đã ở đầu trang VÀ cảnh đã về sát p = 0 (khớp editor) - tránh nhảy cảnh */
+  const tryClose = useCallback(() => {
+    if (!armed.current || holdOpen.current) return;
+    if ((scrollRef.current?.scrollTop ?? 0) >= 4) return;
+    if (p.get() <= 0.006) close();
+  }, [p, close]);
+
+  /* BÀN GIAO CẢNH không chớp: cảnh lớp phủ được đo + vẽ ở trạng thái ẩn (opacity 0, cảnh editor vẫn đang hiện).
+     Chờ 2 khung hình để chắc chắn nó đã lên màn hình, rồi trong CÙNG một khung: lớp phủ hiện, editor ẩn. Hai cảnh
+     giống hệt nhau ở p = 0 nên mắt không thấy gì thay đổi. */
   useEffect(() => {
     if (!ready) return;
-    const id = setTimeout(play, 350);
+    let r2 = 0;
+    const r1 = requestAnimationFrame(() => {
+      r2 = requestAnimationFrame(() => {
+        setShown(true);
+        onSceneReady?.();
+      });
+    });
+    return () => { cancelAnimationFrame(r1); cancelAnimationFrame(r2); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
+
+  // đã bàn giao xong thì chờ một nhịp rồi tự cuộn
+  useEffect(() => {
+    if (!shown) return;
+    const id = setTimeout(play, 450);
     return () => clearTimeout(id);
-  }, [ready, play]);
+  }, [shown, play]);
 
   // người dùng chạm vào thì nhường quyền điều khiển
   useEffect(() => {
@@ -208,7 +266,7 @@ function FlowBody({
     const interrupt = () => { if (!holdOpen.current) stopAuto(); };
     const onWheel = (e: WheelEvent) => {
       interrupt();
-      if (e.deltaY < 0 && sc.scrollTop <= 0 && !holdOpen.current) close();
+      if (e.deltaY < 0 && sc.scrollTop <= 0) tryClose();
     };
     const onKey = (e: KeyboardEvent) => {
       if (["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " "].includes(e.key)) interrupt();
@@ -217,23 +275,24 @@ function FlowBody({
     sc.addEventListener("wheel", onWheel, { passive: true });
     sc.addEventListener("touchstart", interrupt, { passive: true });
     sc.addEventListener("pointerdown", interrupt, { passive: true });
+    sc.addEventListener("touchmove", tryClose, { passive: true });
     window.addEventListener("keydown", onKey);
     return () => {
       sc.removeEventListener("wheel", onWheel);
       sc.removeEventListener("touchstart", interrupt);
       sc.removeEventListener("pointerdown", interrupt);
+      sc.removeEventListener("touchmove", tryClose);
       window.removeEventListener("keydown", onKey);
     };
-  }, [stopAuto, back, close]);
+  }, [stopAuto, back, tryClose]);
 
   /* ---------- CUỘN NGƯỢC VỀ 0 → trả lại editor ---------- */
   useMotionValueEvent(scrollY, "change", (v) => {
     if (v > 40) armed.current = true;
   });
-  useMotionValueEvent(p, "change", (v) => {
-    if (!armed.current || holdOpen.current || v > 0.004) return;
-    if ((scrollRef.current?.scrollTop ?? 0) < 4) close();
-  });
+  useMotionValueEvent(p, "change", () => tryClose());
+  // đã ở đầu trang nhưng p còn đang chạy về: khi cuộn dừng hẳn mà p đã tới nơi thì đóng
+  useMotionValueEvent(scrollY, "change", () => tryClose());
 
   return (
     <div
@@ -243,9 +302,9 @@ function FlowBody({
       {/* VÙNG GHIM: cảnh đứng yên trong khung hình, tiến độ chạy theo cuộn */}
       <section ref={trackRef} className="relative" style={{ height: `${TRACK_VH}dvh` }}>
         <div className="sticky top-0 h-dvh w-full overflow-hidden">
-          <motion.div aria-hidden className="absolute inset-0" style={{ opacity: settle, background: STAGE_BG }} />
+          <motion.div aria-hidden className="absolute" style={{ left: bgL, top: bgT, right: bgR, bottom: bgB, opacity: stage ? (shown ? 1 : 0) : settle, background: STAGE_BG }} />
 
-          <motion.div className="absolute inset-0" style={{ x: wx, y: wy, scale: wScale, transformOrigin: "50% 50%" }}>
+          <motion.div className="absolute inset-0" style={{ x: wx, y: wy, scale: wScale, transformOrigin: "50% 50%", opacity: shown ? 1 : 0 }}>
             <EnvelopeScene
               card={card}
               envelopeColor={envelopeColor}
@@ -257,12 +316,20 @@ function FlowBody({
               cardFront
               focus="card"
               send={p}
-              onReady={() => {
-                setReady(true);
-                onSceneReady?.();
-              }}
+              onReady={() => setReady(true)}
             />
           </motion.div>
+
+          {/* viền tối (vignette) phủ lên cảnh, dưới các nút */}
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-10"
+            style={{ opacity: vignette, background: "radial-gradient(ellipse at 50% 48%, transparent 38%, rgba(0,0,0,.72) 100%)" }}
+          />
+          <motion.div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[4.5dvh] origin-top bg-black" style={{ scaleY: bars }} />
+          <motion.div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[4.5dvh] origin-bottom bg-black" style={{ scaleY: bars }} />
+
+          <motion.div aria-hidden={false} style={{ opacity: hintWrapping }} className="absolute inset-0 z-20 pointer-events-none"><Captions p={p} /></motion.div>
 
           <motion.button
             type="button"
@@ -273,11 +340,8 @@ function FlowBody({
             <ChevronLeft className="size-4" /> Quay lại thiết kế
           </motion.button>
 
-          <div className="pointer-events-none absolute inset-x-0 bottom-[6dvh] z-20 flex flex-col items-center text-center" style={{ color: INK }}>
+          <div className="pointer-events-none absolute inset-x-0 bottom-[8dvh] z-20 flex flex-col items-center text-center" style={{ color: INK }}>
             <motion.div style={{ opacity: hintWrapping }} className="absolute bottom-0 flex flex-col items-center gap-1">
-              <p className="text-base italic" style={{ fontFamily: "var(--ev-serif), 'Cormorant Garamond', serif" }} aria-live="polite">
-                Đang gói thiệp của bạn…
-              </p>
               <button
                 type="button"
                 onClick={skip}
@@ -308,6 +372,49 @@ function FlowBody({
           onReplay={replay}
         />
       </section>
+    </div>
+  );
+}
+
+
+/* Chú thích từng bước: kicker nhỏ + tiêu đề serif nghiêng + vạch đỏ mảnh, trượt nhẹ vào/ra theo tiến độ */
+type Side = "left" | "right" | "center";
+const CAPTIONS: { a: number; b: number; k: string; t: string; d: string; side: Side }[] = [
+  // vật thể ở bên PHẢI → chữ bên TRÁI, rồi đảo bên theo từng bước (khớp CAM_KEYS trong EnvelopeScene)
+  { a: 0.06, b: 0.28, k: "Bước 1 / 4", t: "Mặt bìa thiệp của bạn", d: "Xem lần cuối trước khi gửi", side: "left" },
+  { a: 0.29, b: 0.52, k: "Bước 2 / 4", t: "Đưa thiệp vào phong bì", d: "Thiệp nằm gọn, không bị nhàu", side: "right" },
+  { a: 0.53, b: 0.76, k: "Bước 3 / 4", t: "Gập nắp phong bì", d: "Khép lại thật cẩn thận", side: "left" },
+  { a: 0.77, b: 0.93, k: "Bước 4 / 4", t: "Niêm phong bằng dấu sáp iCards", d: "Dấu ấn dành riêng cho thiệp của bạn", side: "center" },
+];
+
+function Caption({ p, c }: { p: MotionValue<number>; c: (typeof CAPTIONS)[number] }) {
+  const opacity = useTransform(p, [c.a, c.a + 0.035, c.b - 0.03, c.b], [0, 1, 1, 0]);
+  const y = useTransform(p, [c.a, c.a + 0.04, c.b - 0.04, c.b], [14, 0, 0, -10]);
+  const dir = c.side === "left" ? -1 : c.side === "right" ? 1 : 0;
+  const x = useTransform(p, [c.a, c.a + 0.05, c.b - 0.04, c.b], [dir * 36, 0, 0, dir * 22]);
+  // màn rộng: chữ nằm hẳn một bên, đối diện với thiệp · điện thoại: chữ ở dưới, giữa
+  const pos =
+    c.side === "left" ? "md:left-[7vw] md:items-start md:text-left"
+    : c.side === "right" ? "md:right-[7vw] md:items-end md:text-right"
+    : "md:inset-x-0 md:mx-auto md:items-center md:text-center";
+  const place = c.side === "center" ? "md:bottom-[16dvh]" : "md:top-1/2 md:-translate-y-1/2";
+  return (
+    <div className={`absolute inset-x-0 bottom-[14dvh] flex justify-center md:inset-x-auto md:bottom-auto md:w-[min(30vw,430px)] ${place}`}
+         style={c.side === "center" ? { left: 0, right: 0, width: "auto" } : undefined}>
+      <motion.div style={{ opacity, y, x }} className={`flex flex-col items-center gap-1 text-center md:gap-2 ${pos}`}>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/55">{c.k}</span>
+        <p className="text-xl italic leading-tight md:text-4xl" style={{ fontFamily: "var(--ev-serif), 'Cormorant Garamond', serif" }} aria-live="polite">{c.t}</p>
+        <span className="h-px w-10 md:w-14" style={{ background: CRIMSON }} />
+        <span className="text-xs text-white/60 md:text-sm">{c.d}</span>
+      </motion.div>
+    </div>
+  );
+}
+
+function Captions({ p }: { p: MotionValue<number> }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20">
+      {CAPTIONS.map((c) => <Caption key={c.k} p={p} c={c} />)}
     </div>
   );
 }

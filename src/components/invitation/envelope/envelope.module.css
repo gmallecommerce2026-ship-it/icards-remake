@@ -349,3 +349,56 @@
     inset: 0 0 -2px 0;
     pointer-events: none;
 }
+
+/* Con dấu sáp: nằm trên mũi nắp (mặt nắp đóng), nổi lên khỏi giấy vài px */
+.sealAnchor {
+    position: absolute;
+    transform: translateZ(4px);
+    pointer-events: none;
+}
+
+/* "Máy quay" phủ lên cả thế giới 3D: nhận dolly / orbit / roll trong chế độ gói thiệp */
+.camera {
+    position: absolute;
+    inset: 0;
+}
+
+/* Vệt sáng lướt qua mặt thiệp khi thiệp nghiêng khoe bìa */
+.glareClip {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    /* KHÔNG đặt z-index ở đây: sẽ tạo stacking context riêng và mix-blend-mode của con chỉ trộn với nền trong suốt */
+}
+
+.glare {
+    position: absolute;
+    top: -10%;
+    bottom: -10%;
+    left: 0;
+    width: 45%;
+    transform: skewX(-18deg);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / .42), transparent);
+    mix-blend-mode: soft-light;
+    z-index: 5;
+}
+
+
+/* Giấy thiệp: vân sần (ánh sáng chiếu nghiêng lên nền nhiễu) + viền sáng + tối mép (độ dày giấy) */
+.paper3d {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-size: 110px 110px, 100% 100%;
+    background-repeat: repeat, no-repeat;
+    /* overlay trên xám 50% = trung tính: không đổi màu thiệp khi nhìn xa */
+    mix-blend-mode: overlay;
+    z-index: 5;
+    will-change: opacity;
+}
+
+.cardPlane {
+    text-rendering: geometricPrecision;
+    -webkit-font-smoothing: antialiased;
+}
