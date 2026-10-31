@@ -501,6 +501,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
           open={sendOpen}
           card={<CardFaceStatic pageId="cover" />}
           getSceneRect={() => sceneBoxRef.current?.getBoundingClientRect() ?? null}
+          getStageRect={() => stageRef.current?.getBoundingClientRect() ?? null}
           envelopeColor={env.color}
           liner={liner.background}
           stampId={stampId}

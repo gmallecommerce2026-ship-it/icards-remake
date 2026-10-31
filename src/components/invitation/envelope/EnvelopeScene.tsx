@@ -5,6 +5,8 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEv
 import { animate, motion, useMotionValue, useSpring, useTransform, useVelocity, type MotionValue } from 'motion/react';
 import { Stamp } from './Stamp';
 import { EnvelopeFlap } from './EnvelopeFlap';
+import { WaxSeal, SEAL_PRESS_AT } from './WaxSeal';
+import { createCamera, type CamKey } from './cinematic';
 import { FlapDebugPanel } from './FlapDebugPanel';
 import { dbg } from './flapDebug';
 import s from './envelope.module.css';
@@ -88,11 +90,47 @@ const ss = (a: number, b: number, x: number) => {
 /*  Muốn nhanh / chậm từng đoạn chỉ cần sửa các mốc dưới đây.                                         */
 /* ------------------------------------------------------------------ */
 export const SEND_RANGE = {
-  card: [0.06, 0.44],   // thiệp xoay ngang rồi trượt xuống miệng phong bì (t: 1 → 0)
-  sink: [0.44, 0.54],   // thiệp chìm hẳn vào trong phong bì (rise: 1 → 0)
-  flap: [0.5, 0.74],    // nắp gập xuống (180° → 0°) và nảy nhẹ một nhịp
-  flip: [0.76, 0.95],   // phong bì xoay ra MẶT TRƯỚC (có tem + tên người nhận)
+  show: [0.05, 0.26],   // thiệp tiến sát camera, nghiêng nhiều góc để khoe mặt bìa ngoài
+  card: [0.26, 0.50],   // thiệp xoay ngang rồi trượt xuống miệng phong bì (t: 1 → 0)
+  sink: [0.50, 0.58],   // thiệp hạ hẳn xuống đáy túi (vẫn nhìn thấy qua miệng nắp mở)
+  flap: [0.56, 0.74],   // nắp gập xuống (180° → 0°) và nảy nhẹ một nhịp
+  seal: [0.75, 0.89],   // sáp loang, con dấu đồng đóng xuống mép niêm phong, để lại dấu iCards
+  flip: [0.91, 0.98],   // phong bì xoay ra MẶT TRƯỚC (có tem + tên người nhận)
 } as const;
+
+/* Kích thước + vị trí con dấu trên mũi nắp (px thiết kế): tâm đĩa hơi cao hơn mũi để sáp phủ kín đỉnh chữ V */
+const SEAL_D = 96;
+const SEAL_CY = FLAP_H - SEAL_D * 0.1;          // tâm dấu cao hơn mũi nắp một chút: sáp phủ kín đỉnh chữ V
+const SEAL_TOP = SEAL_CY - SEAL_D / 2;
+
+/* GÓC MÁY theo tiến độ p. s = độ phóng · rx/ry/rz = nghiêng/xoay quanh/lắc (độ) · fx,fy = điểm máy nhìn vào (px, từ tâm cảnh)
+   Nhịp: tiến nhẹ khi thiệp khoe mặt bìa → lùi toàn cảnh khi thiệp xoay ngang → áp sát miệng phong bì → nhìn chếch
+         từ trên khi nắp gập → THẲNG GÓC (top-down) vào mép niêm phong khi đóng dấu → lùi ra, vòng một cung khi lật mặt trước. */
+const SEAL_FY = ENV.y + SEAL_CY - CY;
+const CAM_KEYS: CamKey[] = [
+  { p: 0.00, s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0, fy: 0 },
+  { p: 0.05, s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0, fy: 0 },
+  { p: 0.12, s: 1.04, rx: -2, ry: 6,   rz: 0.4,  fx: 0, fy: -6 },
+  { p: 0.20, s: 1.06, rx: 2,  ry: -6,  rz: -0.4, fx: 0, fy: 0 },
+  { p: 0.27, s: 0.92, rx: 6,  ry: 0,   rz: 0,    fx: 0, fy: -10 },
+  { p: 0.36, s: 1.00, rx: 4,  ry: -14, rz: 1.2,  fx: 0, fy: 15 },
+  { p: 0.46, s: 1.30, rx: 6,  ry: -5,  rz: 0,    fx: 0, fy: -45 },
+  { p: 0.54, s: 1.32, rx: 12, ry: 5,   rz: 0,    fx: 0, fy: -35 },
+  { p: 0.62, s: 1.25, rx: 14, ry: 9,   rz: -0.8, fx: 0, fy: -30 },
+  { p: 0.71, s: 1.38, rx: 6,  ry: -4,  rz: 0,    fx: 0, fy: SEAL_FY * 0.5 },
+  { p: 0.76, s: 1.75, rx: 1,  ry: 0,   rz: 0,    fx: 0, fy: SEAL_FY },
+  { p: 0.82, s: 2.05, rx: 0,  ry: 0,   rz: 0,    fx: 0, fy: SEAL_FY },
+  { p: 0.88, s: 2.20, rx: 0,  ry: 0,   rz: 0,    fx: 0, fy: SEAL_FY },
+  { p: 0.92, s: 1.75, rx: -2, ry: -12, rz: 0.8,  fx: 0, fy: SEAL_FY * 0.4 },
+  { p: 0.98, s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0, fy: 0 },
+  { p: 1.00, s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0, fy: 0 },
+];
+const camAt = createCamera(CAM_KEYS);
+/** rung nhẹ khi sáp chạm nắp (px thiết kế), tắt dần */
+const shakeAt = (p: number) => {
+  const d = p - (SEND_RANGE.seal[0] + (SEND_RANGE.seal[1] - SEND_RANGE.seal[0]) * SEAL_PRESS_AT);
+  return d <= 0 ? 0 : 3.2 * Math.exp(-11 * d) * Math.sin(40 * d);
+};
 
 function sendFlapAngle(p: number) {
   const [a, b] = SEND_RANGE.flap;
@@ -125,6 +163,11 @@ type Props = {
   onReady?: () => void;
 };
 
+/** sáp đỏ thẫm; nếu phong bì đã đỏ thì dùng sáp vàng đồng cho nổi */
+function pickSeal(hex: string) {
+  const n = parseInt(hex.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return r > 140 && g < 100 && b < 120 ? '#B8862B' : '#A3152F';
+}
 function isLight(hex: string) {
   const n = parseInt(hex.slice(1), 16);
   return 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 150;
@@ -164,6 +207,19 @@ export function EnvelopeScene({
   const rise = useMotionValue(flapOpen ? 1 : 0);    // 0 = thiệp cất kín · 1 = thiệp thò lên khỏi miệng phong bì
   const fv = useMotionValue(focus === 'envelope' ? 1 : 0);   // 0 = thiệp ở trước · 1 = phong bì ở trước
   const idleOpen = useMotionValue(0);
+  const show = useMotionValue(0);                   // 0..1: thiệp tiến sát camera khoe mặt bìa
+  const sealP = useMotionValue(0);                  // 0..1: con dấu sáp (chỉ chạy trong chế độ gói thiệp)
+  const idleSend = useMotionValue(0);
+  const sendP = send ?? idleSend;
+  // máy quay (chỉ áp dụng khi có `send`)
+  const cam = useTransform(sendP, camAt);
+  const shake = useTransform(sendP, shakeAt);
+  const camScale = useTransform(cam, (c) => c.s);
+  const camRX = useTransform(cam, (c) => c.rx);
+  const camRY = useTransform(cam, (c) => c.ry);
+  const camRZ = useTransform(cam, (c) => c.rz);
+  const camX = useTransform(cam, (c) => -c.fx * c.s);
+  const camY = useTransform([cam, shake] as MotionValue<any>[], ([c, sh]: any[]) => -(c as CamKey).fy * (c as CamKey).s + (sh as number) * (c as CamKey).s);
   const open = openAmt ?? idleOpen;
 
   const rad = Math.PI / 180;
@@ -247,16 +303,18 @@ export function EnvelopeScene({
   useEffect(() => {
     if (!send) return;
     const apply = (p: number) => {
-      const [c0, c1] = SEND_RANGE.card, [s0, s1] = SEND_RANGE.sink, [f0, f1] = SEND_RANGE.flip;
+      const [c0, c1] = SEND_RANGE.card, [s0, s1] = SEND_RANGE.sink, [f0, f1] = SEND_RANGE.flip, [w0, w1] = SEND_RANGE.seal, [h0, h1] = SEND_RANGE.show;
       t.set(1 - clamp01((p - c0) / (c1 - c0)));
       rise.set(1 - ss(s0, s1, p));
       flapRot.set(sendFlapAngle(p));
       flip.set(180 * (1 - ss(f0, f1, p)));
       fv.set(0);
+      sealP.set(clamp01((p - w0) / (w1 - w0)));
+      show.set(clamp01((p - h0) / (h1 - h0)));
     };
     apply(send.get());
     return send.on('change', apply);
-  }, [send, t, rise, flapRot, flip, fv]);
+  }, [send, t, rise, flapRot, flip, fv, sealP, show]);
 
   // báo cho cha biết cảnh đã hiện hình (để cha ẩn bản đang đứng dưới mà không bị chớp)
   const readyCb = useRef(onReady);
@@ -271,33 +329,52 @@ export function EnvelopeScene({
      ĐÚT VÀO (t 1 → 0): đúng hành trình ngược lại - xoay ngang trước, rồi mới trượt xuống vào phong bì. */
   const slide = useTransform(t, (v) => ss(0, T_SLIDE, v));       // 0 → 1: trượt lên khỏi miệng
   const swing = useTransform(t, (v) => ss(T_TURN, 1, v));         // 0 → 1: xoay dọc + bay vòng cung
-  const cardX = useTransform([swing, open, fv], ([u, op, f]: number[]) => {
+  /* "KHOE THIỆP": thiệp là nhân vật chính. Nó tiến sát camera, lia từ TRÁI sang PHẢI rồi ngược lại (1,5 nhịp) và
+     nghiêng theo quán tính để lộ mặt bìa; đồng thời phong bì lùi phía sau trôi NGƯỢC chiều (xem envX). Ở hai đầu
+     mọi thứ về 0 nên nối liền với tư thế đứng yên trước / sau. */
+  const showB = useTransform(show, (u) => ss(0, 0.2, u) * (1 - ss(0.8, 1, u)));
+  const sway = useTransform(show, (u) => Math.sin(2 * Math.PI * ss(0, 1, u)));           // 1 nhịp con lắc êm (chậm ở hai đầu): giữa → phải → trái → giữa
+  const swayLag = useTransform(show, (u) => Math.sin(2 * Math.PI * ss(0, 1, u) - 0.4));   // góc xoay trễ pha nhẹ so với vị trí
+  const showRY = useTransform([swayLag, showB], ([l, b]: number[]) => b * 28 * l);
+  const showRX = useTransform([show, showB], ([u, b]: number[]) => b * (-5 + 6 * Math.cos(2 * Math.PI * ss(0, 1, u))));
+  const showRZ = useTransform([sway, showB], ([w, b]: number[]) => b * 3.4 * w);   // nghiêng ngang theo chiều lia
+  const glareX = useTransform(show, (u) => -CARD_W * 0.7 + CARD_W * 2 * ss(0.15, 0.85, u));
+  const glareOp = useTransform(show, (u) => 0.8 * Math.sin(Math.PI * ss(0.1, 0.9, u)));
+  const cardX = useTransform([swing, open, fv, showB, sway], ([u, op, f, b, w]: number[]) => {
     const closed = lerp(POSE.outClosed.cx, POSE.behind.cx, f);
     const outX = lerp(closed, POSE.outOpen.cx, op * (1 - f));
-    return lerp(POSE.sealed.cx, outX, u) + BOW * Math.sin(Math.PI * u) * (1 - f) - ORB_X * Math.sin(Math.PI * f) * u - CARD_CX;
+    return lerp(POSE.sealed.cx, outX, u) + BOW * Math.sin(Math.PI * u) * (1 - f) - ORB_X * Math.sin(Math.PI * f) * u - CARD_CX + (CX - POSE.outClosed.cx) * 0.8 * b + 92 * b * w;
   });
-  const cardY = useTransform([slide, swing, rise, open, fv], ([sl, u, r, op, f]: number[]) => {
+  const cardY = useTransform([slide, swing, rise, open, fv, showB, sway], ([sl, u, r, op, f, b, w]: number[]) => {
     const inY = lerp(POSE.sealed.cy, POSE.peek.cy, r);
     const y0 = lerp(inY, POSE.slid.cy, sl);
     const closed = lerp(POSE.outClosed.cy, POSE.behind.cy, f);
     const outY = lerp(closed, POSE.outOpen.cy, op * (1 - f));
-    return lerp(y0, outY, u) - CARD_CY - SWAP_ARC * Math.sin(Math.PI * f) * u;   // nhấc lên khi đổi chỗ
+    return lerp(y0, outY, u) - CARD_CY - SWAP_ARC * Math.sin(Math.PI * f) * u - 18 * b - 12 * b * w * w;   // cung võng: nhấc lên ở hai biên, không gãy khúc   // nhấc lên khi đổi chỗ
   });
-  const cardScale = useTransform([swing, open, fv], ([u, op, f]: number[]) => {
+  const cardScale = useTransform([swing, open, fv, showB], ([u, op, f, b]: number[]) => {
     const closed = lerp(POSE.outClosed.s, POSE.behind.s, f);
-    return lerp(POSE.sealed.s, lerp(closed, POSE.outOpen.s, op * (1 - f)), u) * (1 - ORB_DIP * Math.sin(Math.PI * f) * u);
+    return lerp(POSE.sealed.s, lerp(closed, POSE.outOpen.s, op * (1 - f)), u) * (1 - ORB_DIP * Math.sin(Math.PI * f) * u) * (1 + 0.3 * b);
   });
-  const cardRotZ = useTransform(swing, (u) => -90 * (1 - u));      // -90° = nằm ngang · 0° = đứng thẳng
-  const cardRotX = useTransform(swing, (u) => -16 * Math.sin(Math.PI * u));
-  const cardRotY = useTransform([swing, fv], ([u, f]: number[]) => 38 * Math.sin(Math.PI * u) + ORB_YAW * Math.sin(Math.PI * f) * u);
+  const cardRotZ = useTransform([swing, showRZ], ([u, z]: number[]) => -90 * (1 - u) + z);      // -90° = nằm ngang · 0° = đứng thẳng
+  const cardRotX = useTransform([swing, showRX], ([u, x]: number[]) => -16 * Math.sin(Math.PI * u) + x);
+  // Phong bì lật mặt trước: thiệp (đang nằm trong túi) xoay CÙNG phong bì, nếu không lúc phong bì mỏng như tờ giấy (≈90°) cả tấm thiệp lộ ra phía sau
+  const flipTurn = useTransform(flip, (v) => (send ? v - 180 : 0));
+  const cardRotY = useTransform([swing, fv, showRY, flipTurn], ([u, f, y, ft]: number[]) => 38 * Math.sin(Math.PI * u) + ORB_YAW * Math.sin(Math.PI * f) * u + y + ft);
   // z = 1 nằm GIỮA lưng phong bì (z 0) và mặt trước (z 2); ra ngoài thì lên trước (z 100) hoặc lùi hẳn ra sau phong bì (z -160)
   const cardZ = useTransform([t, fv], ([v, f]: number[]) => {
     const u = ss(T_SLIDE, 1, v);
     return 1 + 99 * u + Z_BUMP * Math.sin(Math.PI * u) * (1 - f) - 260 * ss(0.35, 0.65, f) * u;
   });
   // z-index: lưng phong bì = 1 · thiệp (đang trong) = 2 · mặt trước phong bì = 3
+  // bóng thiệp nhiều lớp: sát giấy (tiếp xúc) + mềm + xa; thiệp càng "nhấc" gần camera bóng càng xa và nhoè, lệch ngược chiều nghiêng
+  const cardShadow = useTransform([showB, showRY, swing], ([b, ry, u]: number[]) => {
+    const ox = -ry * 0.9, oy = 5 + 46 * b + 10 * Math.sin(Math.PI * u);
+    return `${ox * 0.2}px ${oy * 0.2}px 2px rgb(0 0 0 / .28), ${ox * 0.6}px ${oy * 0.6}px ${10 + 22 * b}px -1px rgb(0 0 0 / .32), ${ox}px ${oy}px ${26 + 44 * b}px -6px rgb(0 0 0 / .42), ${ox * 1.8}px ${oy * 1.9}px ${60 + 70 * b}px -14px rgb(0 0 0 / .5)`;
+  });
   const cardLayer = useTransform([t, fv], ([v, f]: number[]) => (ss(T_SLIDE, 1, v) < 0.001 ? 2 : f < 0.5 ? 4 : 0));
-  const cardOpacity = useTransform([t, rise], ([tt, r]: number[]) => Math.min(1, r * 3 + tt * 6));
+  // Chế độ gói thiệp: thiệp KHÔNG mờ đi - nó nằm gọn trong phong bì (bị mảnh trước + nắp che) tới lúc đóng nắp xong
+  const cardOpacity = useTransform([t, rise], ([tt, r]: number[]) => (send ? 1 : Math.min(1, r * 3 + tt * 6)));
 
   // máy quay: chỉ cần kéo xuống khi nắp đang mở (nhìn từ mặt nắp) và thiệp còn nằm trong phong bì
   const backAmt = useTransform(flip, (v) => (1 - Math.cos(v * rad)) / 2);   // 0 = mặt địa chỉ · 1 = mặt nắp
@@ -325,15 +402,15 @@ export function EnvelopeScene({
   /* ---------- PHONG BÌ: tụt xuống + lùi ra sau để nhường chỗ cho thiệp, nhưng vẫn thấy được (chạm để cất thiệp) ---------- */
   const uOut = useTransform(t, (v) => ss(T_SLIDE, 1, v));
   const flapAmt = useTransform([flapRot, backAmt], ([fr, ba]: number[]) => clamp01(fr / 180) * ba);
-  const envX = useTransform([uOut, fv], ([u, f]: number[]) => u * (lerp(ENV_LAYOUT.x[0], ENV_LAYOUT.x[1], f) + ORB_X * Math.sin(Math.PI * f)));
+  const envX = useTransform([uOut, fv, showB, sway], ([u, f, b, w]: number[]) => u * (lerp(ENV_LAYOUT.x[0], ENV_LAYOUT.x[1], f) + ORB_X * Math.sin(Math.PI * f)) - 118 * b * w);   // ngược chiều thiệp
   const envY = useTransform([uOut, fv, flapAmt], ([u, f, fa]: number[]) =>
     u * (lerp(ENV_LAYOUT.y[0], ENV_LAYOUT.y[1], f) * fa + SWAP_ARC * Math.sin(Math.PI * f)));
-  const envS = useTransform([uOut, fv], ([u, f]: number[]) => (1 + u * (lerp(ENV_LAYOUT.s[0], ENV_LAYOUT.s[1], f) - 1)) * (1 - ORB_DIP * Math.sin(Math.PI * f) * u));
+  const envS = useTransform([uOut, fv, showB], ([u, f, b]: number[]) => (1 + u * (lerp(ENV_LAYOUT.s[0], ENV_LAYOUT.s[1], f) - 1)) * (1 - ORB_DIP * Math.sin(Math.PI * f) * u) * (1 - 0.06 * b));
   const backZ = useTransform([t, fv], ([v, f]: number[]) => -ENV_PUSH * ss(T_SLIDE, 0.9, v) * (1 - ss(0.35, 0.65, f)));
   const frontZ = useTransform(backZ, (v) => v + 2);
   // hai vật nghiêng ngược chiều nhau trong lúc bay -> cảm giác xoay quanh nhau trong không gian
   const arc = useTransform(t, (v) => Math.sin(Math.PI * ss(T_TURN - 0.05, 1, v)) * 0.6);   // chỉ nghiêng thoáng qua khi rút/cất thiệp
-  const envRotY = useTransform([arc, fv, uOut], ([a, f, u]: number[]) => -22 * a - ORB_YAW * Math.sin(Math.PI * f) * u);
+  const envRotY = useTransform([arc, fv, uOut, swayLag, showB], ([a, f, u, l, b]: number[]) => -22 * a - ORB_YAW * Math.sin(Math.PI * f) * u - 20 * b * l);
   const envRotX = useTransform(arc, (a) => 8 * a);
 
   const vars = { '--env': envelopeColor, '--ink': isLight(envelopeColor) ? '#17171a' : '#ffffff' } as CSSProperties;
@@ -422,6 +499,10 @@ export function EnvelopeScene({
           visibility: dim ? 'visible' : 'hidden',
         }}
       >
+        <motion.div
+          className={s.camera}
+          style={send ? { x: camX, y: camY, scale: camScale, rotateX: camRX, rotateY: camRY, rotateZ: camRZ, transformPerspective: 1500, transformOrigin: `${CX}px ${CY}px` } : undefined}
+        >
         <motion.div className={s.world} style={{ y: pan, perspectiveOrigin: `${CX}px ${CY}px` }}>
           {/* ===== TẤM LƯNG: giấy phong bì, lớp lót, nắp ĐÃ MỞ (nằm sau thiệp) ===== */}
           <motion.div className={s.plane} style={{ x: envX, y: envY, scale: envS, z: backZ, zIndex: 1, rotateY: envRotY, rotateX: envRotX }}>
@@ -447,9 +528,16 @@ export function EnvelopeScene({
               left: CARD.x, top: CARD.y, width: CARD.w, height: CARD.h,
               x: cardX, y: cardY, z: cardZ, zIndex: cardLayer, scale: cardScale,
               rotateX: cardRotX, rotateY: cardRotY, rotateZ: cardRotZ, opacity: cardOpacity,
+              ...(send ? { boxShadow: cardShadow, borderRadius: 3 } : null),
             }}
           >
             {card ?? <div className={s.placeholder}>Thiệp của bạn</div>}
+            {send && (
+              <div className={s.glareClip}>
+                <div className={s.paper3d} />
+                <motion.div className={s.glare} style={{ x: glareX, opacity: glareOp }} />
+              </div>
+            )}
             {onCardClick && (
               <div
                 className={s.cardHit}
@@ -517,10 +605,16 @@ export function EnvelopeScene({
                   height={FLAP_H} liner={liner} rot={flapRot} curl={curl}
                   visibility={flapFrontVis} sheet="front" className={s.hit}
                 />
+                {send && (
+                  <div className={s.sealAnchor} style={{ left: '50%', top: SEAL_TOP, width: SEAL_D, height: SEAL_D, marginLeft: -SEAL_D / 2 }}>
+                    <WaxSeal p={sealP} color={pickSeal(envelopeColor)} />
+                  </div>
+                )}
                 <motion.div className={s.sheen} style={{ opacity: sheen }} />
               </div>
             </Rotor>
           </motion.div>
+        </motion.div>
         </motion.div>
       </div>
       <FlapDebugPanel
