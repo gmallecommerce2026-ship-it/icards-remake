@@ -46,6 +46,25 @@
     box-shadow: 0 18px 50px rgb(0 0 0 / .45);
 }
 
+/* trang trái (mặt trong của bìa): bóng nếp gấp nằm sát gáy = cạnh PHẢI trong hệ toạ độ đã xoay 180° */
+.leftPage::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 26px;
+    background: linear-gradient(270deg, rgb(0 0 0 / .2), transparent);
+    pointer-events: none;
+}
+
+/* trang đang chỉnh trên cặp trang mở: viền xanh nhạt để biết nút thêm / nền sẽ tác động vào trang nào */
+.sheet[data-active='true'],
+.face[data-active='true'] {
+    outline: 2px solid rgb(47 107 255 / .55);
+    outline-offset: -2px;
+}
+
 /* khi đang chỉnh sửa, cho phần tử tràn ra ngoài để thấy tay nắm ở mép thiệp */
 .sheet[data-editable='true'],
 .face[data-editable='true'] {
@@ -68,7 +87,11 @@
 .front {
     position: absolute;
     inset: 0;
-    transform-style: preserve-3d;
+    /* PHẲNG + perspective riêng: thứ tự trước/sau (bìa trên ruột thiệp) do thứ tự DOM quyết định, KHÔNG để trình duyệt
+       sắp theo độ sâu 3D (chênh 1px làm hit-test trả về ruột thiệp thay vì bìa -> không chọn được đối tượng trên bìa).
+       Bìa vẫn lật 3D bình thường nhờ perspective này + preserve-3d của chính .cover. */
+    transform-style: flat;
+    perspective: 2400px;
 }
 
 /* mặt sau: xoay sẵn 180° để khi cả tấm thiệp lật sẽ hiện đúng chiều */
@@ -85,4 +108,44 @@
     background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / .55) 50%, transparent 70%);
     pointer-events: none;
     mix-blend-mode: soft-light;
+}
+
+/* bóng cái bìa đang lật đổ xuống ruột thiệp */
+.cast {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(90deg, rgb(10 15 40 / .42), rgb(10 15 40 / 0) 60%);
+}
+
+/* bìa tối dần về phía gáy khi dựng lên */
+.shadeOut,
+.shadeIn {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.shadeOut {
+    background: linear-gradient(90deg, rgb(10 15 40 / .6), rgb(10 15 40 / 0) 75%);
+}
+
+.shadeIn {
+    background: linear-gradient(270deg, rgb(10 15 40 / .5), rgb(10 15 40 / 0) 70%);
+}
+
+/* chế độ xem: chạm vào thiệp để mở / lật tiếp */
+.tap {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.tap:focus-visible {
+    outline: 3px solid #0b57d0;
+    outline-offset: 4px;
 }
