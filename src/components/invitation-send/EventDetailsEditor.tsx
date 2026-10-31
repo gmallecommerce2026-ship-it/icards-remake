@@ -1,18 +1,20 @@
 "use client";
 
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useState, type CSSProperties, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   AlignLeft,
   ArrowDown,
   ArrowUp,
   Award,
+  Eye,
   Flower2,
   Image as ImageIcon,
   Mic,
   MoreHorizontal,
   Palette,
   Pencil,
+  PencilLine,
   Play,
   Plus,
   PlusSquare,
@@ -121,12 +123,18 @@ const DEFAULT_INFO: EventInfo = {
 
 type Tab = "style" | "settings" | "blocks" | "more";
 
+/** Chế độ xem trước: mọi ô nhập thành chữ thường, ẩn nút thêm / xoá */
+const ReadOnlyCtx = createContext(false);
+
+export type EventPageData = { info: EventInfo; styleId: string; accent: string; bg: string; blocks: Block[] };
+
 export type EventDetailsEditorProps = {
   initial?: Partial<EventInfo>;
   guests?: GuestLists;
   onClose?: () => void;
-  onSave?: (data: { info: EventInfo; styleId: string; accent: string; bg: string; blocks: Block[] }) => void;
-  onAddGuests?: () => void;
+  onSave?: (data: EventPageData) => void;
+  /** bấm "Thêm khách mời": nhận luôn cấu hình trang hiện tại để lưu trước khi chuyển bước */
+  onAddGuests?: (data: EventPageData) => void;
   onReplay?: () => void;
 };
 
@@ -139,6 +147,7 @@ export function EventDetailsEditor({ initial, guests, onClose, onSave, onAddGues
   const [tab, setTab] = useState<Tab | null>(null);
   const [showRsvp, setShowRsvp] = useState(true);
   const [showGuests, setShowGuests] = useState(true);
+  const [preview, setPreview] = useState(false);
 
   const st = PAGE_STYLES.find((s) => s.id === styleId) ?? PAGE_STYLES[0];
   const vars = {
@@ -201,13 +210,26 @@ export function EventDetailsEditor({ initial, guests, onClose, onSave, onAddGues
         <button type="button" onClick={onClose} aria-label="Đóng" className="grid size-9 place-items-center rounded-full hover:bg-black/5">
           <X className="size-5" />
         </button>
-        <div className="flex items-center gap-4 text-sm font-semibold">
+        <div className="flex items-center gap-2 text-sm font-semibold sm:gap-4">
+          <button
+            type="button"
+            onClick={() => {
+              setTab(null);
+              setPreview((v) => !v);
+            }}
+            aria-pressed={preview}
+            className="flex items-center gap-1.5 rounded-full px-3 py-2 hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            style={{ outlineColor: CRIMSON }}
+          >
+            {preview ? <PencilLine className="size-4" /> : <Eye className="size-4" />}
+            <span className="max-sm:sr-only">{preview ? "Tiếp tục chỉnh sửa" : "Xem trước"}</span>
+          </button>
           {onSave && (
             <button type="button" onClick={() => onSave({ info, styleId, accent, bg, blocks })} className="hover:underline">
               Lưu
             </button>
           )}
-          <button type="button" onClick={onAddGuests} className="rounded-full px-5 py-2 text-white" style={{ background: CRIMSON }}>
+          <button type="button" onClick={() => onAddGuests?.({ info, styleId, accent, bg, blocks })} className="whitespace-nowrap rounded-full px-5 py-2 text-white max-sm:px-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" style={{ background: CRIMSON, outlineColor: CRIMSON }}>
             Thêm khách mời
           </button>
         </div>
@@ -215,7 +237,7 @@ export function EventDetailsEditor({ initial, guests, onClose, onSave, onAddGues
 
       <div className="flex flex-1 items-stretch">
         {/* THANH CÔNG CỤ BÊN TRÁI */}
-        <nav aria-label="Công cụ" className="sticky top-14 z-30 h-[calc(100dvh-3.5rem)] w-[68px] shrink-0 border-r border-black/10 bg-white">
+        <nav aria-label="Công cụ" hidden={preview} className="sticky top-14 z-30 h-[calc(100dvh-3.5rem)] w-[68px] shrink-0 border-r border-black/10 bg-white">
           <div className="flex flex-col pt-4">
             <RailBtn icon={Palette} label="Kiểu trang" active={tab === "style"} onClick={() => setTab(tab === "style" ? null : "style")} />
             <RailBtn icon={Settings} label="Cài đặt" active={tab === "settings"} onClick={() => setTab(tab === "settings" ? null : "settings")} />
@@ -227,7 +249,7 @@ export function EventDetailsEditor({ initial, guests, onClose, onSave, onAddGues
 
         {/* PANEL */}
         <AnimatePresence initial={false}>
-          {tab && (
+          {tab && !preview && (
             <motion.aside
               key="panel"
               initial={{ opacity: 0 }}
@@ -238,31 +260,43 @@ export function EventDetailsEditor({ initial, guests, onClose, onSave, onAddGues
             >
               {tab === "style" && (
                 <Panel title="Kiểu trang" onClose={() => setTab(null)}>
-                  <div className="grid gap-2">
-                    {PAGE_STYLES.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => setStyleId(s.id)}
-                        aria-pressed={s.id === styleId}
-                        className="rounded-md border px-4 py-3 text-center transition-colors hover:bg-black/[0.03]"
-                        style={{
-                          borderColor: s.id === styleId ? CRIMSON : "rgba(0,0,0,.12)",
-                          boxShadow: s.id === styleId ? `0 0 0 1px ${CRIMSON}` : undefined,
-                          fontFamily: s.font,
-                          fontWeight: s.weight,
-                          letterSpacing: s.tracking,
-                          textTransform: s.upper ? "uppercase" : "none",
-                          fontSize: s.id === "plume" ? "1.9rem" : "1.3rem",
-                          lineHeight: 1.2,
-                        }}
-                      >
-                        {s.name}
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-[1fr_auto] gap-3">
+                    <div className="grid content-start gap-2">
+                      {PAGE_STYLES.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setStyleId(s.id)}
+                          aria-pressed={s.id === styleId}
+                          className="grid h-[68px] place-items-center rounded-md border px-3 text-center transition-colors hover:bg-black/[0.03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                          style={{
+                            borderColor: s.id === styleId ? CRIMSON : "rgba(0,0,0,.12)",
+                            boxShadow: s.id === styleId ? `0 0 0 1px ${CRIMSON}` : undefined,
+                            outlineColor: CRIMSON,
+                            fontFamily: s.font,
+                            fontWeight: s.weight,
+                            letterSpacing: s.tracking,
+                            textTransform: s.upper ? "uppercase" : "none",
+                            fontSize: s.id === "plume" ? "1.9rem" : "1.25rem",
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          {s.name}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex flex-col items-center gap-2 rounded-full border border-black/10 px-2 py-3">
+                      <ColorWheel label="Chọn màu nhấn tuỳ ý" value={accent} onPick={setAccent} />
+                      {ACCENTS.map((c) => (
+                        <Dot key={c} label={`Màu nhấn ${c}`} color={c} active={c === accent} onPick={() => setAccent(c)} />
+                      ))}
+                      <span aria-hidden className="my-1 h-px w-5 bg-black/20" />
+                      <ColorWheel label="Chọn màu nền tuỳ ý" value={bg} onPick={setBg} />
+                      {BGS.map((c) => (
+                        <Dot key={c} label={`Màu nền ${c}`} color={c} active={c === bg} onPick={() => setBg(c)} />
+                      ))}
+                    </div>
                   </div>
-                  <Swatches title="Màu nhấn" colors={ACCENTS} value={accent} onPick={setAccent} />
-                  <Swatches title="Màu nền" colors={BGS} value={bg} onPick={setBg} />
                 </Panel>
               )}
 
@@ -325,6 +359,7 @@ export function EventDetailsEditor({ initial, guests, onClose, onSave, onAddGues
           className="relative min-w-0 flex-1 overflow-hidden px-5 pb-28 pt-20 transition-colors duration-500 md:px-10"
           style={{ ...vars, background: "var(--ev-bg)", color: "var(--ev-ink)", ...body }}
         >
+          <ReadOnlyCtx.Provider value={preview}>
           {st.deco === "bunting" && <Bunting />}
 
           <div className="mx-auto max-w-3xl text-center">
@@ -371,7 +406,7 @@ export function EventDetailsEditor({ initial, guests, onClose, onSave, onAddGues
 
           {blocks.map((b, i) => (
             <section key={b.id} id={`block-${b.id}`} className="group relative mx-auto mt-24 max-w-3xl scroll-mt-24 text-center">
-              <div className="absolute -top-9 right-0 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 max-md:opacity-100">
+              <div hidden={preview} className="absolute -top-9 right-0 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 max-md:opacity-100">
                 <MiniBtn label="Chuyển lên" disabled={i === 0} onClick={() => moveBlock(b.id, -1)} icon={ArrowUp} />
                 <MiniBtn label="Chuyển xuống" disabled={i === blocks.length - 1} onClick={() => moveBlock(b.id, 1)} icon={ArrowDown} />
                 <MiniBtn label="Xoá khối" onClick={() => setBlocks((bs) => bs.filter((x) => x.id !== b.id))} icon={Trash2} />
@@ -382,6 +417,7 @@ export function EventDetailsEditor({ initial, guests, onClose, onSave, onAddGues
               </div>
             </section>
           ))}
+          </ReadOnlyCtx.Provider>
         </main>
       </div>
     </div>
@@ -420,24 +456,29 @@ function Panel({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
-function Swatches({ title, colors, value, onPick }: { title: string; colors: string[]; value: string; onPick: (c: string) => void }) {
+function Dot({ label, color, active, onPick }: { label: string; color: string; active: boolean; onPick: () => void }) {
   return (
-    <div className="mt-6">
-      <h3 className="mb-2 text-sm font-semibold">{title}</h3>
-      <div className="flex flex-wrap gap-2">
-        {colors.map((c) => (
-          <button
-            key={c}
-            type="button"
-            aria-label={`${title} ${c}`}
-            aria-pressed={c === value}
-            onClick={() => onPick(c)}
-            className="size-9 rounded-full border border-black/15"
-            style={{ background: c, outline: c === value ? `2px solid ${CRIMSON}` : "none", outlineOffset: 2 }}
-          />
-        ))}
-      </div>
-    </div>
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={active}
+      onClick={onPick}
+      className="size-7 shrink-0 rounded-full border border-black/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+      style={{ background: color, outline: active ? `2px solid ${CRIMSON}` : undefined, outlineOffset: 2, outlineColor: CRIMSON }}
+    />
+  );
+}
+
+/** Vòng màu: bấm để mở bảng chọn màu của trình duyệt */
+function ColorWheel({ label, value, onPick }: { label: string; value: string; onPick: (c: string) => void }) {
+  return (
+    <label
+      title={label}
+      className="relative size-7 shrink-0 cursor-pointer rounded-full border border-black/15 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2"
+      style={{ background: "conic-gradient(#f43f5e, #f59e0b, #eab308, #22c55e, #06b6d4, #3b82f6, #a855f7, #f43f5e)", outlineColor: CRIMSON }}
+    >
+      <input type="color" value={value} onChange={(e) => onPick(e.target.value)} aria-label={label} className="absolute inset-0 size-full cursor-pointer opacity-0" />
+    </label>
   );
 }
 
@@ -507,15 +548,17 @@ function Editable({
   cpl?: number; // số ký tự ước tính trên một dòng, để tự giãn chiều cao
   id?: string;
 }) {
-  const cls = "w-full rounded-sm bg-transparent text-center outline-none placeholder:opacity-40 focus:bg-black/[0.04]";
+  const ro = useContext(ReadOnlyCtx);
+  const cls = `w-full rounded-sm bg-transparent text-center outline-none placeholder:opacity-40 ${ro ? "cursor-default" : "focus:bg-black/[0.04]"}`;
   if (!multiline) {
-    return <input id={id} type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={cls} style={{ font: "inherit", ...style }} />;
+    return <input id={id} type="text" readOnly={ro} tabIndex={ro ? -1 : undefined} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={cls} style={{ font: "inherit", ...style }} />;
   }
   const rows = Math.max(1, value.split("\n").reduce((n, l) => n + Math.max(1, Math.ceil(l.length / cpl)), 0));
-  return <textarea id={id} rows={rows} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={`${cls} resize-none`} style={{ font: "inherit", ...style }} />;
+  return <textarea id={id} readOnly={ro} tabIndex={ro ? -1 : undefined} rows={rows} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={`${cls} resize-none`} style={{ font: "inherit", ...style }} />;
 }
 
 function BlockBody({ b, patch }: { b: Block; patch: (p: Partial<Block>) => void }) {
+  const ro = useContext(ReadOnlyCtx);
   const addBtn = "mt-6 inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed px-4 py-2 text-xs font-semibold";
   const addStyle: CSSProperties = { borderColor: "var(--ev-accent)", color: "var(--ev-accent)" };
 
@@ -548,14 +591,14 @@ function BlockBody({ b, patch }: { b: Block; patch: (p: Partial<Block>) => void 
               <div key={ph.id} className="relative aspect-square overflow-hidden rounded-md">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={ph.src} alt="" className="h-full w-full object-cover" />
-                <button type="button" aria-label="Xoá ảnh" onClick={() => patch({ photos: b.photos.filter((x) => x.id !== ph.id) })} className="absolute right-1.5 top-1.5 grid size-7 place-items-center rounded-full bg-black/65 text-white hover:bg-black">
+                <button type="button" hidden={ro} aria-label="Xoá ảnh" onClick={() => patch({ photos: b.photos.filter((x) => x.id !== ph.id) })} className="absolute right-1.5 top-1.5 grid size-7 place-items-center rounded-full bg-black/65 text-white hover:bg-black">
                   <X className="size-3.5" />
                 </button>
               </div>
             ))}
           </div>
         )}
-        <label className={addBtn} style={addStyle}>
+        <label hidden={ro} className={addBtn} style={addStyle}>
           <Plus className="size-3.5" /> Thêm ảnh
           <input
             type="file"
@@ -585,13 +628,13 @@ function BlockBody({ b, patch }: { b: Block; patch: (p: Partial<Block>) => void 
             <div className="mt-1 text-sm opacity-75">
               <Editable value={p.role} onChange={(v) => setPerson(p.id, "role", v)} placeholder="Vai trò" />
             </div>
-            <button type="button" aria-label="Xoá" onClick={() => patch({ people: b.people.filter((x) => x.id !== p.id) })} className="absolute -right-1 -top-2 grid size-5 place-items-center rounded-full opacity-40 hover:opacity-100">
+            <button type="button" hidden={ro} aria-label="Xoá" onClick={() => patch({ people: b.people.filter((x) => x.id !== p.id) })} className="absolute -right-1 -top-2 grid size-5 place-items-center rounded-full opacity-40 hover:opacity-100">
               <X className="size-3" />
             </button>
           </div>
         ))}
       </div>
-      <button type="button" onClick={() => patch({ people: [...b.people, { id: uid(), name: "", role: "" }] })} className={addBtn} style={addStyle}>
+      <button type="button" hidden={ro} onClick={() => patch({ people: [...b.people, { id: uid(), name: "", role: "" }] })} className={addBtn} style={addStyle}>
         <Plus className="size-3.5" /> Thêm người
       </button>
     </>

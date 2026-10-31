@@ -1,24 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { EnvelopeSealStage } from "./EnvelopeSealStage";
 import { EVENT_FONT_VARS, EventDetailsEditor, type EventDetailsEditorProps } from "./EventDetailsEditor";
 
 /* ------------------------------------------------------------------ */
 /*  Bấm "Tiếp theo" ở editor → mở lớp phủ toàn màn hình:               */
-/*   1) phần trên: hiệu ứng gói thiệp vào phong bì                     */
-/*   2) khi dấu sáp đóng xong → tự cuộn xuống phần cấu hình thiệp online */
+/*   1) phần trên: thiệp xoay ngang, nhét khít vào phong bì, nắp đóng   */
+/*   2) khi nắp đóng xong → tự cuộn xuống phần cấu hình thiệp online    */
 /*  Trong lúc chạy hiệu ứng, khoá cuộn tay; xong mới mở khoá.           */
 /* ------------------------------------------------------------------ */
 
 export type InvitationSendFlowProps = Pick<EventDetailsEditorProps, "initial" | "guests" | "onSave" | "onAddGuests"> & {
   open: boolean;
-  /** ảnh chụp thiệp từ canvas của editor */
-  cardImage?: string;
-  /** canvasHeight / canvasWidth */
+  /** mặt ngoài của thiệp (đặt sẵn `absolute inset-0`) - thường là <CardFaceStatic /> */
+  card: ReactNode;
+  /** cao / rộng của thiệp (500×700 → 1.4) */
   cardAspect?: number;
-  sealGlyph?: string;
+  /** màu + lớp lót phong bì người dùng đã chọn trong editor */
+  envelopeColor?: string;
+  liner?: string;
   onClose: () => void;
 };
 
@@ -41,7 +43,7 @@ export function InvitationSendFlow({ open, onClose, ...rest }: InvitationSendFlo
   );
 }
 
-function FlowBody({ cardImage, cardAspect, sealGlyph, initial, guests, onSave, onAddGuests, onClose }: Omit<InvitationSendFlowProps, "open">) {
+function FlowBody({ card, cardAspect, envelopeColor, liner, initial, guests, onSave, onAddGuests, onClose }: Omit<InvitationSendFlowProps, "open">) {
   const reduce = useReducedMotion();
   const scrollRef = useRef<HTMLDivElement>(null);
   const unlockTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -81,13 +83,15 @@ function FlowBody({ cardImage, cardAspect, sealGlyph, initial, guests, onSave, o
     >
       <div className="h-full">
         <EnvelopeSealStage
-          cardImage={cardImage}
           cardAspect={cardAspect}
-          sealGlyph={sealGlyph}
+          envelopeColor={envelopeColor}
+          liner={liner}
           runKey={runKey}
           onSealed={goToDetails}
           onBack={onClose}
-        />
+        >
+          {card}
+        </EnvelopeSealStage>
       </div>
 
       <section className="relative min-h-full">
