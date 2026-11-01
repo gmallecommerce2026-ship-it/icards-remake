@@ -36,8 +36,11 @@ const CARD_TABS: TabDef<CardTab>[] = [
   { id: 'elements', label: 'Phần tử', title: 'Phần tử', search: '', icon: <Ico><path d="M7 3.5l4 7H3z" /><circle cx="17.5" cy="7" r="3.5" /><rect x="3.5" y="14" width="7" height="7" rx="1.2" /><path d="M17.5 14l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z" /></Ico> },
   { id: 'text', label: 'Chữ', title: 'Chữ', search: '', icon: <Ico><path d="M5 6V4h14v2M12 4v16M9 20h6" /></Ico> },
   { id: 'background', label: 'Nền', title: 'Nền', search: '', icon: <Ico><rect x="3.5" y="3.5" width="17" height="17" rx="2.5" /><path d="M3.5 15l5-5 4 4 3-3 5 5" /></Ico> },
+  { id: 'brand', label: 'Thương hiệu', title: 'Thương hiệu', search: '', icon: <Ico><path d="M12 3l2.7 5.5 6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.4l6-.9z" /></Ico> },
   { id: 'uploads', label: 'Tải lên', title: 'Tải lên', search: '', icon: <Ico><path d="M7 18a5 5 0 0 1-.6-9.96A6 6 0 0 1 18 9a4 4 0 0 1 0 8" /><path d="M12 12v8M9 15l3-3 3 3" /></Ico> },
+  { id: 'tools', label: 'Công cụ', title: 'Công cụ', search: '', icon: <Ico><path d="M4 7h16M4 12h16M4 17h16" /><circle cx="9" cy="7" r="2" fill="#fff" /><circle cx="15" cy="12" r="2" fill="#fff" /><circle cx="8" cy="17" r="2" fill="#fff" /></Ico> },
   { id: 'draw', label: 'Vẽ', title: 'Vẽ', search: '', icon: <Ico><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z" /><path d="M14.5 6.5l3 3" /></Ico> },
+  { id: 'apps', label: 'Ứng dụng', title: 'Ứng dụng', search: '', icon: <Ico><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="3.5" y="13.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="13.5" width="7" height="7" rx="1.5" /><path d="M17 3.5v7M13.5 7h7" /></Ico> },
 ];
 // Chế độ chỉnh PHONG BÌ: chỉ những tab liên quan tới phong bì
 const ENV_TABS: TabDef<EnvTab>[] = [

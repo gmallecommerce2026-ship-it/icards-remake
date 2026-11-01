@@ -13,9 +13,10 @@ import { FrameView } from './PageEditor';
 import { ColorGrid } from './Toolbars';
 import { readImage, imageRatio } from './readImage';
 import { PAGES, useEditorStore, type PageId } from './useEditorStore';
+import { AppsPanel, BrandPanel, ToolsPanel } from './ExtraPanels';
 import p from './CardPanel.module.css';
 
-export type CardTab = 'templates' | 'elements' | 'text' | 'background' | 'uploads' | 'draw';
+export type CardTab = 'templates' | 'elements' | 'text' | 'background' | 'uploads' | 'draw' | 'brand' | 'tools' | 'apps';
 
 const PAGE_LABEL: Record<PageId, string> = { 
   cover: 'Mặt ngoài', 
@@ -353,6 +354,9 @@ export function CardPanel({ tab, onPage }: { tab: CardTab; onPage?: (v: PageId) 
       {tab === 'background' && <BackgroundPanel />}
       {tab === 'uploads' && <UploadsPanel />}
       {tab === 'draw' && <DrawPanel />}
+      {tab === 'brand' && <BrandPanel />}
+      {tab === 'tools' && <ToolsPanel />}
+      {tab === 'apps' && <AppsPanel />}
     </div>
   );
 }

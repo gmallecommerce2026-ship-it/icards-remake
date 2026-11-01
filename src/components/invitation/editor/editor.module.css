@@ -120,6 +120,11 @@
     pointer-events: auto;
 }
 
+.rot[data-below='true'] {
+    top: auto;
+    bottom: -34px;
+}
+
 .guideV {
     position: absolute;
     left: 50%;
@@ -356,4 +361,15 @@
     min-width: 34px;
     text-align: right;
     color: #777;
+}
+
+/* lề an toàn (36px) + đường chia ba: bật ở tab Công cụ */
+.safe {
+    position: absolute;
+    inset: 36px;
+    border: 1px dashed rgb(47 107 255 / .7);
+    background:
+        linear-gradient(90deg, transparent calc(33.333% - .5px), rgb(47 107 255 / .25) calc(33.333% - .5px) calc(33.333% + .5px), transparent calc(33.333% + .5px) calc(66.666% - .5px), rgb(47 107 255 / .25) calc(66.666% - .5px) calc(66.666% + .5px), transparent calc(66.666% + .5px)),
+        linear-gradient(0deg, transparent calc(33.333% - .5px), rgb(47 107 255 / .25) calc(33.333% - .5px) calc(33.333% + .5px), transparent calc(33.333% + .5px) calc(66.666% - .5px), rgb(47 107 255 / .25) calc(66.666% - .5px) calc(66.666% + .5px), transparent calc(66.666% + .5px));
+    pointer-events: none;
 }

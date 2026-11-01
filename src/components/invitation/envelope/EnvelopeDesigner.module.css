@@ -22,6 +22,7 @@
 }
 
 .tab {
+  flex: none;          /* 9 tab: không co lại, rail tự cuộn dọc khi màn hình thấp */
   display: flex;
   flex-direction: column;
   align-items: center;
