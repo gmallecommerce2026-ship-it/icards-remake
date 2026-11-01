@@ -77,6 +77,10 @@ export function getService(slug: string): Service | undefined {
   return SERVICES.find((s) => s.slug === slug);
 }
 
+export function getRelatedServices(slug: string, limit = 2): Service[] {
+  return SERVICES.filter((s) => s.slug !== slug).slice(0, limit);
+}
+
 export const PROCESS_STEPS = [
   { title: "Gửi yêu cầu", text: "Chọn dịch vụ và để lại số điện thoại. Chúng tôi liên hệ trong giờ làm việc." },
   { title: "Nhận báo giá", text: "Sau khi hỏi rõ nhu cầu, chúng tôi báo giá cụ thể và thời gian hoàn thành." },
