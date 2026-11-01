@@ -9,7 +9,9 @@
 /*  Đoạn nào hai mốc kề nhau bằng nhau thì giữ yên (tiếp tuyến = 0).     */
 /* ------------------------------------------------------------------ */
 
-export type CamKey = { p: number; s: number; rx: number; ry: number; rz: number; fx: number; fy: number };
+/** `tan`: ép vận tốc (đơn vị / đơn vị p) tại mốc này. Dùng để tạo đoạn NHANH rồi CHẬM dần (ease-out) khi zoom vào:
+ *  mốc đầu đoạn đặt tan lớn, mốc cuối đoạn đặt tan nhỏ (hoặc 0). */
+export type CamKey = { p: number; s: number; rx: number; ry: number; rz: number; fx: number; fy: number; tan?: Partial<Record<'s' | 'rx' | 'ry' | 'rz' | 'fx' | 'fy', number>> };
 type Field = 's' | 'rx' | 'ry' | 'rz' | 'fx' | 'fy';
 const FIELDS: Field[] = ['s', 'rx', 'ry', 'rz', 'fx', 'fy'];
 
@@ -18,6 +20,8 @@ export function createCamera(keys: CamKey[]): (p: number) => CamKey {
   const tan: Record<Field, number[]> = { s: [], rx: [], ry: [], rz: [], fx: [], fy: [] };
   for (const f of FIELDS) {
     for (let i = 0; i < n; i++) {
+      const forced = keys[i].tan?.[f];
+      if (forced !== undefined) { tan[f].push(forced); continue; }
       if (i === 0 || i === n - 1) { tan[f].push(0); continue; }
       const flat = keys[i][f] === keys[i - 1][f] || keys[i][f] === keys[i + 1][f];
       tan[f].push(flat ? 0 : (keys[i + 1][f] - keys[i - 1][f]) / (keys[i + 1].p - keys[i - 1].p));

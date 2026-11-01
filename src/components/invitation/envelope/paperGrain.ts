@@ -69,3 +69,55 @@ export function getPaperGrain(): string | null {
   cached = `url(${c.toDataURL('image/png')})`;
   return cached;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Nhiễu giấy cho phong bì: bitmap sinh sẵn bằng canvas MỘT lần.        */
+/*  Trước đây dùng SVG feTurbulence làm background: trình duyệt phải       */
+/*  raster lại bộ lọc đó mỗi khi máy quay đổi độ phóng (rất nặng ở đoạn    */
+/*  zoom vào dấu sáp → giật). PNG thì chỉ giải mã một lần rồi được dùng lại.   */
+/* ------------------------------------------------------------------ */
+const NOISE = 240;
+let cachedNoise: string | null = null;
+
+export function getEnvelopeNoise(): string | null {
+  if (cachedNoise) return cachedNoise;
+  if (typeof document === 'undefined') return null;
+  const rnd = mulberry32(19);
+  const at = (x: number, y: number) => ((y + NOISE) % NOISE) * NOISE + ((x + NOISE) % NOISE);   // quấn vòng → ô gạch liền mạch
+  let v = new Float32Array(NOISE * NOISE);
+  for (let i = 0; i < v.length; i++) v[i] = rnd();
+  // làm mờ 2 lần: hạt mịn, mềm như thớ giấy - KHÔNG còn những chấm đen sắc nét
+  const blur = (src: Float32Array) => {
+    const out = new Float32Array(src.length);
+    for (let y = 0; y < NOISE; y++) for (let x = 0; x < NOISE; x++) {
+      out[at(x, y)] = (src[at(x - 1, y)] + src[at(x + 1, y)] + src[at(x, y - 1)] + src[at(x, y + 1)] + 4 * src[at(x, y)]) / 8;
+    }
+    return out;
+  };
+  v = blur(blur(v));
+  let mean = 0;
+  for (let i = 0; i < v.length; i++) mean += v[i];
+  mean /= v.length;
+  let varSum = 0;
+  for (let i = 0; i < v.length; i++) varSum += (v[i] - mean) ** 2;
+  const sd = Math.sqrt(varSum / v.length) || 1;
+
+  const c = document.createElement('canvas');
+  c.width = c.height = NOISE;
+  const ctx = c.getContext('2d');
+  if (!ctx) return null;
+  const img = ctx.createImageData(NOISE, NOISE);
+  for (let i = 0; i < v.length; i++) {
+    const d = (v[i] - mean) / sd;                    // ~N(0,1)
+    // hai tông: hạt sáng (trắng) và hạt tối (nâu thẫm, không phải đen) đều RẤT nhạt → giấy có vân nhưng sạch
+    const light = d > 0;
+    const a = Math.min(light ? 0.075 : 0.045, Math.abs(d) * (light ? 0.03 : 0.018));
+    img.data[i * 4] = light ? 255 : 60;
+    img.data[i * 4 + 1] = light ? 255 : 48;
+    img.data[i * 4 + 2] = light ? 255 : 40;
+    img.data[i * 4 + 3] = Math.round(a * 255);
+  }
+  ctx.putImageData(img, 0, 0);
+  cachedNoise = `url(${c.toDataURL('image/png')})`;
+  return cachedNoise;
+}
