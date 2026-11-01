@@ -3,14 +3,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   animate,
-  cubicBezier,
   motion,
+  useMotionValue,
   useMotionValueEvent,
   useScroll,
   useSpring,
   useTransform,
   type AnimationPlaybackControls,
-  type MotionValue,
 } from "motion/react";
 import { ArrowDown, ChevronLeft } from "lucide-react";
 import { EnvelopeScene } from "@/components/invitation/envelope/EnvelopeScene";
@@ -54,10 +53,22 @@ const DW = 720;
 const DH = 700;
 const fitK = (w: number, h: number) => Math.min(1.3, w / DW, h / DH);
 
-const SMOOTH = cubicBezier(0.45, 0, 0.25, 1);
+/** vào cảnh: NHANH lúc đầu rồi chậm dần (ease-out mạnh) · ra cảnh: êm đều */
+const SETTLE_IN: Bezier = [0.16, 1, 0.3, 1];
+const SETTLE_OUT: Bezier = [0.4, 0, 0.2, 1];
+const SETTLE_IN_SECONDS = 0.7;
+const SETTLE_OUT_SECONDS = 0.5;
 type Bezier = [number, number, number, number];
 const IN_OUT: Bezier = [0.45, 0, 0.2, 1];
-const AUTO_EASE: Bezier = [0.25, 0.2, 0.75, 0.8];
+/** tốc độ ĐỀU suốt hành trình, chỉ tăng tốc êm ở 7% đầu và giảm tốc êm ở 7% cuối (trước đây lệch ngay từ khung đầu → khựng) */
+const AUTO_EASE = (t: number) => {
+  const a = 0.07;
+  if (t <= 0) return 0;
+  if (t >= 1) return 1;
+  if (t < a) return (t * t) / (2 * a * (1 - a));
+  if (t > 1 - a) { const r = 1 - t; return 1 - (r * r) / (2 * a * (1 - a)); }
+  return (t - a / 2) / (1 - a);
+};
 
 export type InvitationSendFlowProps = Pick<EventDetailsEditorProps, "initial" | "guests" | "onSave" | "onAddGuests"> & {
   open: boolean;
@@ -88,6 +99,8 @@ function FlowBody({
 }: Omit<InvitationSendFlowProps, "open">) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLElement>(null);
+  const sceneWrapRef = useRef<HTMLDivElement>(null);
+  const autoDriving = useRef(false); // true: tiến độ p do bộ tự chạy lái TRỰC TIẾP (không đi qua scrollTop + lò xo)
   const auto = useRef<AnimationPlaybackControls | null>(null);
   const armed = useRef(false);      // đã cuộn rời vị trí 0 → mới cho phép tự đóng khi cuộn ngược về 0
   const holdOpen = useRef(false);   // đang tua lại để xem lại hiệu ứng: đừng đóng
@@ -141,11 +154,21 @@ function FlowBody({
        1) lò xo gần tới hạn (ζ ≈ 1.1) → không văng quá 0, đuôi tắt dần ngắn;
        2) KHÔNG đóng lớp phủ ngay khi scrollTop về 0 (lúc đó p còn ở xa, cảnh đang ở giữa chừng nên đóng là
           "nhảy" thẳng về cảnh editor) - mà đợi p thực sự chạy về ~0, khi cảnh trùng khớp editor mới đóng. */
-  const pSpring = useSpring(scrollYProgress, { stiffness: 110, damping: 26, mass: 0.8, restDelta: 0.0004, restSpeed: 0.002 });
-  const p = useTransform(pSpring, (v) => Math.min(1, Math.max(0, v)));
+  const pSpring = useSpring(scrollYProgress, { stiffness: 70, damping: 24, mass: 0.7, restDelta: 0.0003, restSpeed: 0.002 });   // cùng bộ lò xo với ImmersiveScrollHero (quá tới hạn: ζ≈1.7 → mượt, không vọt, không rung)
+  /* p là MotionValue riêng:
+       - khi người dùng cuộn tay → bám theo lò xo ở trên (như cũ)
+       - khi đang TỰ CHẠY → được animate() lái thẳng theo thời gian, đồng thời ghi ngược vào scrollTop để lúc người dùng
+         chạm vào thì đã đúng vị trí. Trước đây tự chạy = ghi scrollTop (làm tròn px, trễ 1 khung) → scroll event → lò xo,
+         nên vận tốc không đều (mỗi khung 6-7px) và hiện rõ ở đoạn chậm như đóng nắp / đóng dấu. */
+  const p = useMotionValue(0);
+  useMotionValueEvent(pSpring, "change", (v) => {
+    if (!autoDriving.current) p.set(Math.min(1, Math.max(0, v)));
+  });
 
-  // lướt cảnh từ khung canvas về giữa màn hình + phủ nền tối lên giao diện editor
-  const settle = useTransform(p, [0, 0.1], [0, 1], { ease: SMOOTH });
+  /* lướt cảnh từ khung canvas về giữa màn hình + phủ nền tối lên giao diện editor.
+     Chạy THEO THỜI GIAN (nhanh rồi chậm dần), KHÔNG gắn với tiến độ cuộn: trước đây nó trải ra 10% hành trình (~2s+)
+     với easing in-out nên nền tối nở rất chậm, để lộ sidebar bên trái một lúc rồi mới phủ kín. */
+  const settle = useMotionValue(0);
   const wx = useTransform(settle, [0, 1], [from.x, 0]);
   const wy = useTransform(settle, [0, 1], [from.y, 0]);
   const wScale = useTransform(settle, [0, 1], [from.s, 1]);
@@ -154,7 +177,7 @@ function FlowBody({
   const bgR = useTransform(settle, (v) => (stage ? stage.r * (1 - v) : 0));
   const bgB = useTransform(settle, (v) => (stage ? stage.b * (1 - v) : 0));
   const hintWrapping = useTransform(p, [0.1, 0.16, 0.93, 0.97], [0, 1, 1, 0]);
-  const hintDone = useTransform(p, [0.985, 0.999], [0, 1]);
+  const hintDone = useTransform(p, [0.992, 1], [0, 1]);
   // điện ảnh: viền tối + dải đen trên/dưới, đậm nhất khi máy áp sát dấu sáp
   const vignette = useTransform(p, [0, 0.1, 0.3, 0.7, 0.8, 0.92, 1], [0, 0.35, 0.5, 0.75, 1, 0.5, 0.25]);
   const bars = useTransform(p, [0.06, 0.16, 0.93, 0.99], [0, 1, 1, 0]);
@@ -163,7 +186,11 @@ function FlowBody({
   const stopAuto = useCallback(() => {
     auto.current?.stop();
     auto.current = null;
-  }, []);
+    if (autoDriving.current) {
+      autoDriving.current = false;
+      pSpring.jump(p.get());   // lò xo nhận đúng vị trí hiện tại → cuộn tay tiếp quản không bị nhảy
+    }
+  }, [p, pSpring]);
 
   const scrollTo = useCallback(
     (to: number, seconds: number, ease: Bezier | "easeOut", then?: () => void) => {
@@ -190,12 +217,30 @@ function FlowBody({
   /** chạy xuôi: hết phần hiệu ứng → cuộn nốt cho phần nội dung vào chỗ */
   const play = useCallback(() => {
     const g = geometry();
-    if (!g) return;
-    scrollTo(g.effectEnd, AUTO_SECONDS, AUTO_EASE, () => {
-      const g2 = geometry();
-      if (g2) scrollTo(g2.contentTop, AUTO_TAIL_SECONDS, "easeOut");
+    const sc = scrollRef.current;
+    if (!g || !sc) return;
+    stopAuto();
+    const from = p.get();
+    if (from >= 0.999) {
+      scrollTo(g.contentTop, AUTO_TAIL_SECONDS, "easeOut");
+      return;
+    }
+    autoDriving.current = true;
+    auto.current = animate(from, 1, {
+      duration: Math.max(0.3, AUTO_SECONDS * (1 - from)),
+      ease: AUTO_EASE,
+      onUpdate: (v) => {
+        p.set(v);
+        sc.scrollTop = v * g.effectEnd;
+      },
+      onComplete: () => {
+        autoDriving.current = false;
+        pSpring.jump(1);
+        const g2 = geometry();
+        if (g2) scrollTo(g2.contentTop, AUTO_TAIL_SECONDS, "easeOut");
+      },
     });
-  }, [scrollTo, geometry]);
+  }, [scrollTo, geometry, stopAuto, p, pSpring]);
 
   /** xem lại: tua ngược về đầu (không đóng lớp phủ) rồi chạy xuôi lại */
   const replay = useCallback(() => {
@@ -226,8 +271,9 @@ function FlowBody({
     if (closed.current) return;
     closed.current = true;
     stopAuto();
-    onClose();
-  }, [stopAuto, onClose]);
+    // thu cảnh về đúng khung canvas của editor (nền tối co lại, sidebar lộ ra) rồi mới trả quyền cho editor
+    animate(settle, 0, { duration: SETTLE_OUT_SECONDS, ease: SETTLE_OUT, onComplete: onClose });
+  }, [stopAuto, onClose, settle]);
 
   /** chỉ đóng khi người dùng đã ở đầu trang VÀ cảnh đã về sát p = 0 (khớp editor) - tránh nhảy cảnh */
   const tryClose = useCallback(() => {
@@ -241,21 +287,39 @@ function FlowBody({
      giống hệt nhau ở p = 0 nên mắt không thấy gì thay đổi. */
   useEffect(() => {
     if (!ready) return;
-    let r2 = 0;
-    const r1 = requestAnimationFrame(() => {
-      r2 = requestAnimationFrame(() => {
-        setShown(true);
-        onSceneReady?.();
+    let cancelled = false;
+    let r1 = 0, r2 = 0;
+    // Thiệp tĩnh + phong bì có nhiều ảnh nền (ảnh thiệp, nhiễu giấy...) được giải mã BẤT ĐỒNG BỘ: nếu hiện ngay thì
+    // một vài khung đầu ảnh còn trống rồi mới bật lên = "nháy". Giải mã xong hết (tối đa 700ms) mới bàn giao.
+    const settled = Promise.race([
+      decodeSceneImages(sceneWrapRef.current),
+      new Promise<void>((res) => setTimeout(res, 700)),
+    ]);
+    settled.then(() => {
+      if (cancelled) return;
+      r1 = requestAnimationFrame(() => {
+        r2 = requestAnimationFrame(() => {
+          if (cancelled) return;
+          setShown(true);
+          onSceneReady?.();
+        });
       });
     });
-    return () => { cancelAnimationFrame(r1); cancelAnimationFrame(r2); };
+    return () => { cancelled = true; cancelAnimationFrame(r1); cancelAnimationFrame(r2); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
+
+  // đã bàn giao xong: lướt cảnh ra toàn màn hình NGAY (không chờ tiến độ cuộn)
+  useEffect(() => {
+    if (!shown) return;
+    const c = animate(settle, 1, { duration: SETTLE_IN_SECONDS, ease: SETTLE_IN });
+    return () => c.stop();
+  }, [shown, settle]);
 
   // đã bàn giao xong thì chờ một nhịp rồi tự cuộn
   useEffect(() => {
     if (!shown) return;
-    const id = setTimeout(play, 450);
+    const id = setTimeout(play, SETTLE_IN_SECONDS * 1000 + 100);   // chờ cảnh zoom ra toàn màn hình xong mới chạy: hai chuyển động không chồng nhau
     return () => clearTimeout(id);
   }, [shown, play]);
 
@@ -304,7 +368,7 @@ function FlowBody({
         <div className="sticky top-0 h-dvh w-full overflow-hidden">
           <motion.div aria-hidden className="absolute" style={{ left: bgL, top: bgT, right: bgR, bottom: bgB, opacity: stage ? (shown ? 1 : 0) : settle, background: STAGE_BG }} />
 
-          <motion.div className="absolute inset-0" style={{ x: wx, y: wy, scale: wScale, transformOrigin: "50% 50%", opacity: shown ? 1 : 0 }}>
+          <motion.div ref={sceneWrapRef} className="absolute inset-0" style={{ x: wx, y: wy, scale: wScale, transformOrigin: "50% 50%", opacity: shown ? 1 : 0 }}>
             <EnvelopeScene
               card={card}
               envelopeColor={envelopeColor}
@@ -329,7 +393,6 @@ function FlowBody({
           <motion.div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[4.5dvh] origin-top bg-black" style={{ scaleY: bars }} />
           <motion.div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[4.5dvh] origin-bottom bg-black" style={{ scaleY: bars }} />
 
-          <motion.div aria-hidden={false} style={{ opacity: hintWrapping }} className="absolute inset-0 z-20 pointer-events-none"><Captions p={p} /></motion.div>
 
           <motion.button
             type="button"
@@ -377,44 +440,20 @@ function FlowBody({
 }
 
 
-/* Chú thích từng bước: kicker nhỏ + tiêu đề serif nghiêng + vạch đỏ mảnh, trượt nhẹ vào/ra theo tiến độ */
-type Side = "left" | "right" | "center";
-const CAPTIONS: { a: number; b: number; k: string; t: string; d: string; side: Side }[] = [
-  // vật thể ở bên PHẢI → chữ bên TRÁI, rồi đảo bên theo từng bước (khớp CAM_KEYS trong EnvelopeScene)
-  { a: 0.06, b: 0.28, k: "Bước 1 / 4", t: "Mặt bìa thiệp của bạn", d: "Xem lần cuối trước khi gửi", side: "left" },
-  { a: 0.29, b: 0.52, k: "Bước 2 / 4", t: "Đưa thiệp vào phong bì", d: "Thiệp nằm gọn, không bị nhàu", side: "right" },
-  { a: 0.53, b: 0.76, k: "Bước 3 / 4", t: "Gập nắp phong bì", d: "Khép lại thật cẩn thận", side: "left" },
-  { a: 0.77, b: 0.93, k: "Bước 4 / 4", t: "Niêm phong bằng dấu sáp iCards", d: "Dấu ấn dành riêng cho thiệp của bạn", side: "center" },
-];
-
-function Caption({ p, c }: { p: MotionValue<number>; c: (typeof CAPTIONS)[number] }) {
-  const opacity = useTransform(p, [c.a, c.a + 0.035, c.b - 0.03, c.b], [0, 1, 1, 0]);
-  const y = useTransform(p, [c.a, c.a + 0.04, c.b - 0.04, c.b], [14, 0, 0, -10]);
-  const dir = c.side === "left" ? -1 : c.side === "right" ? 1 : 0;
-  const x = useTransform(p, [c.a, c.a + 0.05, c.b - 0.04, c.b], [dir * 36, 0, 0, dir * 22]);
-  // màn rộng: chữ nằm hẳn một bên, đối diện với thiệp · điện thoại: chữ ở dưới, giữa
-  const pos =
-    c.side === "left" ? "md:left-[7vw] md:items-start md:text-left"
-    : c.side === "right" ? "md:right-[7vw] md:items-end md:text-right"
-    : "md:inset-x-0 md:mx-auto md:items-center md:text-center";
-  const place = c.side === "center" ? "md:bottom-[16dvh]" : "md:top-1/2 md:-translate-y-1/2";
-  return (
-    <div className={`absolute inset-x-0 bottom-[14dvh] flex justify-center md:inset-x-auto md:bottom-auto md:w-[min(30vw,430px)] ${place}`}
-         style={c.side === "center" ? { left: 0, right: 0, width: "auto" } : undefined}>
-      <motion.div style={{ opacity, y, x }} className={`flex flex-col items-center gap-1 text-center md:gap-2 ${pos}`}>
-        <span className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/55">{c.k}</span>
-        <p className="text-xl italic leading-tight md:text-4xl" style={{ fontFamily: "var(--ev-serif), 'Cormorant Garamond', serif" }} aria-live="polite">{c.t}</p>
-        <span className="h-px w-10 md:w-14" style={{ background: CRIMSON }} />
-        <span className="text-xs text-white/60 md:text-sm">{c.d}</span>
-      </motion.div>
-    </div>
-  );
-}
-
-function Captions({ p }: { p: MotionValue<number> }) {
-  return (
-    <div className="pointer-events-none absolute inset-0 z-20">
-      {CAPTIONS.map((c) => <Caption key={c.k} p={p} c={c} />)}
-    </div>
-  );
+/** giải mã trước mọi ảnh nền / <img> trong cảnh để lúc hiện hình không bị chớp ảnh trống */
+function decodeSceneImages(root: HTMLElement | null): Promise<void> {
+  if (!root) return Promise.resolve();
+  const urls = new Set<string>();
+  root.querySelectorAll<HTMLElement>("*").forEach((n) => {
+    if (n instanceof HTMLImageElement && n.currentSrc) urls.add(n.currentSrc);
+    const bg = getComputedStyle(n).backgroundImage;
+    if (bg && bg !== "none") for (const m of bg.matchAll(/url\((["']?)(.*?)\1\)/g)) urls.add(m[2]);
+  });
+  return Promise.all(
+    [...urls].map((u) => {
+      const img = new Image();
+      img.src = u;
+      return img.decode().catch(() => undefined);
+    }),
+  ).then(() => undefined);
 }

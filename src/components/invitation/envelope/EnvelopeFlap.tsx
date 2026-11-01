@@ -29,7 +29,7 @@ export const FLAP_N = N;               // (debug) dùng ở FlapDebugPanel
 export const FLAP_SUM = SUM;
 const RAD = Math.PI / 180;
 const OVERLAP = 1.2;                   // px chồng mép giữa hai dải để không hở đường nối
-const LINER_INSET = 3.5;               // lề lớp lót (%)
+const LINER_INSET = 2;                 // lề lớp lót (%) - PHẢI bằng lề của `.interior` (clip-path 2% / 98%) để lớp lót nắp và lòng phong bì khớp nhau tại bản lề
 const LINER_TIP = 0.88;                // mũi lớp lót (tỉ lệ chiều cao nắp)
 const LINER_CLIP = `polygon(${LINER_INSET}% 0, ${100 - LINER_INSET}% 0, 50% ${LINER_TIP * 100}%)`;
 

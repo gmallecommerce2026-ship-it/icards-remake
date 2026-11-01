@@ -6,7 +6,7 @@ import { animate, motion, useMotionValue, useSpring, useTransform, useVelocity, 
 import { Stamp } from './Stamp';
 import { EnvelopeFlap } from './EnvelopeFlap';
 import { WaxSeal, SEAL_PRESS_AT } from './WaxSeal';
-import { getPaperGrain } from './paperGrain';
+import { getPaperGrain, getEnvelopeNoise } from './paperGrain';
 import { createCamera, type CamKey } from './cinematic';
 import { FlapDebugPanel } from './FlapDebugPanel';
 import { dbg } from './flapDebug';
@@ -96,11 +96,12 @@ export const SEND_RANGE = {
   sink: [0.50, 0.585],  // thiệp hạ hẳn xuống đáy túi (nắp VẪN MỞ HẲN 180°)
   flap: [0.60, 0.76],   // nắp gập xuống - chỉ bắt đầu SAU khi thiệp đã chìm hẳn (không bao giờ chồng với sink)
   seal: [0.77, 0.90],   // sáp loang, con dấu đồng đóng xuống mép niêm phong, để lại dấu iCards
-  flip: [0.92, 0.985],  // phong bì xoay ra MẶT TRƯỚC (có tem + tên người nhận)
+  flip: [0.945, 0.995], // phong bì xoay ra MẶT TRƯỚC (có tem + tên người nhận) - CHỈ SAU KHI máy đã zoom ra xa (.90→.935)
 } as const;
 
 /* Kích thước + vị trí con dấu trên mũi nắp (px thiết kế): tâm đĩa hơi cao hơn mũi để sáp phủ kín đỉnh chữ V */
 const SEAL_D = 96;
+const ENV_THICK = 12;   // độ dày giấy (px thiết kế) của phong bì: lộ ra ở mép khi máy nghiêng / lúc lật
 const SEAL_CY = FLAP_H - SEAL_D * 0.1;          // tâm dấu cao hơn mũi nắp một chút: sáp phủ kín đỉnh chữ V
 const SEAL_TOP = SEAL_CY - SEAL_D / 2;
 
@@ -113,20 +114,22 @@ const SEAL_FY = ENV.y + SEAL_CY - CY;
 const CAM_KEYS: CamKey[] = [
   { p: 0.00, s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0,    fy: 0 },
   { p: 0.05, s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0,    fy: 0 },
-  { p: 0.12, s: 1.08, rx: -2, ry: -10, rz: 1.0,  fx: -110, fy: -6 },
-  { p: 0.20, s: 1.18, rx: 2,  ry: 9,   rz: -1.0, fx: -160, fy: 2 },
-  { p: 0.27, s: 1.02, rx: 3,  ry: -2,  rz: 0.3,  fx: -60,  fy: -4 },
-  { p: 0.36, s: 1.08, rx: 4,  ry: 12,  rz: 1.2,  fx: 140,  fy: 8 },
-  { p: 0.45, s: 1.18, rx: 6,  ry: -6,  rz: -0.8, fx: 110,  fy: -26 },
-  { p: 0.53, s: 1.18, rx: 9,  ry: 8,   rz: 0.6,  fx: 50,   fy: -28 },
-  { p: 0.61, s: 1.20, rx: 12, ry: -11, rz: -1.0, fx: -120, fy: -28 },
-  { p: 0.69, s: 1.34, rx: 14, ry: 6,   rz: 0.8,  fx: -90,  fy: -30 },
-  { p: 0.75, s: 1.34, rx: 8,  ry: -3,  rz: 0,    fx: -25,  fy: SEAL_FY * 0.5 },
-  { p: 0.79, s: 1.78, rx: 1,  ry: 0,   rz: 0,    fx: 0,    fy: SEAL_FY },
-  { p: 0.85, s: 2.08, rx: 0,  ry: 0,   rz: 0,    fx: 0,    fy: SEAL_FY },
-  { p: 0.90, s: 2.20, rx: 0,  ry: 0,   rz: 0,    fx: 0,    fy: SEAL_FY },
-  { p: 0.94, s: 1.70, rx: -2, ry: -12, rz: 0.8,  fx: 0,    fy: SEAL_FY * 0.4 },
-  { p: 0.985,s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0,    fy: 0 },
+  { p: 0.12, s: 1.08, rx: -2, ry: -10, rz: 1.0,  fx: -40,  fy: -6 },
+  { p: 0.20, s: 1.18, rx: 2,  ry: 9,   rz: -1.0, fx: -55,  fy: 2 },
+  { p: 0.27, s: 1.02, rx: 3,  ry: -2,  rz: 0.3,  fx: -20,  fy: -4 },
+  { p: 0.36, s: 1.08, rx: 4,  ry: 12,  rz: 1.2,  fx: 50,   fy: 8 },
+  { p: 0.45, s: 1.18, rx: 6,  ry: -6,  rz: -0.8, fx: 40,   fy: -26 },
+  { p: 0.53, s: 1.18, rx: 9,  ry: 8,   rz: 0.6,  fx: 20,   fy: -28 },
+  { p: 0.61, s: 1.20, rx: 12, ry: -11, rz: -1.0, fx: -40,  fy: -28 },
+  { p: 0.69, s: 1.34, rx: 14, ry: 6,   rz: 0.8,  fx: -25,  fy: -30, tan: { s: 1.2, fx: 0 } },
+  // ZOOM VÀO DẤU SÁP: NHANH lúc đầu rồi CHẬM DẦN (ease-out), bắt đầu sớm lúc nắp còn đang gập.
+  // Dấu sáp nằm CHÍNH GIỮA khung (fx = 0): không còn lệch sang bên.
+  { p: 0.735,s: 1.95, rx: 4,  ry: 0,   rz: 0,    fx: 0,    fy: SEAL_FY * 0.85, tan: { s: 7, fy: 30, fx: 0 } },
+  { p: 0.79, s: 2.10, rx: 0,  ry: 0,   rz: 0,    fx: 0,    fy: SEAL_FY, tan: { s: 2.2, fy: 0 } },
+  { p: 0.85, s: 2.17, rx: 0,  ry: 0,   rz: 0,    fx: 0,    fy: SEAL_FY, tan: { s: 0.5 } },
+  { p: 0.90, s: 2.20, rx: 0,  ry: 0,   rz: 0,    fx: 0,    fy: SEAL_FY, tan: { s: 0, fy: 0 } },
+  // sáp xong → máy LÙI RA XA hẳn về toàn cảnh, THẲNG, rồi mới lật phong bì (.945+): lật ở xa không lộ độ mỏng 2D
+  { p: 0.935,s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0,    fy: 0, tan: { s: 0, fy: 0 } },
   { p: 1.00, s: 1.00, rx: 0,  ry: 0,   rz: 0,    fx: 0,    fy: 0 },
 ];
 const camAt = createCamera(CAM_KEYS);
@@ -136,14 +139,18 @@ const shakeAt = (p: number) => {
   return d <= 0 ? 0 : 3.2 * Math.exp(-11 * d) * Math.sin(40 * d);
 };
 
+/* NẮP: gập xuống nhưng DỪNG khi còn hé ~FLAP_GAP° (chưa khít) - nằm yên chờ; chỉ khi con dấu đồng ép xuống thì nắp mới
+   khít hẳn xuống thân phong bì (đúng lúc dấu chạm sáp). Không còn nảy / bật ngược ở cuối nên chuyển động liền một mạch. */
+const FLAP_GAP = 8;
+const smoother = (u: number) => u * u * u * (u * (u * 6 - 15) + 10);   // êm cả đầu lẫn cuối, vận tốc không gãy
 function sendFlapAngle(p: number) {
   const [a, b] = SEND_RANGE.flap;
   const u = clamp01((p - a) / (b - a));
   if (u <= 0) return 180;
-  const w = Math.min(1, u / 0.8);
-  const closing = 180 * (1 - w * w * (3 - 2 * w));
-  const bounce = u > 0.8 ? 5 * Math.sin(Math.PI * ((u - 0.8) / 0.2)) : 0;
-  return closing + bounce;
+  const closing = 180 - (180 - FLAP_GAP) * smoother(u);
+  const [w0, w1] = SEND_RANGE.seal;
+  const press = ss(w0 + (w1 - w0) * (SEAL_PRESS_AT - 0.07), w0 + (w1 - w0) * (SEAL_PRESS_AT + 0.03), p);
+  return closing * (1 - press);
 }
 
 type Props = {
@@ -182,10 +189,21 @@ const onKey = (fn?: () => void) => (e: KeyboardEvent) => {
 
 /** Một "tấm" phong bì lật quanh trục dọc. Cả hai tấm (lưng + mặt trước) dùng chung perspective và góc lật
  *  nên khớp tuyệt đối với nhau; thiệp chen vào GIỮA hai tấm theo trục z. */
+/** Ba thành mỏng (trái, phải, đáy - KHÔNG có thành trên: đó là chỗ bản lề nắp, thành ở đây sẽ thành một vạch cắt ngang thiệp) nối mặt trước với mặt sau → phong bì có độ DÀY thật (hơi nhô lên khỏi mặt phẳng), không còn là tờ giấy 2D */
+function Walls() {
+  return (
+    <>
+      <i className={`${s.wall} ${s.wallL}`} />
+      <i className={`${s.wall} ${s.wallR}`} />
+      <i className={`${s.wall} ${s.wallB}`} />
+    </>
+  );
+}
+
 function Rotor({ flip, origin, children, innerRef }: { flip: MotionValue<number>; origin: MotionValue<string>; children: ReactNode; innerRef?: React.Ref<HTMLDivElement> }) {
   return (
     <motion.div className={s.stage3d} data-stage3d style={{ perspectiveOrigin: origin }}>
-      <motion.div ref={innerRef} className={s.envelope} data-envelope style={{ left: ENV.x, top: ENV.y, width: ENV.w, height: ENV.h, rotateY: flip }}>
+      <motion.div ref={innerRef} className={s.envelope} data-envelope style={{ left: ENV.x, top: ENV.y, width: ENV.w, height: ENV.h, rotateY: flip, ['--thick' as string]: `${ENV_THICK}px` }}>
         {children}
       </motion.div>
     </motion.div>
@@ -229,7 +247,8 @@ export function EnvelopeScene({
   // VÂN SẦN giấy có SẴN ngay từ editor (không đột ngột xuất hiện lúc chuyển cảnh). Trung tính về màu (overlay trên xám 50%),
   // nên nhìn xa không đổi sắc; càng zoom gần càng đậm lên.
   const [grain, setGrain] = useState<string | null>(null);
-  useEffect(() => { setGrain(getPaperGrain()); }, []);
+  const [noise, setNoise] = useState<string | null>(null);   // nhiễu giấy phong bì: bitmap sinh sẵn (thay SVG feTurbulence nặng)
+  useEffect(() => { setGrain(getPaperGrain()); setNoise(getEnvelopeNoise()); }, []);
   const GRAIN_BASE = 0.22;
   const grainOp = useTransform(camScale, (c) => (send ? GRAIN_BASE + (1 - GRAIN_BASE) * ss(1.05, 2.0, c) : GRAIN_BASE));
 
@@ -412,6 +431,8 @@ export function EnvelopeScene({
     // sát thân thì mũi không được bật lên (nắp đóng phải khít), và cũng không được chui xuống dưới thân
     return Math.max(Math.min(sag + drag, Math.max(0, r) * 0.5), -Math.max(0, r - 1));
   });
+  // mũi nắp (nơi đặt dấu) nhích LÊN FLAP_H·(1 − cos θ) khi nắp còn hé θ độ; dấu bám theo để luôn nằm đúng trên mũi nắp
+  const sealDy = useTransform([flapRot, curl], ([r, c]: number[]) => -FLAP_H * (1 - Math.cos(Math.max(0, Math.min(60, r + c)) * rad)));
   const pan = useTransform([flapRot, slide, swing, backAmt], ([fr, sl, sw, ba]: number[]) => {
     const f = clamp01(fr / 180) * ba;
     return (PAN_FLAP * f + (PAN_SLID - PAN_FLAP) * sl * f) * (1 - sw);
@@ -510,7 +531,7 @@ export function EnvelopeScene({
       <div
         className={s.scene}
         style={{
-          ...vars, width: DW, height: DH,
+          ...vars, ...(noise ? ({ '--noise': noise } as CSSProperties) : null), width: DW, height: DH,
           left: dim ? (dim.w - DW * dim.k) / 2 : 0,
           top: dim ? (dim.h - DH * dim.k) / 2 : 0,
           transform: `scale(${dim?.k ?? 1})`,
@@ -535,6 +556,8 @@ export function EnvelopeScene({
                   visibility={flapBackVis} sheet="back" className={s.hit} onClick={() => envClick('back')()}
                 />
               </div>
+              {/* thành giấy (độ dày) nằm ở tấm LƯNG: luôn dưới thiệp, không bao giờ vẽ đè lên thiệp đang thò ra khỏi miệng phong bì */}
+              <Walls />
             </Rotor>
           </motion.div>
 
@@ -621,15 +644,25 @@ export function EnvelopeScene({
                   height={FLAP_H} liner={liner} rot={flapRot} curl={curl}
                   visibility={flapFrontVis} sheet="front" className={s.hit}
                 />
-                {send && (
-                  <div className={s.sealAnchor} style={{ left: '50%', top: SEAL_TOP, width: SEAL_D, height: SEAL_D, marginLeft: -SEAL_D / 2 }}>
-                    <WaxSeal p={sealP} color={pickSeal(envelopeColor)} />
-                  </div>
-                )}
                 <motion.div className={s.sheen} style={{ opacity: sheen }} />
               </div>
             </Rotor>
           </motion.div>
+
+          {/* ===== TẤM DẤU SÁP: một tấm riêng nằm TRÊN CÙNG, xoay / dịch / phóng y hệt phong bì.
+               Trước đây dấu nằm chung khối 3D với nắp: nắp còn hé thì mũi nắp (cao hơn) che mất phần dấu phía trên nhưng lại
+               nằm dưới phần dấu phía dưới. Tách tấm ra thì dấu luôn nằm trên nắp, và bám theo mũi nắp khi nắp hé. ===== */}
+          {send && (
+            <motion.div className={s.plane} style={{ x: envX, y: envY, scale: envS, z: frontZ, zIndex: 5, rotateY: envRotY, rotateX: envRotX }}>
+              <Rotor flip={flip} origin={persp}>
+                <div className={`${s.face} ${s.back}`}>
+                  <motion.div className={s.sealAnchor} style={{ left: '50%', top: SEAL_TOP, width: SEAL_D, height: SEAL_D, marginLeft: -SEAL_D / 2, y: sealDy }}>
+                    <WaxSeal p={sealP} color={pickSeal(envelopeColor)} />
+                  </motion.div>
+                </div>
+              </Rotor>
+            </motion.div>
+          )}
         </motion.div>
         </motion.div>
       </div>

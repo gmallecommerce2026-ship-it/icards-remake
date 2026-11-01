@@ -10,7 +10,7 @@
     left: 0;
     top: 0;
     transform-origin: 0 0;
-    --noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n' x='0' y='0' width='100%25' height='100%25'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .5 -.17'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>");
+    --noise: none;   /* bitmap thật được gán từ EnvelopeScene (getEnvelopeNoise) */
 }
 
 /* Thế giới 3D chung: lưng phong bì (z 0) < thiệp (z 1 → 100) < mặt trước phong bì (z 2) */
@@ -169,8 +169,9 @@
 /* Mặt sau: liner, hai cánh bên, cánh đáy, nắp */
 .interior {
     position: absolute;
-    inset: 0 0 auto 0;
-    height: 58%;
+    /* trồi lên 1px dưới bản lề: hai mép (nắp / thân) CHỒNG nhau thay vì chỉ chạm nhau → không còn vệt hở do khử răng cưa */
+    inset: -1px 0 auto 0;
+    height: calc(58% + 1px);
     clip-path: polygon(2% 0, 98% 0, 50% 55%);
     transform: translateZ(.5px);
 }
@@ -179,7 +180,9 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, rgb(0 0 0 / .3), transparent 55%);
+    /* bóng đổ xuống lòng phong bì: bắt đầu từ 0 ngay tại bản lề (mặt trong nắp mở hẳn không có bóng) rồi đậm dần - trước đây
+       bắt đầu ở .3 nên có một vạch tối cứng đúng chỗ nối nắp - thân */
+    background: linear-gradient(to bottom, rgb(0 0 0 / 0) 0, rgb(0 0 0 / .2) 12%, transparent 58%);
 }
 
 .sides,
@@ -402,3 +405,20 @@
     text-rendering: geometricPrecision;
     -webkit-font-smoothing: antialiased;
 }
+
+
+/* Thành giấy: cho phong bì độ dày (xem <Walls /> trong EnvelopeScene). Nằm trong khối preserve-3d của .envelope */
+.wall {
+    position: absolute;
+    display: block;
+    pointer-events: none;
+    backface-visibility: visible;
+    background-color: var(--env);
+    background-image: var(--noise), linear-gradient(rgb(0 0 0 / .26), rgb(0 0 0 / .26));
+}
+.wallL, .wallR { top: 0; height: 100%; width: var(--thick); transform: rotateY(90deg); }
+.wallL { left: calc(var(--thick) / -2); }
+.wallR { right: calc(var(--thick) / -2); }
+.wallT, .wallB { left: 0; width: 100%; height: var(--thick); transform: rotateX(90deg); }
+.wallT { top: calc(var(--thick) / -2); }
+.wallB { bottom: calc(var(--thick) / -2); }

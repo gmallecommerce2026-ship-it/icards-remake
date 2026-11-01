@@ -83,7 +83,6 @@ export function WaxSeal({ p, color = '#A3152F' }: { p: MotionValue<number>; colo
   const toolShadowOp = useTransform(toolOp, (o) => 0.5 * o);
   const toolShadowX = useTransform(toolScale, (s) => 9 * (s - 1));
   const toolShadowY = useTransform(toolScale, (s) => 14 * (s - 1));
-  const toolShadowBlur = useTransform(toolScale, (s) => `blur(${2 + 7 * (s - 1)}px)`);
 
   const emblem = (
     <g id={`${uid}em`}>
@@ -150,7 +149,7 @@ export function WaxSeal({ p, color = '#A3152F' }: { p: MotionValue<number>; colo
       </motion.div>
 
       {/* bóng của con dấu đồng đổ lên sáp */}
-      <motion.div style={{ position: 'absolute', inset: '10%', borderRadius: '50%', background: 'rgb(0 0 0 / .85)', opacity: toolShadowOp, scale: toolScale, x: toolShadowX, y: toolShadowY, filter: toolShadowBlur }} />
+      <motion.div style={{ position: 'absolute', inset: '10%', borderRadius: '50%', background: 'rgb(0 0 0 / .85)', opacity: toolShadowOp, scale: toolScale, x: toolShadowX, y: toolShadowY, filter: 'blur(6px)' }}   /* blur CỐ ĐỊNH: đổi filter mỗi khung hình buộc raster lại lớp mờ → giật */ />
 
       {/* con dấu đồng nhìn từ trên xuống: mặt khắc ngược */}
       <motion.div style={{ position: 'absolute', inset: '9%', opacity: toolOp, scale: toolScale, rotate: toolRot }}>
