@@ -65,7 +65,7 @@
     outline-offset: -2px;
 }
 
-/* khi đang chỉnh sửa, cho phần tử tràn ra ngoài để thấy tay nắm ở mép thiệp */
+/* khi đang chỉnh sửa: chỉ để TAY NẮM / khung chọn được hiện ra ngoài mép. Vị trí phần tử đã bị kẹp trong trang bởi bounds.ts nên nội dung không thể tràn ra ngoài hay sang trang bên cạnh */
 .sheet[data-editable='true'],
 .face[data-editable='true'] {
     overflow: visible;

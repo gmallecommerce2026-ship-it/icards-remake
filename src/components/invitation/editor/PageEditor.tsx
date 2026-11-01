@@ -4,6 +4,7 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type RefObject } from 'react';
 import { PAGE } from '../envelope/envelope.data';
 import { ArtSVG, frameOf } from './editor.data';
+import { fitInside, halfExtent } from './bounds';
 import { useEditorStore, type CardEl, type PageId } from './useEditorStore';
 import e from './editor.module.css';
 
@@ -42,7 +43,8 @@ function DrawLayer({ rootRef, pageId }: { rootRef: RefObject<HTMLDivElement | nu
   function at(ev: RPointerEvent): [number, number] {
     const r = rootRef.current!.getBoundingClientRect();
     const k = r.width / PAGE.w;
-    return [(ev.clientX - r.left) / k, (ev.clientY - r.top) / k];
+    // kẹp trong trang: nét vẽ không được lan ra ngoài viền / sang trang bên cạnh dù con trỏ đã ra ngoài (pointer capture)
+    return [Math.min(PAGE.w, Math.max(0, (ev.clientX - r.left) / k)), Math.min(PAGE.h, Math.max(0, (ev.clientY - r.top) / k))];
   }
   function down(ev: RPointerEvent) {
     if (!rootRef.current) return;
@@ -85,6 +87,23 @@ function ElNode({ el, editable, selected, rootRef, setGuides }: {
   const ref = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const editing = useEditorStore((s) => s.editingId === el.id);
+  const [hMeasured, setHMeasured] = useState<number | undefined>();
+
+  // Luôn giữ phần tử trong trang: bắt mọi trường hợp ngoài kéo-thả (đổi cỡ chữ, đổi phông, gõ thêm dòng, nhân đôi, mẫu cũ…).
+  useEffect(() => {
+    const n = ref.current;
+    if (!editable || editing || !n) return;
+    const fix = () => {
+      const h = n.offsetHeight;
+      setHMeasured((p) => (p === h ? p : h));
+      const p = fitInside(el, el.kind === 'text' ? h : undefined);
+      if (p) useEditorStore.getState().patch(el.id, p);
+    };
+    fix();
+    const ro = new ResizeObserver(fix);
+    ro.observe(n);
+    return () => ro.disconnect();
+  }, [el, editable, editing]);
 
   // vào chế độ gõ chữ: nạp nội dung, focus và bôi đen toàn bộ
   useEffect(() => {
@@ -126,6 +145,10 @@ function ElNode({ el, editable, selected, rootRef, setGuides }: {
       }
       if (mode === 'move') {
         let x = o.x + (m.clientX - sx) / sc, y = o.y + (m.clientY - sy) / sc;
+        // chặn ở viền trang (tính cả khi đã xoay)
+        const lim = fitInside({ ...o, x, y, kind: el.kind }, h0);
+        if (lim?.x !== undefined) x = lim.x;
+        if (lim?.y !== undefined) y = lim.y;
         const g = { v: false, h: false };
         if (Math.abs(x + o.w / 2 - PAGE.w / 2) < SNAP) { x = PAGE.w / 2 - o.w / 2; g.v = true; }
         if (Math.abs(y + h0 / 2 - PAGE.h / 2) < SNAP) { y = PAGE.h / 2 - h0 / 2; g.h = true; }
@@ -134,13 +157,18 @@ function ElNode({ el, editable, selected, rootRef, setGuides }: {
       } else if (mode === 'scale') {
         const k = Math.max(0.15, Math.hypot(m.clientX - cx, m.clientY - cy) / d0);
         const w = o.w * k;
-        if (el.kind === 'text') st.patch(el.id, { w, size: (o.size ?? 32) * k, x: midX - w / 2, y: midY - (h0 * k) / 2 });
-        else st.patch(el.id, { w, h: o.h * k, x: midX - w / 2, y: midY - (o.h * k) / 2 });
+        if (el.kind === 'text') {
+          const next = { ...o, w, size: (o.size ?? 32) * k, x: midX - w / 2, y: midY - (h0 * k) / 2 };
+          st.patch(el.id, { ...next, ...fitInside(next, h0 * k) });
+        } else {
+          const next = { ...o, w, h: o.h * k, x: midX - w / 2, y: midY - (o.h * k) / 2 };
+          st.patch(el.id, { ...next, ...fitInside(next) });
+        }
       } else {
         let r = o.rot + ((Math.atan2(m.clientY - cy, m.clientX - cx) - a0) * 180) / Math.PI;
         const near = Math.round(r / 45) * 45;
         if (Math.abs(r - near) < 3) r = near;
-        st.patch(el.id, { rot: r });
+        st.patch(el.id, { rot: r, ...fitInside({ ...o, rot: r }, h0) });
       }
     };
     const up = () => {
@@ -158,10 +186,13 @@ function ElNode({ el, editable, selected, rootRef, setGuides }: {
     transform: `rotate(${el.rot}deg)`,
     opacity: el.kind === 'draw' ? undefined : el.op,
   };
+  // tay nắm xoay mặc định nằm phía trên; sát mép trên của trang thì chuyển xuống dưới để không bị che / ra ngoài
+  const hh = el.kind === 'text' ? (hMeasured ?? el.h) : el.h;
+  const rotBelow = el.y + hh / 2 - halfExtent(el.w, hh, el.rot).hy < 40;
   const flip = { transform: `scale(${el.flipX ? -1 : 1}, ${el.flipY ? -1 : 1})` };
 
   return (
-    <div ref={ref} className={e.node} style={style} data-el="" data-selected={selected}
+    <div ref={ref} className={e.node} style={style} data-el="" data-id={el.id} data-selected={selected}
       onPointerDown={(ev) => begin(ev, 'move')}
       onDoubleClick={() => editable && el.kind === 'text' && useEditorStore.getState().edit(el.id)}>
       {el.kind === 'text' && (
@@ -200,7 +231,7 @@ function ElNode({ el, editable, selected, rootRef, setGuides }: {
       {selected && !editing && (
         <div className={e.box}>
           {(['nw', 'ne', 'se', 'sw'] as const).map((p) => <span key={p} className={e.h} data-p={p} onPointerDown={(ev) => begin(ev, 'scale')} />)}
-          <span className={e.rot} onPointerDown={(ev) => begin(ev, 'rotate')} aria-label="Xoay">
+          <span className={e.rot} data-below={rotBelow} onPointerDown={(ev) => begin(ev, 'rotate')} aria-label="Xoay">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#222" strokeWidth="2.4" strokeLinecap="round"><path d="M20 12a8 8 0 1 1-3-6.2M20 4v5h-5" /></svg>
           </span>
         </div>
@@ -214,6 +245,7 @@ export function PageEditor({ pageId, editable }: { pageId: PageId; editable: boo
   const els = useEditorStore((s) => s.pages[pageId]);
   const drawing = useEditorStore((s) => s.draw.on);   // lớp vẽ có mặt ở MỌI trang đang chỉnh được (trang trái + phải)
   const selectedId = useEditorStore((s) => s.selectedId);
+  const showSafe = useEditorStore((s) => s.showSafe && s.page === pageId);
   const [guides, setGuides] = useState<Guides>({ v: false, h: false });
 
   // Chạm vào trang nào (đối tượng, vùng trống hay lớp vẽ) thì trang đó thành trang đang chỉnh.
@@ -274,6 +306,7 @@ export function PageEditor({ pageId, editable }: { pageId: PageId; editable: boo
         <ElNode key={el.id} el={el} editable={editable} selected={editable && selectedId === el.id} rootRef={root} setGuides={setGuides} />
       ))}
       {editable && drawing && <DrawLayer rootRef={root} pageId={pageId} />}
+      {editable && showSafe && <i className={e.safe} aria-hidden />}
       {editable && guides.v && <i className={e.guideV} />}
       {editable && guides.h && <i className={e.guideH} />}
     </div>

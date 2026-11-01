@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { PAGE } from '../envelope/envelope.data';
 import type { InvitationTemplate } from '@/lib/templates';
+import { fitted, halfExtent } from './bounds';
 
 export type PageId = 'cover' | 'insideLeft' | 'inside' | 'back';
 export type Align = 'left' | 'center' | 'right';
@@ -20,6 +21,7 @@ export type CardEl = {
   vw?: number; vh?: number;          // kích thước gốc của nét vẽ, để co giãn đúng
 };
 
+export type AlignTo = 'left' | 'hcenter' | 'right' | 'top' | 'vmiddle' | 'bottom';
 export type DrawTool = 'pen' | 'marker';
 export type DrawCfg = { on: boolean; tool: DrawTool; color: string; size: number };
 
@@ -34,6 +36,7 @@ type State = Snap & {
   tplName: string | null;       // tên mẫu đang dùng (đổi được ngay trong editor)
   uploads: string[];            // ảnh người dùng đã tải lên trong phiên này
   draw: DrawCfg;
+  showSafe: boolean;            // hiện lề an toàn + đường chia ba trên trang đang chỉnh
 
   select: (id: string | null) => void;
   edit: (id: string | null) => void;
@@ -54,6 +57,9 @@ type State = Snap & {
   setFrameImage: (id: string, src: string | undefined) => void;
   addUpload: (src: string) => void;
   setDraw: (p: Partial<DrawCfg>) => void;
+  setShowSafe: (v: boolean) => void;
+  alignEl: (id: string, to: AlignTo, hText?: number) => void;
+  clearPage: () => void;
   addStroke: (pts: [number, number][]) => void;
   clearStrokes: (last?: boolean) => void;
   setBackdrop: (bg: string, record?: boolean) => void;
@@ -137,6 +143,7 @@ export const useEditorStore = create<State>((set, get) => {
     tplName: null,
     uploads: [],
     draw: { on: false, tool: 'pen', color: '#1a1a1a', size: 6 },
+    showSafe: false,
 
     select: (selectedId) => set({ selectedId }),
     edit: (editingId) => set({ editingId }),
@@ -167,7 +174,7 @@ export const useEditorStore = create<State>((set, get) => {
         const i = s.pages[pg].findIndex((e) => e.id === id);
         if (i < 0) continue;
         const src = s.pages[pg][i];
-        const copy = { ...src, id: uid(), x: src.x + 20, y: src.y + 20 };
+        const copy = fitted({ ...src, id: uid(), x: src.x + 20, y: src.y + 20 });
         const list = [...s.pages[pg]];
         list.splice(i + 1, 0, copy);
         return { ...push(s), pages: { ...s.pages, [pg]: list }, selectedId: copy.id };
@@ -222,14 +229,36 @@ export const useEditorStore = create<State>((set, get) => {
     }),
     setFrameImage: (id, src) => set((s) => ({ ...push(s), pages: mapPages(s, (l) => l.map((e) => (e.id === id ? { ...e, src } : e))) })),
     addUpload: (src) => set((s) => ({ uploads: [src, ...s.uploads].slice(0, 40) })),
+    setShowSafe: (showSafe) => set({ showSafe }),
+    // căn phần tử vào trang (tính theo hộp bao sau khi xoay). hText: chiều cao thực của ô chữ
+    alignEl: (id, to, hText) => set((s) => {
+      for (const pg of PAGES) {
+        const el = s.pages[pg].find((e) => e.id === id);
+        if (!el) continue;
+        const h = el.kind === 'text' ? (hText ?? el.h) : el.h;
+        const { hx, hy } = halfExtent(el.w, h, el.rot);
+        let cx = el.x + el.w / 2, cy = el.y + h / 2;
+        if (to === 'left') cx = hx;
+        if (to === 'right') cx = PAGE.w - hx;
+        if (to === 'hcenter') cx = PAGE.w / 2;
+        if (to === 'top') cy = hy;
+        if (to === 'bottom') cy = PAGE.h - hy;
+        if (to === 'vmiddle') cy = PAGE.h / 2;
+        const next = { ...el, x: cx - el.w / 2, y: cy - h / 2 };
+        return { ...push(s), pages: { ...s.pages, [pg]: s.pages[pg].map((e) => (e.id === id ? next : e)) } };
+      }
+      return s;
+    }),
+    clearPage: () => set((s) => (s.pages[s.page].length ? { ...push(s), pages: { ...s.pages, [s.page]: [] }, selectedId: null, editingId: null } : s)),
     setDraw: (p) => set((s) => ({ draw: { ...s.draw, ...p } })),
     addStroke: (pts) => set((s) => {
       if (pts.length < 2) return s;
       const { color, size, tool } = s.draw;
       const pad = size / 2 + 1;
       const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
-      const x0 = Math.min(...xs) - pad, y0 = Math.min(...ys) - pad;
-      const w = Math.max(...xs) + pad - x0, h = Math.max(...ys) + pad - y0;
+      // hộp bao của nét vẽ luôn nằm trong trang (điểm đã được kẹp ở lớp vẽ)
+      const x0 = Math.max(0, Math.min(...xs) - pad), y0 = Math.max(0, Math.min(...ys) - pad);
+      const w = Math.min(PAGE.w, Math.max(...xs) + pad) - x0, h = Math.min(PAGE.h, Math.max(...ys) + pad) - y0;
       const L = pts.map(([x, y]) => [x - x0, y - y0] as const);
       // làm mượt bằng đường cong bậc 2 qua trung điểm
       let d = `M${L[0][0].toFixed(1)} ${L[0][1].toFixed(1)}`;
