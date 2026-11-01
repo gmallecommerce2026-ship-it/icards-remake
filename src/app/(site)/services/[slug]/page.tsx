@@ -1,170 +1,99 @@
 import { notFound } from "next/navigation";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
-import { getService, getServices, getRelatedServices } from "@/lib/services";
-import { FAQS } from "@/lib/faq";
+import { CheckCircle2 } from "lucide-react";
+import { PROCESS_STEPS, getRelatedServices, getService, getServices } from "@/lib/services";
+import { formatPrice } from "@/lib/format";
 import ServiceCover from "@/components/services/ServiceCover";
-import { Container } from "@/components/ui/Primitives";
+import { ServiceRequestForm } from "@/components/shop/ServiceRequestForm";
+import { ServiceCard } from "@/components/shop/ServiceCard";
 
-export async function generateStaticParams() {
-  const services = getServices();
-  return services.map((s) => ({ slug: s.slug }));
+type Params = Promise<{ slug: string }>;
+
+export function generateStaticParams() {
+  return getServices().map((s) => ({ slug: s.slug }));
 }
 
-export async function generateMetadata({ 
-  params 
-}: { 
-  params: Promise<{ slug: string }> 
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
   const service = getService(slug);
-  
   if (!service) return { title: "Không tìm thấy dịch vụ | iCards" };
-  
-  return {
-    title: `${service.name} | Dịch vụ iCards`,
-    description: service.summary,
-  };
+  return { title: `${service.name} | Dịch vụ iCards`, description: service.summary };
 }
 
-export default async function ServiceDetailPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function ServiceDetailPage({ params }: { params: Params }) {
   const { slug } = await params;
   const service = getService(slug);
+  if (!service) notFound();
 
-  if (!service) {
-    notFound();
-  }
-
-  const relatedServices = getRelatedServices(service.slug);
-  const serviceFaqs = FAQS.filter(f => service.faqIds.includes(f.id));
+  const related = getRelatedServices(service.slug);
 
   return (
-    <main className="min-h-screen bg-white pt-[72px]">
-      <Container className="py-10 lg:py-14">
-        {/* Breadcrumb */}
-        <nav aria-label="Breadcrumb" className="mb-8 text-sm font-medium">
-          <Link href="/services" className="text-muted hover:text-lacquer transition-colors">Dịch vụ</Link>
-          <span className="mx-2 text-line">/</span>
-          <span className="text-ink font-semibold" aria-current="page">{service.name}</span>
-        </nav>
+    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+      <nav aria-label="Breadcrumb" className="mb-8 text-sm font-medium">
+        <Link href="/services" className="text-[#5B6B7F] hover:text-[#27548A]">Dịch vụ</Link>
+        <span className="mx-2 text-[#C5D0DE]">/</span>
+        <span className="font-semibold" aria-current="page">{service.name}</span>
+      </nav>
 
-        {/* Hero Chi tiết */}
-        <div className="grid gap-12 lg:grid-cols-2 mb-20 items-center">
-          <div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-ink mb-6">
-              {service.name}
-            </h1>
-            <p className="text-lg text-muted leading-relaxed mb-8">
-              {service.description}
-            </p>
-            
-            <div className="mb-10">
-              <h3 className="font-bold text-ink mb-4 text-lg">Tiện ích nổi bật:</h3>
-              <ul className="space-y-4">
-                {service.highlights.map((highlight, idx) => (
-                  <li key={idx} className="flex items-start gap-3">
-                    <CheckCircle2 className="h-6 w-6 shrink-0 text-lacquer mt-0.5" />
-                    <span className="text-ink leading-relaxed text-[17px]">{highlight}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+      <div className="grid items-start gap-12 lg:grid-cols-2">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{service.name}</h1>
+          <p className="mt-4 text-lg leading-relaxed text-[#3D4C61]">{service.description}</p>
 
-            <Link
-              href="/pricing"
-              className="inline-flex h-12 items-center justify-center rounded-full bg-lacquer px-8 font-medium text-white transition-colors hover:bg-lacquer-dark shadow-lg shadow-lacquer/20 focus-visible:outline-none"
-            >
-              Đăng ký dịch vụ ngay
-            </Link>
-          </div>
-          <div className="order-first lg:order-last">
-            <ServiceCover service={service} className="aspect-square w-full rounded-[2rem] shadow-xl shadow-ink/5" />
-          </div>
+          <dl className="mt-6 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+            <dt className="text-[#5B6B7F]">Giá từ</dt>
+            <dd className="font-semibold text-[#27548A]">{formatPrice(service.priceFrom)}</dd>
+            <dt className="text-[#5B6B7F]">Thời gian</dt>
+            <dd className="font-medium">{service.duration}</dd>
+            <dt className="text-[#5B6B7F]">Phù hợp với</dt>
+            <dd className="font-medium">{service.audience}</dd>
+          </dl>
+
+          <h2 className="mt-8 text-lg font-bold">Bao gồm</h2>
+          <ul className="mt-3 space-y-3">
+            {service.includes.map((item) => (
+              <li key={item} className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-[#27548A]" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
-        {/* Quy trình */}
-        <section className="mb-24 rounded-[2rem] bg-porcelain p-8 md:p-14">
-          <h2 className="text-2xl sm:text-3xl font-bold text-ink mb-12 text-center">Quy trình thực hiện</h2>
-          <div className="grid gap-8 md:grid-cols-3">
-            {service.process.map((step, index) => (
-              <div key={index} className="relative bg-white p-8 rounded-3xl border border-line shadow-sm hover:border-lacquer/30 transition-colors">
-                <div className="mb-4 text-5xl font-extrabold text-lacquer-soft">
-                  0{index + 1}
-                </div>
-                <h3 className="text-xl font-bold text-ink mb-3">{step.title}</h3>
-                <p className="text-muted leading-relaxed">{step.desc}</p>
-              </div>
-            ))}
+        <div className="space-y-6">
+          <ServiceCover service={service} className="aspect-[4/3] w-full" />
+          <div className="rounded-xl border border-[#DDE4EE] bg-white p-5 sm:p-6">
+            <h2 className="text-lg font-bold">Gửi yêu cầu</h2>
+            <ServiceRequestForm serviceSlug={service.slug} serviceName={service.name} />
           </div>
-        </section>
+        </div>
+      </div>
 
-        {/* FAQs */}
-        {serviceFaqs.length > 0 && (
-          <section className="mb-24 max-w-3xl mx-auto">
-            <h2 className="text-2xl font-bold text-ink mb-8 text-center">Câu hỏi về {service.name.toLowerCase()}</h2>
-            <div className="space-y-4">
-              {serviceFaqs.map((faq) => (
-                <details key={faq.id} className="group rounded-2xl bg-white border border-line p-6 [&_summary::-webkit-details-marker]:hidden hover:border-lacquer/30 transition-colors">
-                  <summary className="flex cursor-pointer items-center justify-between gap-4 font-medium text-ink focus-visible:outline-none text-[17px]">
-                    {faq.q}
-                    <span className="transition group-open:rotate-180 bg-porcelain rounded-full p-1 text-muted group-hover:text-lacquer">
-                      <svg fill="none" height="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="20"><path d="M6 9l6 6 6-6"></path></svg>
-                    </span>
-                  </summary>
-                  <p className="mt-4 text-muted leading-relaxed border-t border-line pt-4">{faq.a}</p>
-                </details>
-              ))}
-            </div>
-          </section>
-        )}
+      <section className="mt-20 rounded-2xl bg-white p-8 ring-1 ring-[#DDE4EE] md:p-12">
+        <h2 className="text-center text-2xl font-bold">Quy trình thực hiện</h2>
+        <ol className="mt-8 grid gap-6 md:grid-cols-4">
+          {PROCESS_STEPS.map((step, i) => (
+            <li key={step.title}>
+              <div className="text-4xl font-extrabold text-[#E8EEF6]">0{i + 1}</div>
+              <h3 className="mt-2 font-bold">{step.title}</h3>
+              <p className="mt-1 text-sm leading-relaxed text-[#5B6B7F]">{step.text}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
 
-        {/* Dịch vụ liên quan */}
-        <section className="mb-12 pt-12 border-t border-line">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-ink">Có thể bạn quan tâm</h2>
-            <Link href="/services" className="text-sm font-semibold text-lacquer hover:underline">
-              Xem tất cả &rarr;
-            </Link>
+      {related.length > 0 && (
+        <section className="mt-16 border-t border-[#DDE4EE] pt-12">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Có thể bạn quan tâm</h2>
+            <Link href="/services" className="text-sm font-semibold text-[#27548A] hover:underline">Xem tất cả →</Link>
           </div>
           <div className="grid gap-6 md:grid-cols-2">
-            {relatedServices.map((rs) => (
-              <Link 
-                key={rs.slug}
-                href={`/services/${rs.slug}`}
-                className="group flex items-center gap-5 rounded-2xl bg-white border border-line p-5 transition-shadow hover:shadow-lg hover:border-lacquer/20 focus-visible:outline-none"
-              >
-                <div 
-                  className="h-24 w-24 shrink-0 rounded-[1.25rem] flex items-center justify-center"
-                  style={{ backgroundColor: rs.tone.bg }}
-                >
-                  <div className="h-10 w-10 rounded-full border-[3px]" style={{ borderColor: rs.tone.ink, opacity: 0.6 }} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-ink group-hover:text-lacquer transition-colors">{rs.name}</h3>
-                  <p className="text-[15px] text-muted line-clamp-2 mt-2 leading-relaxed">{rs.summary}</p>
-                </div>
-              </Link>
-            ))}
+            {related.map((rs) => <ServiceCard key={rs.slug} service={rs} />)}
           </div>
         </section>
-
-        {/* CTA Cuối trang */}
-        <section className="rounded-[2.5rem] bg-lacquer-soft px-6 py-16 text-center mt-24">
-          <h2 className="text-2xl sm:text-3xl font-bold text-ink mb-4">Cần tư vấn thêm?</h2>
-          <p className="text-muted text-lg mb-8 max-w-lg mx-auto">Đừng ngần ngại liên hệ nếu bạn có yêu cầu đặc biệt chưa có trong danh sách.</p>
-          <Link
-            href="/contact"
-            className="inline-flex h-12 items-center justify-center rounded-full bg-lacquer px-10 font-semibold text-white transition-colors hover:bg-lacquer-dark shadow-xl shadow-lacquer/10 focus-visible:outline-none"
-          >
-            Liên hệ hỗ trợ ngay
-          </Link>
-        </section>
-      </Container>
-    </main>
+      )}
+    </div>
   );
 }
