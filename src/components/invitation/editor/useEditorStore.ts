@@ -60,6 +60,10 @@ type State = Snap & {
   setShowSafe: (v: boolean) => void;
   alignEl: (id: string, to: AlignTo, hText?: number) => void;
   clearPage: () => void;
+  recolorText: (color: string) => void;                     // đổi màu mọi chữ trên cả 4 mặt thiệp
+  setAllBackdrops: (bg: string) => void;                    // đặt cùng một màu nền cho cả 4 mặt
+  applyFonts: (heading: string, body: string) => void;      // chữ lớn (>= 34px) dùng phông tiêu đề, còn lại dùng phông nội dung
+  distribute: (heights: Record<string, number>) => void;    // chia đều khoảng cách dọc giữa các phần tử của mặt đang chỉnh
   addStroke: (pts: [number, number][]) => void;
   clearStrokes: (last?: boolean) => void;
   setBackdrop: (bg: string, record?: boolean) => void;
@@ -68,6 +72,7 @@ type State = Snap & {
 };
 
 const MAX_HISTORY = 60;
+const EMOJI_ONLY = new RegExp('^\\p{Extended_Pictographic}', 'u');   // ô chữ chỉ là emoji thì không đổi phông
 const uid = () => Math.random().toString(36).slice(2, 10);
 const snap = (s: Snap): Snap => ({ pages: s.pages, backdrops: s.backdrops });
 const push = (s: State) => ({ past: [...s.past.slice(-(MAX_HISTORY - 1)), snap(s)], future: [] as Snap[] });
@@ -250,6 +255,27 @@ export const useEditorStore = create<State>((set, get) => {
       return s;
     }),
     clearPage: () => set((s) => (s.pages[s.page].length ? { ...push(s), pages: { ...s.pages, [s.page]: [] }, selectedId: null, editingId: null } : s)),
+    recolorText: (color) => set((s) => ({ ...push(s), pages: mapPages(s, (l) => l.map((e) => (e.kind === 'text' ? { ...e, color } : e))) })),
+    setAllBackdrops: (bg) => set((s) => ({ ...push(s), backdrops: { cover: bg, insideLeft: bg, inside: bg, back: bg } })),
+    applyFonts: (heading, body) => set((s) => ({
+      ...push(s),
+      pages: mapPages(s, (l) => l.map((e) => (e.kind === 'text' && !EMOJI_ONLY.test(e.text ?? '') ? { ...e, font: (e.size ?? 0) >= 34 ? heading : body } : e))),
+    })),
+    distribute: (hs) => set((s) => {
+      const list = s.pages[s.page];
+      const items = list
+        .filter((e) => e.kind !== 'draw')
+        .map((e) => ({ e, h: e.kind === 'text' ? (hs[e.id] ?? e.h) : e.h }))
+        .sort((a, b) => a.e.y - b.e.y);
+      if (items.length < 3) return s;
+      const top = items[0].e.y, bottom = items[items.length - 1].e.y + items[items.length - 1].h;
+      const gap = (bottom - top - items.reduce((t, i) => t + i.h, 0)) / (items.length - 1);
+      if (gap < 0) return s;                       // các phần tử đang chen nhau quá nhiều, chia đều sẽ chồng lên nhau
+      const ny = new Map<string, number>();
+      let y = top;
+      for (const it of items) { ny.set(it.e.id, y); y += it.h + gap; }
+      return { ...push(s), pages: { ...s.pages, [s.page]: list.map((e) => (ny.has(e.id) ? { ...e, y: ny.get(e.id) as number } : e)) } };
+    }),
     setDraw: (p) => set((s) => ({ draw: { ...s.draw, ...p } })),
     addStroke: (pts) => set((s) => {
       if (pts.length < 2) return s;
