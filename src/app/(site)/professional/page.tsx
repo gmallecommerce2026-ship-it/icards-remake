@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
-import { PROCESS_STEPS, TIERS, PORTFOLIO } from "@/lib/professional";
-import { FAQS } from "@/lib/faq";
+import { getFaq, getProfessionalPortfolio, getProfessionalProcess, getProfessionalTiers } from "@/lib/catalog";
 import PortfolioCover from "@/components/professional/PortfolioCover";
 import { Container } from "@/components/ui/Primitives";
 
@@ -11,9 +10,15 @@ export const metadata: Metadata = {
   description: "Giải pháp thiết kế thiệp điện tử độc quyền và vận hành công nghệ dành cho cá nhân cao cấp, doanh nghiệp và agency sự kiện.",
 };
 
-export default function ProfessionalPage() {
+export default async function ProfessionalPage() {
+  const [processSteps, tiers, portfolio, faq] = await Promise.all([
+    getProfessionalProcess(),
+    getProfessionalTiers(),
+    getProfessionalPortfolio(),
+    getFaq(),
+  ]);
   // Lấy một số câu hỏi thường gặp liên quan đến thanh toán/bắt đầu làm mẫu
-  const proFaqs = FAQS.filter(f => f.group === "bat-dau" || f.group === "thanh-toan").slice(0, 4);
+  const proFaqs = faq.items.filter(f => f.group === "bat-dau" || f.group === "thanh-toan").slice(0, 4);
 
   return (
     <main className="min-h-screen bg-porcelain">
@@ -43,14 +48,14 @@ export default function ProfessionalPage() {
         <section className="mb-24">
           <h2 className="text-2xl font-bold text-ink mb-12 text-center">Quy trình kiến tạo</h2>
           <div className="grid gap-8 md:grid-cols-4">
-            {PROCESS_STEPS.map((step, index) => (
+            {processSteps.map((step, index) => (
               <div key={index} className="relative">
                 <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-lacquer-soft text-lacquer font-bold text-lg">
                   {index + 1}
                 </div>
                 <h3 className="text-lg font-semibold text-ink mb-3">{step.title}</h3>
                 <p className="text-muted leading-relaxed">{step.description}</p>
-                {index < PROCESS_STEPS.length - 1 && (
+                {index < processSteps.length - 1 && (
                   <div className="hidden md:block absolute top-6 left-16 right-0 h-[1px] bg-line -z-10" />
                 )}
               </div>
@@ -65,7 +70,7 @@ export default function ProfessionalPage() {
             <p className="text-muted">Lựa chọn gói dịch vụ phù hợp với quy mô sự kiện</p>
           </div>
           <div className="grid gap-8 md:grid-cols-2 max-w-4xl mx-auto">
-            {TIERS.map((tier) => (
+            {tiers.map((tier) => (
               <div 
                 key={tier.id} 
                 className={`flex flex-col rounded-2xl bg-white p-8 ${
@@ -109,7 +114,7 @@ export default function ProfessionalPage() {
             </div>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {PORTFOLIO.map((item) => (
+            {portfolio.map((item) => (
               <div key={item.id} className="group">
                 <PortfolioCover item={item} className="mb-4 aspect-[3/4]" />
                 <h3 className="font-semibold text-ink group-hover:text-lacquer transition-colors">{item.name}</h3>

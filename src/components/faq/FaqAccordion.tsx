@@ -2,20 +2,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { FAQS, FAQ_GROUPS, normalize } from "@/lib/faq";
+import { normalize, type FaqGroup, type FaqItem } from "@/lib/faq";
 
-export default function FaqAccordion() {
+export default function FaqAccordion({ groups, items }: { groups: FaqGroup[]; items: FaqItem[] }) {
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState<string>("all");
 
   const items = useMemo(() => {
     const q = normalize(query.trim());
-    return FAQS.filter((f) => {
+    return items.filter((f) => {
       if (group !== "all" && f.group !== group) return false;
       if (!q) return true;
       return normalize(f.q).includes(q) || normalize(f.a).includes(q);
     });
-  }, [query, group]);
+  }, [query, group, items]);
 
   return (
     <div>
@@ -33,7 +33,7 @@ export default function FaqAccordion() {
 
       <div role="tablist" aria-label="Nhóm câu hỏi" className="mt-5 flex flex-wrap gap-2">
         <Tab label="Tất cả" active={group === "all"} onClick={() => setGroup("all")} />
-        {FAQ_GROUPS.map((g) => (
+        {groups.map((g) => (
           <Tab key={g.slug} label={g.label} active={group === g.slug} onClick={() => setGroup(g.slug)} />
         ))}
       </div>

@@ -1,31 +1,32 @@
 import axios, { type AxiosInstance } from "axios";
 
-const isServer = typeof window === "undefined";
+/**
+ * Địa chỉ backend. Mặc định https://api.icards.com.vn/api.
+ * Khi chạy local đặt NEXT_PUBLIC_API_URL=http://localhost:5000/api trong .env.local.
+ */
+export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "https://api.icards.com.vn/api").replace(/\/+$/, "");
 
-function create(browserBase: string, serverBase: string | undefined): AxiosInstance {
-  const instance = axios.create({
-    // Browser: đi qua proxy rewrites (same-origin). Server (SSR): gọi thẳng backend.
-    baseURL: isServer ? serverBase : browserBase,
-    headers: { "Content-Type": "application/json" },
-    withCredentials: true,
-  });
+/** Phát khi backend trả 401 (phiên hết hạn). AuthProvider lắng nghe để đăng xuất. */
+export const UNAUTHORIZED_EVENT = "icards:unauthorized";
 
-  instance.interceptors.response.use(
-    (res) => res,
-    (error) => {
-      if (process.env.NODE_ENV !== "production") {
-        console.error("API Error:", error?.response?.data?.message || error.message);
-      }
-      // 401: xử lý logout/redirect tại AuthProvider (giai đoạn 2)
-      return Promise.reject(error);
+/** Dùng cho cả browser và server component. Cookie httpOnly icards_token được gửi nhờ withCredentials. */
+export const api: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  headers: { "Content-Type": "application/json" },
+  withCredentials: true,
+});
+
+api.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("API Error:", error?.response?.data?.message || error.message);
     }
-  );
-  return instance;
-}
-
-/** Backend chính: https://api.icards.com.vn/api */
-export const api = create("/backend-api", process.env.API_URL);
-/** Backend admin (settings công khai): https://adminapi.icards.com.vn/api/v1 */
-export const adminApi = create("/admin-backend-api", process.env.ADMIN_API_URL);
+    if (error?.response?.status === 401 && typeof window !== "undefined") {
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    }
+    return Promise.reject(error);
+  },
+);
 
 export const multipart = { headers: { "Content-Type": "multipart/form-data" } };

@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { categoryLabel, formatPrice, type InvitationTemplate } from "@/lib/templates";
+import { formatPrice, type InvitationTemplate } from "@/lib/templates";
 import { InvitationPreview } from "./InvitationPreview";
 
-export function TemplateCard({ template }: { template: InvitationTemplate }) {
+export function TemplateCard({ template, categoryName }: { template: InvitationTemplate; categoryName?: string }) {
   const free = template.price === 0;
   return (
     <Link
@@ -17,7 +17,7 @@ export function TemplateCard({ template }: { template: InvitationTemplate }) {
           <h3 className="truncate text-base font-semibold text-[#0E1B2C] group-hover:underline group-hover:underline-offset-4">
             {template.name}
           </h3>
-          <p className="mt-0.5 text-sm text-[#5B6B7F]">{categoryLabel(template.category)}</p>
+          <p className="mt-0.5 text-sm text-[#5B6B7F]">{categoryName}</p>
         </div>
         <span
           className={

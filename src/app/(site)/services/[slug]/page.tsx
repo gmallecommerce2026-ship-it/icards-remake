@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
-import { PROCESS_STEPS, getRelatedServices, getService, getServices } from "@/lib/services";
+import { getRelatedServices } from "@/lib/services";
+import { getService, getServices, getServicesProcess } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import ServiceCover from "@/components/services/ServiceCover";
 import { ServiceRequestForm } from "@/components/shop/ServiceRequestForm";
@@ -10,23 +11,19 @@ import { ServiceCard } from "@/components/shop/ServiceCard";
 
 type Params = Promise<{ slug: string }>;
 
-export function generateStaticParams() {
-  return getServices().map((s) => ({ slug: s.slug }));
-}
-
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
-  const service = getService(slug);
+  const service = await getService(slug);
   if (!service) return { title: "Không tìm thấy dịch vụ | iCards" };
   return { title: `${service.name} | Dịch vụ iCards`, description: service.summary };
 }
 
 export default async function ServiceDetailPage({ params }: { params: Params }) {
   const { slug } = await params;
-  const service = getService(slug);
+  const [service, all, processSteps] = await Promise.all([getService(slug), getServices(), getServicesProcess()]);
   if (!service) notFound();
 
-  const related = getRelatedServices(service.slug);
+  const related = getRelatedServices(all, service.slug);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
@@ -73,7 +70,7 @@ export default async function ServiceDetailPage({ params }: { params: Params }) 
       <section className="mt-20 rounded-2xl bg-white p-8 ring-1 ring-[#DDE4EE] md:p-12">
         <h2 className="text-center text-2xl font-bold">Quy trình thực hiện</h2>
         <ol className="mt-8 grid gap-6 md:grid-cols-4">
-          {PROCESS_STEPS.map((step, i) => (
+          {processSteps.map((step, i) => (
             <li key={step.title}>
               <div className="text-4xl font-extrabold text-[#E8EEF6]">0{i + 1}</div>
               <h3 className="mt-2 font-bold">{step.title}</h3>

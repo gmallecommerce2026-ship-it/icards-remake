@@ -110,7 +110,7 @@ function normalize(data: any): Tpl[] {
     id: String(t._id ?? t.id ?? i),
     name: t.name ?? t.title ?? "Mẫu thiệp",
     image: t.thumbnail ?? t.thumbnailUrl ?? t.previewImage ?? t.image,
-    href: `/invitation/${t._id ?? t.id ?? t.slug ?? ""}`,
+    href: `/templates/${t.slug ?? ""}`,
     tone: tones[i % tones.length],
   }));
 }

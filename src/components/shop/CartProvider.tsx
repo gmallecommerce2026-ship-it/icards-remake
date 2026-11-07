@@ -1,12 +1,13 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { MAX_QTY, getProduct, getVariant } from "@/lib/shop";
+import { MAX_QTY, findProduct, getVariant, type Product } from "@/lib/shop";
 
 export type CartLine = { key: string; slug: string; variantId: string; qty: number };
 
 type CartContextValue = {
   lines: CartLine[];
+  products: Product[];
   ready: boolean;
   count: number;
   add: (slug: string, variantId: string, qty: number) => void;
@@ -22,14 +23,14 @@ const clamp = (n: number) => Math.min(MAX_QTY, Math.max(1, Math.floor(n)));
 const lineKey = (slug: string, variantId: string) => `${slug}:${variantId}`;
 
 // Chỉ lưu định danh và số lượng. Giá luôn được tra lại từ danh mục khi hiển thị.
-function isValidLine(x: unknown): x is CartLine {
+function isValidLine(x: unknown, products: Product[]): x is CartLine {
   if (!x || typeof x !== "object") return false;
   const l = x as CartLine;
-  const product = typeof l.slug === "string" ? getProduct(l.slug) : undefined;
+  const product = typeof l.slug === "string" ? findProduct(products, l.slug) : undefined;
   return !!product && typeof l.variantId === "string" && !!getVariant(product, l.variantId) && Number.isFinite(l.qty);
 }
 
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartProvider({ children, products }: { children: ReactNode; products: Product[] }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [ready, setReady] = useState(false);
 
@@ -39,7 +40,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (raw) {
         const parsed: unknown = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          setLines(parsed.filter(isValidLine).map((l) => ({ ...l, key: lineKey(l.slug, l.variantId), qty: clamp(l.qty) })));
+          setLines(parsed.filter((l) => isValidLine(l, products)).map((l) => ({ ...l, key: lineKey(l.slug, l.variantId), qty: clamp(l.qty) })));
         }
       }
     } catch {
@@ -74,8 +75,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clear = useCallback(() => setLines([]), []);
 
   const value = useMemo<CartContextValue>(
-    () => ({ lines, ready, count: lines.reduce((s, l) => s + l.qty, 0), add, setQty, remove, clear }),
-    [lines, ready, add, setQty, remove, clear],
+    () => ({ lines, ready, products, count: lines.reduce((s, l) => s + l.qty, 0), add, setQty, remove, clear }),
+    [lines, ready, products, add, setQty, remove, clear],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

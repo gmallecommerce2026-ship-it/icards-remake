@@ -1,6 +1,6 @@
 // src/components/blog/PostCard.tsx
 import Link from "next/link";
-import { formatDate, getCategory, type Post } from "@/lib/blog";
+import { formatDate, getCategory, type BlogCategory, type Post } from "@/lib/blog";
 
 /** Ảnh bìa vẽ bằng CSS từ tone của bài viết (cùng cách làm với `thumb` + `tone` trong shop.ts). */
 export function PostCover({ post, className = "" }: { post: Post; className?: string }) {
@@ -24,8 +24,8 @@ export function PostCover({ post, className = "" }: { post: Post; className?: st
   );
 }
 
-export function PostMeta({ post }: { post: Post }) {
-  const cat = getCategory(post.category);
+export function PostMeta({ post, categories = [] }: { post: Post; categories?: BlogCategory[] }) {
+  const cat = getCategory(categories, post.category);
   return (
     <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
       {cat && (
@@ -39,7 +39,7 @@ export function PostMeta({ post }: { post: Post }) {
   );
 }
 
-export default function PostCard({ post }: { post: Post }) {
+export default function PostCard({ post, categories = [] }: { post: Post; categories?: BlogCategory[] }) {
   return (
     <article className="group">
       <Link
@@ -48,7 +48,7 @@ export default function PostCard({ post }: { post: Post }) {
       >
         <PostCover post={post} className="aspect-[16/10] rounded-2xl" />
         <div className="mt-4 space-y-2">
-          <PostMeta post={post} />
+          <PostMeta post={post} categories={categories} />
           <h3 className="text-lg font-semibold leading-snug text-slate-900 group-hover:text-[#27548A]">
             {post.title}
           </h3>

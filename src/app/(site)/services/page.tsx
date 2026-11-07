@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
-import { getServices } from "@/lib/services";
+import { getServices } from "@/lib/catalog";
 import ServiceCover from "@/components/services/ServiceCover";
 import { PageHero, Container } from "@/components/ui/Primitives";
 
@@ -10,8 +10,8 @@ export const metadata: Metadata = {
   description: "Khám phá các dịch vụ tiện ích đi kèm của iCards giúp sự kiện của bạn trọn vẹn và chuyên nghiệp hơn.",
 };
 
-export default function ServicesPage() {
-  const services = getServices();
+export default async function ServicesPage() {
+  const services = await getServices();
 
   return (
     <main className="min-h-screen bg-porcelain">

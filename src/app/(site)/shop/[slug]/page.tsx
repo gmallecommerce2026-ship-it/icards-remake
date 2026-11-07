@@ -4,18 +4,15 @@ import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { ProductThumb } from "@/components/shop/ProductThumb";
 import { AddToCart } from "@/components/shop/AddToCart";
-import { PRODUCTS, SHOP_CATEGORIES, getProduct, getRelatedProducts, priceFrom } from "@/lib/shop";
+import { getRelatedProducts, priceFrom } from "@/lib/shop";
+import { getProduct, getProducts, getShopCategories } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 
 type Params = Promise<{ slug: string }>;
 
-export function generateStaticParams() {
-  return PRODUCTS.map((p) => ({ slug: p.slug }));
-}
-
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const product = await getProduct(slug);
   if (!product) return {};
   return {
     title: `${product.name} | iCards`,
@@ -26,11 +23,11 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function ProductPage({ params }: { params: Params }) {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const [product, all, categories] = await Promise.all([getProduct(slug), getProducts(), getShopCategories()]);
   if (!product) notFound();
 
-  const cat = SHOP_CATEGORIES.find((c) => c.id === product.category);
-  const related = getRelatedProducts(product.slug);
+  const cat = categories.find((c) => c.id === product.category);
+  const related = getRelatedProducts(all, product.slug);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">

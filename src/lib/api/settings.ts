@@ -1,3 +1,3 @@
-import { adminApi } from "./http";
+import { api } from "./http";
 
-export const getPublicSettings = () => adminApi.get("/public/settings");
+export const getPublicSettings = () => api.get("/public/settings");

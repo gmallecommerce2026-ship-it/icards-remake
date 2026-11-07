@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { SERVICE_REQUEST_ENDPOINT } from "@/lib/services";
+import { API_BASE_URL } from "@/lib/api/http";
 
 type Status = "idle" | "sending" | "done" | "error";
 
@@ -25,7 +25,7 @@ export function ServiceRequestForm({ serviceSlug, serviceName }: { serviceSlug: 
     setPhoneError("");
     setStatus("sending");
     try {
-      const res = await fetch(SERVICE_REQUEST_ENDPOINT, {
+      const res = await fetch(`${API_BASE_URL}/service-requests`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

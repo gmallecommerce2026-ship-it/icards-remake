@@ -2,8 +2,9 @@
 // Sidebar chỉnh THIỆP, bố cục giống Canva: Mẫu · Phần tử · Chữ · Nền · Tải lên · Vẽ.
 'use client';
 
-import { useState, type ReactNode } from 'react';
-import { CATEGORIES, TEMPLATES, type CategoryId } from '@/lib/templates';
+import { useEffect, useState, type ReactNode } from 'react';
+import { type CategoryId, type InvitationTemplate } from '@/lib/templates';
+import { contentApi, templatesApi } from '@/lib/api';
 import { InvitationPreview } from '@/components/templates/InvitationPreview';
 import {
   ART_BY_CAT, ARTS, ArtSVG, BACKDROPS, FONTS, FRAMES, GRIDS,
@@ -52,15 +53,26 @@ function TemplatesPanel() {
   const [cat, setCat] = useState<CategoryId | null>(null);
   const [note, setNote] = useState('');
   const current = useEditorStore((s) => s.tplName);
+  const [catalog, setCatalog] = useState<{ templates: InvitationTemplate[]; categories: { id: CategoryId; label: string }[] }>({ templates: [], categories: [] });
+  useEffect(() => {
+    let alive = true;
+    Promise.all([
+      templatesApi.getTemplates(),
+      contentApi.getPublicContent<{ id: CategoryId; label: string }[]>('templates.categories'),
+    ])
+      .then(([tpl, cats]) => { if (alive) setCatalog({ templates: tpl.data, categories: cats.data }); })
+      .catch(() => { /* lỗi mạng: danh sách mẫu để trống */ });
+    return () => { alive = false; };
+  }, []);
   const needle = q.trim().toLowerCase();
-  const list = TEMPLATES.filter((t) => (!cat || t.category === cat) && (!needle || `${t.name} ${t.tagline}`.toLowerCase().includes(needle)));
+  const list = catalog.templates.filter((t) => (!cat || t.category === cat) && (!needle || `${t.name} ${t.tagline}`.toLowerCase().includes(needle)));
 
   return (
     <>
       <Search value={q} onChange={setQ} placeholder="Tìm mẫu thiệp" />
       <div className={p.chipRow} role="group" aria-label="Loại thiệp">
         <button type="button" className={p.cat} aria-pressed={cat === null} onClick={() => setCat(null)}>Tất cả</button>
-        {CATEGORIES.map((c) => (
+        {catalog.categories.map((c) => (
           <button key={c.id} type="button" className={p.cat} aria-pressed={cat === c.id} onClick={() => setCat(cat === c.id ? null : c.id)}>{c.label}</button>
         ))}
       </div>

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FormEvent } from "react";
 import { ProductCard } from "@/components/shop/ProductCard";
-import { SHOP_CATEGORIES, getProducts, isShopCategory, priceFrom, type ShopCategoryId } from "@/lib/shop";
+import { getProductsByCategory, isShopCategory, priceFrom, type Product, type ShopCategoryId } from "@/lib/shop";
+import type { Option } from "@/lib/catalog";
 
 type SortValue = "popular" | "price-asc" | "price-desc";
 const SORTS: { value: SortValue; label: string }[] = [
@@ -25,18 +26,18 @@ function buildHref(p: { category?: ShopCategoryId; sort?: SortValue; q?: string 
 
 const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").toLowerCase();
 
-export default function ShopClient() {
+export default function ShopClient({ products: allProducts, categories }: { products: Product[]; categories: Option[] }) {
   const router = useRouter();
   const sp = useSearchParams();
 
   const catParam = sp.get("category") ?? undefined;
-  const category = isShopCategory(catParam) ? catParam : undefined;
+  const category = isShopCategory(catParam, categories) ? catParam : undefined;
   const sortParam = sp.get("sort");
   const sort: SortValue = isSort(sortParam) ? sortParam : "popular";
   const query = sp.get("q")?.trim() || undefined;
-  const activeLabel = SHOP_CATEGORIES.find((c) => c.id === category)?.label;
+  const activeLabel = categories.find((c) => c.id === category)?.label;
 
-  let products = getProducts(category);
+  let products = getProductsByCategory(allProducts, category);
   if (query) {
     const n = norm(query);
     products = products.filter((p) => norm(`${p.name} ${p.summary}`).includes(n));
@@ -45,7 +46,7 @@ export default function ShopClient() {
     products = [...products].sort((a, b) => (sort === "price-asc" ? priceFrom(a) - priceFrom(b) : priceFrom(b) - priceFrom(a)));
   }
 
-  const count = (c?: ShopCategoryId) => getProducts(c).length;
+  const count = (c?: ShopCategoryId) => getProductsByCategory(allProducts, c).length;
 
   function onSearch(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -60,8 +61,8 @@ export default function ShopClient() {
 
       <nav aria-label="Danh mục sản phẩm" className="mt-8 flex flex-wrap gap-2">
         <FilterLink href={buildHref({ sort, q: query })} label="Tất cả" count={count()} current={!category} />
-        {SHOP_CATEGORIES.map((c) => (
-          <FilterLink key={c.id} href={buildHref({ category: c.id, sort, q: query })} label={c.label} count={count(c.id)} current={category === c.id} />
+        {categories.map((c) => (
+          <FilterLink key={c.id} href={buildHref({ category: c.id as ShopCategoryId, sort, q: query })} label={c.label} count={count(c.id as ShopCategoryId)} current={category === c.id} />
         ))}
       </nav>
 

@@ -5,7 +5,8 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, useMotionValue, useSpring } from 'motion/react';
-import { getTemplateBySlug } from '@/lib/templates';
+import type { InvitationTemplate } from '@/lib/templates';
+import { templatesApi } from '@/lib/api';
 import { ROUTES } from '@/lib/routes';
 import { EnvelopeScene } from './EnvelopeScene';
 import { dbg } from './flapDebug';
@@ -69,7 +70,19 @@ const draftKey = (slug?: string | null) => `icards:draft:${slug ?? 'blank'}`;
 
 export function EnvelopeDesigner({ recipientName: recipientProp, editable = false, templateSlug }: Props) {
   const [recipientName, setRecipientName] = useState(recipientProp);
-  const template = templateSlug ? getTemplateBySlug(templateSlug) : undefined;
+  // Mẫu được tải từ API. templateReady báo đã có kết quả (kể cả không có mẫu) để không nạp thiếu dữ liệu.
+  const [template, setTemplate] = useState<InvitationTemplate | undefined>(undefined);
+  const [templateReady, setTemplateReady] = useState(!templateSlug);
+  useEffect(() => {
+    if (!templateSlug) { setTemplate(undefined); setTemplateReady(true); return; }
+    let alive = true;
+    setTemplateReady(false);
+    templatesApi.getTemplate(templateSlug)
+      .then((r) => { if (alive) setTemplate(r.data); })
+      .catch(() => { if (alive) setTemplate(undefined); })
+      .finally(() => { if (alive) setTemplateReady(true); });
+    return () => { alive = false; };
+  }, [templateSlug]);
   const [tab, setTab] = useState<Tab>(editable ? 'elements' : 'envelope');
   const lastCard = useRef<CardTab>('elements');   // tab thiệp / phong bì dùng gần nhất, để quay lại đúng chỗ khi đổi qua lại
   const lastEnv = useRef<EnvTab>('envelope');
@@ -306,6 +319,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
 
   // ---- Nạp nội dung: bản nháp đã lưu → mẫu → mặc định
   useEffect(() => {
+    if (!templateReady) return;
     const st = useEditorStore.getState();
     let loaded = false;
     try {
@@ -317,7 +331,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setReady(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templateSlug]);
+  }, [templateSlug, templateReady]);
 
   // ---- Tự lưu nháp (debounce) khi nội dung đổi
   const saveNow = useCallback(() => {

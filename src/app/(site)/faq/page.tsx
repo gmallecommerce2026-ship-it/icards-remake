@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import FaqAccordion from "@/components/faq/FaqAccordion";
-import { FAQS } from "@/lib/faq";
+import { getFaq } from "@/lib/catalog";
 import { PageHero, Container } from "@/components/ui/Primitives";
 
 export const metadata: Metadata = {
@@ -10,11 +10,12 @@ export const metadata: Metadata = {
     "Giải đáp các câu hỏi thường gặp về tạo thiệp mời online, gửi thiệp, xác nhận tham dự, thanh toán và tài khoản.",
 };
 
-export default function FaqPage() {
+export default async function FaqPage() {
+  const faq = await getFaq();
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: FAQS.map((f) => ({
+    mainEntity: faq.items.map((f) => ({
       "@type": "Question",
       name: f.q,
       acceptedAnswer: { "@type": "Answer", text: f.a },
@@ -35,7 +36,7 @@ export default function FaqPage() {
 
       <Container className="py-12 lg:py-16">
         <div className="max-w-3xl mx-auto">
-          <FaqAccordion />
+          <FaqAccordion groups={faq.groups} items={faq.items} />
 
           <section className="mt-14 flex flex-col items-start justify-between gap-4 rounded-3xl bg-[#E8EEF6] p-8 sm:flex-row sm:items-center">
             <div>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CATEGORIES, type CategoryId, type InvitationTemplate } from "@/lib/templates";
+import { type CategoryId, type InvitationTemplate } from "@/lib/templates";
+import type { Option } from "@/lib/catalog";
 import { TemplateCard } from "./TemplateCard";
 
 type Sort = "popular" | "newest" | "price-asc";
@@ -22,7 +23,7 @@ const SORT_OPTIONS: { value: Sort; label: string }[] = [
   { value: "price-asc", label: "Giá thấp đến cao" },
 ];
 
-export function TemplateBrowser({ templates }: { templates: InvitationTemplate[] }) {
+export function TemplateBrowser({ templates, categories }: { templates: InvitationTemplate[]; categories: Option[] }) {
   const [category, setCategory] = useState<CategoryId | "all">("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("popular");
@@ -47,7 +48,7 @@ export function TemplateBrowser({ templates }: { templates: InvitationTemplate[]
     });
   }, [templates, category, query, sort]);
 
-  const tabs: { id: CategoryId | "all"; label: string }[] = [{ id: "all", label: "Tất cả" }, ...CATEGORIES];
+  const tabs: { id: string; label: string }[] = [{ id: "all", label: "Tất cả" }, ...categories];
 
   function reset() {
     setCategory("all");
@@ -66,7 +67,7 @@ export function TemplateBrowser({ templates }: { templates: InvitationTemplate[]
               key={tab.id}
               type="button"
               aria-pressed={active}
-              onClick={() => setCategory(tab.id)}
+              onClick={() => setCategory(tab.id as CategoryId | "all")}
               className={
                 `shrink-0 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-colors ${focus} ` +
                 (active
@@ -141,7 +142,7 @@ export function TemplateBrowser({ templates }: { templates: InvitationTemplate[]
       ) : (
         <section aria-label="Danh sách mẫu thiệp" className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
           {list.map((t) => (
-            <TemplateCard key={t.slug} template={t} />
+            <TemplateCard key={t.slug} template={t} categoryName={categories.find((c) => c.id === t.category)?.label} />
           ))}
         </section>
       )}

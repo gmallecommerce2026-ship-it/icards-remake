@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CHECKOUT_HREF, MAX_QTY, getProduct, getVariant, type Product, type Variant } from "@/lib/shop";
+import { CHECKOUT_HREF, MAX_QTY, findProduct, getVariant, type Product, type Variant } from "@/lib/shop";
 import { formatPrice } from "@/lib/format";
 import { useCart, type CartLine } from "./CartProvider";
 import { ProductThumb } from "./ProductThumb";
@@ -11,14 +11,14 @@ type Resolved = { line: CartLine; product: Product; variant: Variant };
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#27548A]";
 
 export function CartView() {
-  const { lines, ready, setQty, remove, clear } = useCart();
+  const { lines, ready, setQty, remove, clear, products } = useCart();
 
   if (!ready) {
     return <p className="text-[#5B6B7F]" role="status">Đang tải giỏ hàng…</p>;
   }
 
   const items = lines.flatMap<Resolved>((line) => {
-    const product = getProduct(line.slug);
+    const product = findProduct(products, line.slug);
     const variant = product ? getVariant(product, line.variantId) : undefined;
     return product && variant ? [{ line, product, variant }] : [];
   });

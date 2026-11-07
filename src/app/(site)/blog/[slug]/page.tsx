@@ -2,18 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import PostCard, { PostCover, PostMeta } from "@/components/blog/PostCard";
-import { POSTS, getCategory, getPost, getRelated, slugify, type Block } from "@/lib/blog";
+import { getCategory, getRelated, slugify, type Block } from "@/lib/blog";
+import { getBlogCategories, getPost, getPosts } from "@/lib/catalog";
 import { Container } from "@/components/ui/Primitives";
 
 type Params = Promise<{ slug: string }>;
 
-export function generateStaticParams() {
-  return POSTS.map((p) => ({ slug: p.slug }));
-}
-
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
-  const post = getPost(slug);
+  const post = await getPost(slug);
   if (!post) return {};
   return {
     title: `${post.title} | iCards`,
@@ -24,12 +21,14 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function BlogPostPage({ params }: { params: Params }) {
   const { slug } = await params;
-  const post = getPost(slug);
+  const post = await getPost(slug);
   if (!post) notFound();
 
-  const cat = getCategory(post.category);
-  const toc = post.content.filter((b): b is Extract<Block, { t: "h2" }> => b.t === "h2");
-  const related = getRelated(post);
+  const [categories, all] = await Promise.all([getBlogCategories(), getPosts()]);
+  const cat = getCategory(categories, post.category);
+  const content = post.content ?? [];
+  const toc = content.filter((b): b is Extract<Block, { t: "h2" }> => b.t === "h2");
+  const related = getRelated(all, post);
 
   return (
     <main className="min-h-screen bg-white pt-[72px]">
@@ -59,7 +58,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
             </span>
             <div className="text-sm">
               <p className="font-medium text-slate-900 text-base">{post.author}</p>
-              <PostMeta post={post} />
+              <PostMeta post={post} categories={categories} />
             </div>
           </div>
         </header>
@@ -68,7 +67,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
 
         <div className="mt-12 grid gap-12 lg:grid-cols-[1fr_280px]">
           <article className="max-w-[70ch] text-[17px] leading-8 text-slate-700">
-            {post.content.map((b, i) => renderBlock(b, i, post.tone.ink))}
+            {content.map((b, i) => renderBlock(b, i, post.tone.ink))}
           </article>
 
           {toc.length > 1 && (
@@ -109,7 +108,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
             <h2 className="text-2xl font-bold text-slate-900">Bài viết liên quan</h2>
             <div className="mt-8 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
               {related.map((p) => (
-                <PostCard key={p.slug} post={p} />
+                <PostCard key={p.slug} post={p} categories={categories} />
               ))}
             </div>
           </section>

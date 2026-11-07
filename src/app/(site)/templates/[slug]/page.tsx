@@ -3,25 +3,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { InvitationPreview } from "@/components/templates/InvitationPreview";
 import { TemplateCard } from "@/components/templates/TemplateCard";
-import {
-  CREATE_EVENT_HREF,
-  categoryLabel,
-  formatPrice,
-  getRelatedTemplates,
-  getTemplateBySlug,
-  getTemplates,
-} from "@/lib/templates";
+import { CREATE_EVENT_HREF, formatPrice, getRelatedTemplates } from "@/lib/templates";
+import { getTemplate, getTemplateCategories, getTemplates } from "@/lib/catalog";
 import { Container } from "@/components/ui/Primitives";
 
 type Props = { params: Promise<{ slug: string }> };
 
-export function generateStaticParams() {
-  return getTemplates().map((t) => ({ slug: t.slug }));
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const t = getTemplateBySlug(slug);
+  const t = await getTemplate(slug);
   if (!t) return { title: "Không tìm thấy mẫu thiệp" };
   return {
     title: `Mẫu thiệp ${t.name}`,
@@ -40,10 +30,10 @@ function Check() {
 
 export default async function TemplateDetailPage({ params }: Props) {
   const { slug } = await params;
-  const template = getTemplateBySlug(slug);
+  const [template, all, categories] = await Promise.all([getTemplate(slug), getTemplates(), getTemplateCategories()]);
   if (!template) notFound();
 
-  const related = getRelatedTemplates(slug, 4);
+  const related = getRelatedTemplates(all, slug, 4);
   const free = template.price === 0;
 
   return (
@@ -75,7 +65,7 @@ export default async function TemplateDetailPage({ params }: Props) {
           </div>
 
           <div className="max-w-xl">
-            <p className="text-sm font-medium text-[#27548A]">{categoryLabel(template.category)}</p>
+            <p className="text-sm font-medium text-[#27548A]">{categories.find((c) => c.id === template.category)?.label ?? ""}</p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">{template.name}</h1>
             <p className="mt-3 text-lg leading-relaxed text-[#3D4C61]">{template.tagline}</p>
             <p className="mt-4 leading-relaxed text-[#5B6B7F]">{template.description}</p>
@@ -133,7 +123,7 @@ export default async function TemplateDetailPage({ params }: Props) {
             <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4 lg:gap-x-6">
               {related.map((t) => (
                 <li key={t.slug}>
-                  <TemplateCard template={t} />
+                  <TemplateCard template={t} categoryName={categories.find((c) => c.id === t.category)?.label} />
                 </li>
               ))}
             </ul>

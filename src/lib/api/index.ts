@@ -1,5 +1,6 @@
 export * from "./http";
 export * from "./types";
+export * from "./errors";
 export * as authApi from "./auth";
 export * as usersApi from "./users";
 export * as pagesApi from "./pages";
@@ -7,4 +8,6 @@ export * as templatesApi from "./templates";
 export * as invitationsApi from "./invitations";
 export * as wishesApi from "./wishes";
 export * as productsApi from "./products";
+export * as servicesApi from "./services";
 export * as settingsApi from "./settings";
+export * as contentApi from "./content";

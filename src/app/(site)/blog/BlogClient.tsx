@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import PostCard, { PostCover, PostMeta } from "@/components/blog/PostCard";
-import { BLOG_CATEGORIES, getCategory, getPosts } from "@/lib/blog";
+import { filterPosts, getCategory, type BlogCategory, type Post } from "@/lib/blog";
 import { PageHero, Container } from "@/components/ui/Primitives";
 
-export default function BlogClient() {
+export default function BlogClient({ posts: allPosts, categories }: { posts: Post[]; categories: BlogCategory[] }) {
   const category = useSearchParams().get("category") ?? undefined;
-  const active = getCategory(category);
-  const posts = getPosts(active?.slug);
+  const active = getCategory(categories, category);
+  const posts = filterPosts(allPosts, active?.slug);
   const [featured, ...rest] = posts;
 
   return (
@@ -22,7 +22,7 @@ export default function BlogClient() {
       <Container className="py-12 lg:py-16">
         <nav aria-label="Chuyên mục" className="mb-10 flex flex-wrap gap-2">
           <FilterLink href="/blog" label="Tất cả" current={!active} />
-          {BLOG_CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <FilterLink
               key={c.slug}
               href={`/blog?category=${c.slug}`}
@@ -48,7 +48,7 @@ export default function BlogClient() {
               >
                 <PostCover post={featured} className="aspect-[16/10] rounded-2xl" />
                 <div className="space-y-4 p-4 lg:p-8">
-                  <PostMeta post={featured} />
+                  <PostMeta post={featured} categories={categories} />
                   <h2 className="text-2xl font-bold leading-tight text-slate-900 group-hover:text-[#27548A] sm:text-3xl lg:text-4xl">
                     {featured.title}
                   </h2>
@@ -61,7 +61,7 @@ export default function BlogClient() {
             {rest.length > 0 && (
               <section aria-label="Bài viết khác" className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
                 {rest.map((p) => (
-                  <PostCard key={p.slug} post={p} />
+                  <PostCard key={p.slug} post={p} categories={categories} />
                 ))}
               </section>
             )}
