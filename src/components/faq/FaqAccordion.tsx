@@ -8,7 +8,7 @@ export default function FaqAccordion({ groups, items }: { groups: FaqGroup[]; it
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState<string>("all");
 
-  const items = useMemo(() => {
+  const filtered = useMemo(() => {
     const q = normalize(query.trim());
     return items.filter((f) => {
       if (group !== "all" && f.group !== group) return false;
@@ -39,16 +39,16 @@ export default function FaqAccordion({ groups, items }: { groups: FaqGroup[]; it
       </div>
 
       <p className="mt-6 text-sm text-slate-500" aria-live="polite">
-        {items.length} câu hỏi
+        {filtered.length} câu hỏi
       </p>
 
-      {items.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="mt-4 rounded-2xl bg-[#E8EEF6] p-8 text-center text-slate-700">
           Không tìm thấy câu hỏi phù hợp. Hãy thử từ khóa khác hoặc liên hệ với chúng tôi.
         </div>
       ) : (
         <ul className="mt-4 divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-          {items.map((f) => (
+          {filtered.map((f) => (
             <li key={f.id}>
               <details className="group">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left text-[17px] font-semibold text-slate-900 hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#27548A] [&::-webkit-details-marker]:hidden">
