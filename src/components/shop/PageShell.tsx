@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Be_Vietnam_Pro, Cormorant_Garamond } from "next/font/google";
+import { Be_Vietnam_Pro, Cormorant_Garamond } from "@/lib/fonts";
 
 // Be Vietnam Pro cho giao diện, Cormorant Garamond cho chữ trên thiệp. Cả hai có subset tiếng Việt.
 const ui = Be_Vietnam_Pro({

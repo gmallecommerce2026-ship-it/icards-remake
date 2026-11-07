@@ -24,7 +24,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { Be_Vietnam_Pro, Cormorant_Garamond, Space_Mono, Great_Vibes, Oswald } from "next/font/google";
+import { Be_Vietnam_Pro, Cormorant_Garamond, Space_Mono, Great_Vibes, Oswald } from "@/lib/fonts";
 
 /* Font: tất cả đều có subset "vietnamese" */
 const fSerif = Cormorant_Garamond({ subsets: ["latin", "vietnamese"], weight: ["400", "500", "600"], style: ["normal", "italic"], variable: "--ev-serif", display: "swap" });

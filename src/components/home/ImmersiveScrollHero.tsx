@@ -18,7 +18,7 @@ import {
   type MotionValue,
 } from "motion/react";
 import { ArrowDown } from "lucide-react";
-import { Be_Vietnam_Pro, Cormorant_Garamond, Great_Vibes } from "next/font/google";
+import { Be_Vietnam_Pro, Cormorant_Garamond, Great_Vibes } from "@/lib/fonts";
 
 /* ------------------------------------------------------------------ */
 /*  FONT - cả ba đều có subset "vietnamese" nên đủ dấu, không rơi font  */

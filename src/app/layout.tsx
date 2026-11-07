@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { Be_Vietnam_Pro } from "next/font/google";
+import { Be_Vietnam_Pro } from "@/lib/fonts";
 import { AuthProvider } from "@/providers/AuthProvider";
 import "./globals.css";
+import "@/styles/local-fonts.css";
 
 const be = Be_Vietnam_Pro({ subsets: ["vietnamese", "latin"], weight: ["400", "500", "600", "700"], style: ["normal", "italic"], variable: "--font-be" });
 
