@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, useMotionValue, useSpring } from 'motion/react';
 import type { InvitationTemplate } from '@/lib/templates';
-import { templatesApi } from '@/lib/api';
+import { invitationsApi, templatesApi } from '@/lib/api';
+import { errorText, toEventDateIso, type ApiInvitation } from '@/lib/invitation-flow';
 import { ROUTES } from '@/lib/routes';
 import { EnvelopeScene } from './EnvelopeScene';
 import { dbg } from './flapDebug';
@@ -63,13 +64,22 @@ function EnvelopeThumb({ color }: { color: string }) {
   );
 }
 
-type Props = { recipientName?: string; editable?: boolean; templateSlug?: string | null };
+type Props = { recipientName?: string; editable?: boolean; templateSlug?: string | null; invitationId?: string | null };
 
 const DOTS: PageId[] = ['cover', 'inside', 'back'];
 const draftKey = (slug?: string | null) => `icards:draft:${slug ?? 'blank'}`;
 
-export function EnvelopeDesigner({ recipientName: recipientProp, editable = false, templateSlug }: Props) {
+export function EnvelopeDesigner({ recipientName: recipientProp, editable = false, templateSlug, invitationId }: Props) {
   const [recipientName, setRecipientName] = useState(recipientProp);
+  // Thiệp đã lưu trên máy chủ (mở lại bằng ?invitation=). Khi có, nội dung lấy từ server thay vì mẫu.
+  const [invId, setInvId] = useState<string | null>(invitationId ?? null);
+  const invIdRef = useRef<string | null>(invitationId ?? null);
+  const [serverInfo, setServerInfo] = useState<Partial<EventInfo> | undefined>(undefined);
+  const [serverReady, setServerReady] = useState(!invitationId);
+  const serverDesignRef = useRef(false);
+  const [saveError, setSaveError] = useState('');
+  const [pushing, setPushing] = useState(false);
+  const persistQueue = useRef<Promise<unknown>>(Promise.resolve());
   // Mẫu được tải từ API. templateReady báo đã có kết quả (kể cả không có mẫu) để không nạp thiếu dữ liệu.
   const [template, setTemplate] = useState<InvitationTemplate | undefined>(undefined);
   const [templateReady, setTemplateReady] = useState(!templateSlug);
@@ -83,6 +93,28 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
       .finally(() => { if (alive) setTemplateReady(true); });
     return () => { alive = false; };
   }, [templateSlug]);
+  // Mở lại thiệp đã lưu: nạp thiết kế (trang, nền) và thông tin sự kiện từ server
+  useEffect(() => {
+    if (!invitationId) return;
+    let alive = true;
+    invitationsApi.getInvitation(invitationId)
+      .then((r) => {
+        if (!alive) return;
+        const inv = r.data as ApiInvitation;
+        const design = inv.design;
+        if (design?.pages && design?.backdrops) {
+          useEditorStore.getState().hydrate({
+            pages: design.pages as Snap['pages'],
+            backdrops: design.backdrops as Snap['backdrops'],
+          });
+          serverDesignRef.current = true;
+        }
+        setServerInfo(inv.info);
+      })
+      .catch(() => { if (alive) setSaveError('Không mở được thiệp đã lưu. Hãy tải lại trang.'); })
+      .finally(() => { if (alive) setServerReady(true); });
+    return () => { alive = false; };
+  }, [invitationId]);
   const [tab, setTab] = useState<Tab>(editable ? 'elements' : 'envelope');
   const lastCard = useRef<CardTab>('elements');   // tab thiệp / phong bì dùng gần nhất, để quay lại đúng chỗ khi đổi qua lại
   const lastEnv = useRef<EnvTab>('envelope');
@@ -319,11 +351,11 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
 
   // ---- Nạp nội dung: bản nháp đã lưu → mẫu → mặc định
   useEffect(() => {
-    if (!templateReady) return;
+    if (!templateReady || !serverReady) return;
     const st = useEditorStore.getState();
-    let loaded = false;
+    let loaded = serverDesignRef.current;
     try {
-      const raw = localStorage.getItem(draftKey(templateSlug));
+      const raw = loaded ? null : localStorage.getItem(draftKey(templateSlug));
       if (raw) { st.hydrate(JSON.parse(raw) as Snap); loaded = true; }
     } catch { /* bỏ qua bản nháp hỏng */ }
     if (!loaded && template) st.loadTemplate(template);
@@ -331,7 +363,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setReady(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templateSlug, templateReady]);
+  }, [templateSlug, templateReady, serverReady]);
 
   // ---- Tự lưu nháp (debounce) khi nội dung đổi
   const saveNow = useCallback(() => {
@@ -381,7 +413,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
   };
   const closeSend = () => { setSendOpen(false); setSceneHidden(false); };
   // thông tin sự kiện gợi ý sẵn từ mẫu đang dùng (người dùng sửa tiếp ở bước sau)
-  const eventInitial: Partial<EventInfo> | undefined = template
+  const eventInitial: Partial<EventInfo> | undefined = serverInfo ?? (template
     ? {
         title: template.sample.titleLines.map((l) => l.trim()).filter(Boolean).join(' ').replace(/\s+/g, ' '),
         description: template.sample.message,
@@ -390,14 +422,62 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
         venue: template.sample.place,
         address: template.sample.address,
       }
-    : undefined;
+    : undefined);
   const eventKey = `icards:event:${templateSlug ?? 'blank'}`;
+  // Lưu thiệp lên server: tạo lần đầu, các lần sau cập nhật cùng một thiệp. Xếp hàng để không tạo trùng.
+  const persistInvitation = (data: EventPageData): Promise<string> => {
+    const run = async (): Promise<string> => {
+      const { pages, backdrops } = useEditorStore.getState();
+      const info = data.info;
+      const form = new FormData();
+      form.append('title', (info.title || template?.name || 'Thiệp mời').trim().slice(0, 200));
+      form.append('eventType', template?.category ?? 'wedding');
+      if (templateSlug) form.append('templateSlug', templateSlug);
+      const iso = toEventDateIso(info);
+      if (iso) form.append('eventDate', iso);
+      form.append('info', JSON.stringify(info));
+      form.append('page', JSON.stringify({ styleId: data.styleId, accent: data.accent, bg: data.bg, blocks: data.blocks }));
+      form.append('design', JSON.stringify({
+        pages, backdrops,
+        envelope: { color: env.color, liner: liner.background, stampId, recipientName },
+      }));
+      if (invIdRef.current) {
+        const r = await invitationsApi.updateInvitation(invIdRef.current, form);
+        return (r.data as ApiInvitation)._id;
+      }
+      const r = await invitationsApi.createInvitation(form);
+      const id = (r.data as ApiInvitation)._id;
+      invIdRef.current = id;
+      setInvId(id);
+      return id;
+    };
+    const next = persistQueue.current.then(run, run);
+    persistQueue.current = next.catch(() => undefined);
+    return next;
+  };
   const saveEvent = (data: EventPageData) => {
-    try { localStorage.setItem(eventKey, JSON.stringify(data)); } catch { /* bộ nhớ đầy: bỏ qua, người dùng vẫn đang giữ dữ liệu trên màn hình */ }
+    try { localStorage.setItem(eventKey, JSON.stringify(data)); } catch { /* bộ nhớ đầy: vẫn lưu lên server bên dưới */ }
+    if (editable) {
+      persistInvitation(data).catch((err) => setSaveError(errorText(err, 'Chưa lưu được thiệp lên máy chủ. Nội dung vẫn còn trên trình duyệt này.')));
+    }
+  };
+  // "Thêm khách mời": lưu xong mới chuyển sang tab khách mời của đúng thiệp
+  const pushGuests = (data: EventPageData) => {
+    if (pushing) return;
+    setPushing(true);
+    setSaveError('');
+    persistInvitation(data)
+      .then((id) => router.push(ROUTES.invitationTab(id, 'guests')))
+      .catch((err) => { setSaveError(errorText(err, 'Không lưu được thiệp. Vui lòng thử lại.')); setPushing(false); });
   };
 
   return (
     <div className={d.root}>
+      {saveError && (
+        <p role="alert" style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 60, background: '#FBEDEE', color: '#8E2B3B', padding: '8px 14px', borderRadius: 8, fontSize: 14, maxWidth: '90vw' }}>
+          {saveError}
+        </p>
+      )}
       <header className={d.top}>
         <Link href={ROUTES.invitationManagement} className={d.back} aria-label="Quay lại quản lý thiệp mời">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 5l-7 7 7 7" /></svg>
@@ -526,7 +606,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
           onSceneReady={() => setSceneHidden(true)}
           initial={eventInitial}
           onSave={saveEvent}
-          onAddGuests={(data) => { saveEvent(data); router.push(ROUTES.invitationManagement); }}
+          onAddGuests={pushGuests}
           onClose={closeSend}
         />
       )}

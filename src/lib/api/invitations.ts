@@ -12,6 +12,7 @@ export const getPublicInvitation = (id: string, params?: { guestId?: string; [k:
 export const createInvitation = (form: FormData) => api.post("/invitations", form, multipart);
 export const updateInvitation = (id: string, form: FormData) => api.put(inv(id), form, multipart);
 export const deleteInvitation = (id: string) => api.delete(inv(id));
+export const publishInvitation = (id: string, published: boolean) => api.put(`${inv(id)}/publish`, { published });
 export const updateSettings = (id: string, body: Body) => api.put(`${inv(id)}/settings`, body);
 export const updateBudgetRequest = (id: string, body: Body) => api.put(`${inv(id)}/budgetRequest`, body);
 
@@ -20,6 +21,7 @@ export const getTasks = (id: string) => api.get(`${inv(id)}/tasks`);
 export const updateTasks = (id: string, body: Body) => api.put(`${inv(id)}/tasks`, body);
 
 // --- Guests ---
+export const getGuests = (id: string, params?: Record<string, unknown>) => api.get(`${inv(id)}/guests`, { params });
 export const addGuest = (id: string, body: Body) => api.post(`${inv(id)}/guests`, body);
 export const updateGuest = (id: string, guestId: string, body: Body) => api.put(`${inv(id)}/guests/${guestId}`, body);
 export const deleteGuest = (id: string, guestId: string) => api.delete(`${inv(id)}/guests/${guestId}`);

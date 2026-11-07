@@ -1,8 +1,9 @@
-export default function Page() {
-  return (
-    <div>
-      <h2 className="text-xl font-bold text-[#27548A] mb-4">Xóa thiệp mời</h2>
-      <p className="text-slate-600">Giao diện xóa thiệp mời.</p>
-    </div>
-  );
+import type { Metadata } from "next";
+import { DeletePanel } from "@/components/invitation-management/DeletePanel";
+
+export const metadata: Metadata = { title: "Xoá thiệp mời | iCards" };
+
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <DeletePanel id={id} />;
 }

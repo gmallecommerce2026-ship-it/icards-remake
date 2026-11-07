@@ -1,3 +1,12 @@
-export default function Page_events_id_() {
-  return <div>TODO: /events/[id]</div>;
+import { Suspense } from "react";
+import { PublicInvitation } from "@/components/invitation/public/PublicInvitation";
+
+export const metadata = { title: "Thiệp mời | iCards", robots: { index: false, follow: false } };
+
+export default function Page() {
+  return (
+    <Suspense fallback={null}>
+      <PublicInvitation />
+    </Suspense>
+  );
 }

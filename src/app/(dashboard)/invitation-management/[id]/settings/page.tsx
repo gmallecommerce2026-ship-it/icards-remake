@@ -1,8 +1,9 @@
-export default function Page() {
-  return (
-    <div>
-      <h2 className="text-xl font-bold text-[#27548A] mb-4">Cài đặt thiệp mời</h2>
-      <p className="text-slate-600">Giao diện cài đặt thiệp mời.</p>
-    </div>
-  );
+import type { Metadata } from "next";
+import { SettingsForm } from "@/components/invitation-management/SettingsForm";
+
+export const metadata: Metadata = { title: "Cài đặt thiệp mời | iCards" };
+
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <SettingsForm id={id} />;
 }

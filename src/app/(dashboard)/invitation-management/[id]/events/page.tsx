@@ -1,8 +1,10 @@
-export default function GuestsPage() {
+export default function EventsPage() {
   return (
     <div>
-      <h2 className="text-xl font-bold text-[#27548A] mb-4">Sự kiện</h2>
-      <p className="text-slate-600">Giao diện Sự kiện</p>
+      <h2 className="mb-2 text-xl font-bold text-ink">Quản lý sự kiện</h2>
+      <p className="text-sm text-muted">
+        Mục này chưa có API trên backend (lịch trình nhiều sự kiện trong một thiệp). Thông tin sự kiện hiện được nhập trong trình thiết kế.
+      </p>
     </div>
   );
 }
