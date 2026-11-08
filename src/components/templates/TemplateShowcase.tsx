@@ -19,13 +19,16 @@ const ENV_H = CARD_W + 2 * M;    // 45
 // Toạ độ tương đối với góc trên-trái của phong bì
 const CARD_X = ENV_W / 2 - CARD_W;             // thiệp che nửa chiều rộng phong bì
 const CARD_Y = ENV_H - ENV_H * 0.1 - CARD_H;   // đáy thiệp cách đáy phong bì 10% chiều cao
+// Nắp mở lên trên, lật ra khỏi miệng phong bì: cao 60% chiều cao phong bì.
+const FLAP_H = ENV_H * 0.6;
+const FLAP_CLIP = "polygon(0% 100%, 100% 100%, 50% 0%)";
+// Cụm gồm cả nắp, nên tính lại khung theo đỉnh nắp (có thể cao hơn đỉnh thiệp)
+const TOP_Y = Math.min(CARD_Y, -FLAP_H);
 const BOX_W = ENV_W - CARD_X;
-const BOX_H = ENV_H - CARD_Y;
+const BOX_H = ENV_H - TOP_Y;
 const ORIGIN_X = (100 - BOX_W) / 2 - CARD_X;   // căn giữa cụm
-const ORIGIN_Y = (100 - BOX_H) / 2 - CARD_Y;
+const ORIGIN_Y = (100 - BOX_H) / 2 - TOP_Y;
 
-const FLAP_OUTER = "polygon(0% 0%, 100% 0%, 50% 68%)";
-const FLAP_INNER = "polygon(3% 0%, 97% 0%, 50% 58%)";
 const DEFAULT_ENV = { envId: "burgundy", linerId: "ink" };
 
 export function TemplateShowcase({ template }: { template: InvitationTemplate }) {
@@ -37,15 +40,21 @@ export function TemplateShowcase({ template }: { template: InvitationTemplate })
 
   return (
     <div className="relative aspect-square w-full">
-      {/* Phong bì (nằm sau): thân, nắp mở (tam giác) và lớp lót bên trong nắp */}
+      {/* Phong bì (nằm sau): thân, và nắp mở dựng lên phía trên miệng phong bì.
+          Mặt nắp quay ra trước là lớp lót (hoạ tiết), viền ngoài là màu phong bì. */}
       <div
         aria-hidden
         className="absolute transition-transform duration-500 group-hover:translate-y-1"
         style={{ left: `${ORIGIN_X}%`, top: `${ORIGIN_Y}%`, width: `${ENV_W}%`, height: `${ENV_H}%` }}
       >
         <div className="absolute inset-0 rounded-[2px] shadow-[0_12px_24px_-12px_rgba(0,0,0,0.5)]" style={{ background: env.color }} />
-        <div className="absolute inset-0" style={{ background: env.color, filter: "brightness(1.12)", clipPath: FLAP_OUTER }} />
-        <div className="absolute inset-0" style={{ background: liner.background, clipPath: FLAP_INNER }} />
+        <div className="absolute left-0 right-0" style={{ bottom: "100%", height: `${(FLAP_H / ENV_H) * 100}%` }}>
+          <div className="absolute inset-0" style={{ background: env.color, filter: "brightness(1.08)", clipPath: FLAP_CLIP }} />
+          <div
+            className="absolute"
+            style={{ left: "7%", right: "7%", bottom: 0, top: "16%", background: liner.background, clipPath: FLAP_CLIP }}
+          />
+        </div>
       </div>
 
       {/* Thiệp (nằm trước), tỉ lệ 5:7 như trong studio */}

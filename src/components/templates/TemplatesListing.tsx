@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Option } from "@/lib/catalog";
 import { type InvitationTemplate } from "@/lib/templates";
-import { InvitationPreview } from "./InvitationPreview";
+import { TemplateShowcase } from "./TemplateShowcase";
 import { collectSlugs, findPath, type TreeNode } from "@/lib/templates-tree";
 
 /* Giá trị lấy từ InvitationContent.css của bản src. */
@@ -174,14 +174,8 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
           <div className="grid gap-x-[30px] gap-y-10 py-[45px] [grid-template-columns:repeat(auto-fill,minmax(250px,1fr))]">
             {list.map((t) => (
               <Link key={t.slug} href={`/templates/${t.slug}`} className="group flex cursor-pointer flex-col items-center gap-4 [color:inherit] no-underline">
-                <div className="relative w-full overflow-hidden rounded-[4px] bg-white pt-[100%] transition-all duration-300 group-hover:scale-[1.03] group-hover:shadow-[0_8px_25px_rgba(0,0,0,0.1)]">
-                  <div className="absolute inset-0">
-                    {t.previewImage ? (
-                      <img src={t.previewImage} alt={t.name} loading="lazy" className="h-full w-full object-cover" />
-                    ) : (
-                      <InvitationPreview template={t} />
-                    )}
-                  </div>
+                <div className="w-full transition-transform duration-300 group-hover:scale-[1.03]">
+                  <TemplateShowcase template={t} />
                 </div>
                 <h3 className="box-border h-[45px] w-full overflow-hidden px-[5px] text-center text-base font-semibold uppercase leading-[1.4] tracking-[0.02em] text-[#27548A] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] text-ellipsis">
                   {t.name}
