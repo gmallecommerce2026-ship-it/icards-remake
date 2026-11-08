@@ -1,10 +1,14 @@
 import axios, { type AxiosInstance } from "axios";
 
 /**
- * Địa chỉ backend. Mặc định https://api.icards.com.vn/api.
- * Khi chạy local đặt NEXT_PUBLIC_API_URL=http://localhost:5000/api trong .env.local.
+ * Địa chỉ backend, cố định lúc BUILD (NEXT_PUBLIC_*).
+ * - VPS (khuyến nghị): NEXT_PUBLIC_API_URL=/api  → browser gọi cùng domain, Next proxy sang API (xem next.config.mjs).
+ * - Local: NEXT_PUBLIC_API_URL=http://localhost:5000/api trong .env.local.
+ * Phía server (SSR) không dùng được đường dẫn tương đối nên tự chuyển sang API_INTERNAL_URL.
  */
-export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "https://api.icards.com.vn/api").replace(/\/+$/, "");
+const PUBLIC_API = (process.env.NEXT_PUBLIC_API_URL ?? "https://api.icards.com.vn/api").replace(/\/+$/, "");
+const SERVER_API = (process.env.API_INTERNAL_URL ?? "http://127.0.0.1:3001").replace(/\/+$/, "");
+export const API_BASE_URL = typeof window === "undefined" && PUBLIC_API.startsWith("/") ? `${SERVER_API}${PUBLIC_API}` : PUBLIC_API;
 
 /** Phát khi backend trả 401 (phiên hết hạn). AuthProvider lắng nghe để đăng xuất. */
 export const UNAUTHORIZED_EVENT = "icards:unauthorized";
