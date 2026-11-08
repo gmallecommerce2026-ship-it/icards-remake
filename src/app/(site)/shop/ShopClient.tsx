@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { getProductsByCategory, isShopCategory, priceFrom, type Product, type ShopCategoryId } from "@/lib/shop";
 import type { Option } from "@/lib/catalog";
@@ -14,6 +14,7 @@ const SORTS: { value: SortValue; label: string }[] = [
   { value: "price-desc", label: "Giá cao đến thấp" },
 ];
 const isSort = (v: string | null): v is SortValue => SORTS.some((s) => s.value === v);
+const PAGE_SIZE = 4; // số sản phẩm mỗi lần bấm "Xem thêm" (như bản src)
 
 function buildHref(p: { category?: ShopCategoryId; sort?: SortValue; q?: string }) {
   const sp = new URLSearchParams();
@@ -24,11 +25,12 @@ function buildHref(p: { category?: ShopCategoryId; sort?: SortValue; q?: string 
   return qs ? `/shop?${qs}` : "/shop";
 }
 
-const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").toLowerCase();
+const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").toLowerCase();
 
 export default function ShopClient({ products: allProducts, categories }: { products: Product[]; categories: Option[] }) {
   const router = useRouter();
   const sp = useSearchParams();
+  const chipsRef = useRef<HTMLDivElement>(null);
 
   const catParam = sp.get("category") ?? undefined;
   const category = isShopCategory(catParam, categories) ? catParam : undefined;
@@ -37,14 +39,34 @@ export default function ShopClient({ products: allProducts, categories }: { prod
   const query = sp.get("q")?.trim() || undefined;
   const activeLabel = categories.find((c) => c.id === category)?.label;
 
-  let products = getProductsByCategory(allProducts, category);
-  if (query) {
-    const n = norm(query);
-    products = products.filter((p) => norm(`${p.name} ${p.summary}`).includes(n));
-  }
-  if (sort !== "popular") {
-    products = [...products].sort((a, b) => (sort === "price-asc" ? priceFrom(a) - priceFrom(b) : priceFrom(b) - priceFrom(a)));
-  }
+  // Cuộn ngang dải danh mục bằng con lăn chuột (như bản src)
+  useEffect(() => {
+    const el = chipsRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (el.scrollWidth <= el.clientWidth) return;
+      const atStart = el.scrollLeft === 0;
+      const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1;
+      if ((e.deltaY > 0 && !atEnd) || (e.deltaY < 0 && !atStart)) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+      }
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  const products = useMemo(() => {
+    let list = getProductsByCategory(allProducts, category);
+    if (query) {
+      const n = norm(query);
+      list = list.filter((p) => norm(`${p.name} ${p.summary}`).includes(n));
+    }
+    if (sort !== "popular") {
+      list = [...list].sort((a, b) => (sort === "price-asc" ? priceFrom(a) - priceFrom(b) : priceFrom(b) - priceFrom(a)));
+    }
+    return list;
+  }, [allProducts, category, query, sort]);
 
   const count = (c?: ShopCategoryId) => getProductsByCategory(allProducts, c).length;
 
@@ -55,17 +77,33 @@ export default function ShopClient({ products: allProducts, categories }: { prod
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-      <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Cửa hàng</h1>
-      <p className="mt-3 max-w-2xl text-[#5B6B7F]">Thiệp in, quà tặng và phụ kiện QR đồng bộ với thiệp mời online của bạn.</p>
+    <div className="mx-auto max-w-[1520px] px-5 pb-24 pt-10 lg:px-8">
+      <header className="text-center">
+        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Cửa hàng</h1>
+        <p className="mx-auto mt-3 max-w-xl text-[#5B6B7F]">
+          Khám phá các sản phẩm độc đáo của chúng tôi: thiệp in, quà tặng và phụ kiện QR đồng bộ với thiệp online.
+        </p>
+      </header>
 
-      <nav aria-label="Danh mục sản phẩm" className="mt-8 flex flex-wrap gap-2">
+      {/* Dải danh mục */}
+      <nav
+        ref={chipsRef}
+        aria-label="Danh mục sản phẩm"
+        className="mt-10 flex gap-3 overflow-x-auto pb-2 [scrollbar-width:thin] md:justify-center"
+      >
         <FilterLink href={buildHref({ sort, q: query })} label="Tất cả" count={count()} current={!category} />
         {categories.map((c) => (
-          <FilterLink key={c.id} href={buildHref({ category: c.id as ShopCategoryId, sort, q: query })} label={c.label} count={count(c.id as ShopCategoryId)} current={category === c.id} />
+          <FilterLink
+            key={c.id}
+            href={buildHref({ category: c.id as ShopCategoryId, sort, q: query })}
+            label={c.label}
+            count={count(c.id as ShopCategoryId)}
+            current={category === c.id}
+          />
         ))}
       </nav>
 
+      {/* Tìm kiếm & sắp xếp */}
       <div className="mt-6 flex flex-col gap-4 rounded-xl border border-[#DDE4EE] bg-white p-4 md:flex-row md:items-center md:justify-between">
         <form onSubmit={onSearch} role="search" className="flex flex-1 gap-2 md:max-w-md">
           <label htmlFor="shop-search" className="sr-only">Tìm sản phẩm</label>
@@ -86,7 +124,7 @@ export default function ShopClient({ products: allProducts, categories }: { prod
               key={s.value}
               href={buildHref({ category, sort: s.value, q: query })}
               aria-current={sort === s.value ? "true" : undefined}
-              className={"rounded-lg px-3 py-2 font-medium transition-colors " + (sort === s.value ? "bg-[#E8EEF6] text-[#27548A]" : "text-[#3D4C61] hover:bg-[#EEF2F7]")}
+              className={`rounded-lg px-3 py-2 font-medium transition-colors ${sort === s.value ? "bg-[#E8EEF6] text-[#27548A]" : "text-[#3D4C61] hover:bg-[#EEF2F7]"}`}
             >
               {s.label}
             </Link>
@@ -98,16 +136,8 @@ export default function ShopClient({ products: allProducts, categories }: { prod
         {products.length} sản phẩm{activeLabel ? ` trong “${activeLabel}”` : ""}{query ? ` cho “${query}”` : ""}
       </p>
 
-      {products.length === 0 ? (
-        <p className="mt-6 rounded-xl bg-[#E8EEF6] p-8 text-center text-[#3D4C61]">
-          Chưa có sản phẩm phù hợp.{" "}
-          <Link href="/shop" className="font-semibold text-[#27548A] underline">Xem tất cả sản phẩm</Link>
-        </p>
-      ) : (
-        <section aria-label="Danh sách sản phẩm" className="mt-6 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((p) => <ProductCard key={p.slug} product={p} />)}
-        </section>
-      )}
+      {/* key đổi theo bộ lọc để nút "Xem thêm" reset về trang đầu */}
+      <ProductGrid key={`${category ?? ""}|${sort}|${query ?? ""}`} products={products} />
 
       <section className="mt-20 flex flex-col items-start justify-between gap-6 rounded-2xl bg-[#27548A] p-8 text-white sm:flex-row sm:items-center md:p-10">
         <div>
@@ -120,15 +150,51 @@ export default function ShopClient({ products: allProducts, categories }: { prod
   );
 }
 
+function ProductGrid({ products }: { products: Product[] }) {
+  const [shown, setShown] = useState(PAGE_SIZE);
+
+  if (products.length === 0) {
+    return (
+      <p className="mt-6 rounded-xl bg-[#E8EEF6] p-8 text-center text-[#3D4C61]">
+        Chưa có sản phẩm phù hợp.{" "}
+        <Link href="/shop" className="font-semibold text-[#27548A] underline">Xem tất cả sản phẩm</Link>
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <section
+        aria-label="Danh sách sản phẩm"
+        className="mt-8 grid grid-cols-1 gap-x-5 gap-y-14 min-[481px]:grid-cols-2 min-[769px]:grid-cols-3 min-[1201px]:grid-cols-4"
+      >
+        {products.slice(0, shown).map((p) => <ProductCard key={p.slug} product={p} />)}
+      </section>
+      {shown < products.length && (
+        <div className="mt-14 text-center">
+          <button
+            onClick={() => setShown((s) => s + PAGE_SIZE)}
+            className="rounded-lg border border-[#27548A] px-8 py-3 text-sm font-semibold text-[#27548A] transition hover:bg-[#27548A] hover:text-white"
+          >
+            Xem thêm
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
 function FilterLink({ href, label, count, current }: { href: string; label: string; count: number; current: boolean }) {
   return (
     <Link
       href={href}
       aria-current={current ? "page" : undefined}
-      className={"inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors " + (current ? "bg-[#27548A] text-white" : "border border-[#DDE4EE] bg-white text-[#27548A] hover:border-[#27548A]")}
+      className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium uppercase tracking-wide transition-colors ${
+        current ? "bg-[#27548A] text-white" : "border border-[#DDE4EE] bg-white text-[#27548A] hover:border-[#27548A]"
+      }`}
     >
       {label}
-      <span className={"rounded-full px-2 py-0.5 text-xs " + (current ? "bg-white/20 text-white" : "bg-[#E8EEF6] text-[#27548A]")}>{count}</span>
+      <span className={`rounded-full px-2 py-0.5 text-xs ${current ? "bg-white/20 text-white" : "bg-[#E8EEF6] text-[#27548A]"}`}>{count}</span>
     </Link>
   );
 }
