@@ -321,7 +321,7 @@ export function Header({ className }: { className?: string }) {
             links: (col.children || [])
               .filter((l: any) => l.isVisible)
               .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
-              .map((l: any) => ({ text: l.title, href: TEMPLATES })),
+              .map((l: any) => ({ text: l.title, href: l.path ?? TEMPLATES })),
           })),
       };
     });
@@ -333,7 +333,7 @@ export function Header({ className }: { className?: string }) {
         columns: otherCategories.map((nav) => ({
           title: nav.title,
           path: TEMPLATES,
-          links: (nav.children || []).filter((l: any) => l.isVisible).map((l: any) => ({ text: l.title, href: TEMPLATES })),
+          links: (nav.children || []).filter((l: any) => l.isVisible).map((l: any) => ({ text: l.title, href: l.path ?? TEMPLATES })),
         })),
       };
     }
