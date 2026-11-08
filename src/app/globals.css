@@ -3,9 +3,10 @@
 @theme {
   /* Mọi màu, font, bo góc, bóng đều đọc từ biến --c-* / --f-* / --r-* / --s-* của theme đang bật */
   --font-sans: var(--f-sans);
-  --font-display: var(--f-display);
-  --font-inter: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-playfair: "Playfair Display", Georgia, serif;
+  /* Toàn site dùng Be Vietnam Pro (đã nạp ở layout) */
+  --font-display: var(--font-be), ui-sans-serif, system-ui, sans-serif;
+  --font-inter: var(--font-be), ui-sans-serif, system-ui, sans-serif;
+  --font-playfair: var(--font-be), ui-sans-serif, system-ui, sans-serif;
 
   --color-porcelain: var(--c-bg);
   --color-ink: var(--c-ink);
@@ -40,7 +41,7 @@
   --c-bg: #f7f8fb; --c-paper: #fbf8f2; --c-paper-deep: #f1ebdf;
   --c-ink: #1c1a24; --c-muted: #5f5b6b; --c-line: #e6e4ec;
   --c-accent: #a3152f; --c-accent-dark: #6f0d20; --c-accent-soft: #fbeaed; --c-gold: #b8893b;
-  --f-display: var(--font-display-raw), "Cormorant Garamond", Georgia, serif;
+  --f-display: var(--font-be), ui-sans-serif, system-ui, sans-serif;
   --f-sans: var(--font-be), ui-sans-serif, system-ui, sans-serif;
   --r-xs: 1px; --r-sm: 2px; --r-md: 2px; --r-lg: 3px; --r-xl: 4px; --r-2xl: 4px; --r-3xl: 6px;
   --s-sm: 0 1px 2px rgba(28,26,36,.05); --s-md: 0 2px 6px -2px rgba(28,26,36,.08);
@@ -75,7 +76,7 @@
   --c-bg: #fbf6ee; --c-paper: #f7efe3; --c-paper-deep: #efe3d1;
   --c-ink: #3b2f2a; --c-muted: #7a6a5e; --c-line: #e8dccb;
   --c-accent: #b5654a; --c-accent-dark: #8e4b33; --c-accent-soft: #f6e7dc; --c-gold: #a8875a;
-  --f-display: var(--font-display-raw), "Cormorant Garamond", Georgia, serif;
+  --f-display: var(--font-be), ui-sans-serif, system-ui, sans-serif;
   --f-sans: var(--font-be), ui-sans-serif, system-ui, sans-serif;
   --r-xs: 4px; --r-sm: 999px; --r-md: 999px; --r-lg: 16px; --r-xl: 20px; --r-2xl: 24px; --r-3xl: 28px;
   --s-sm: 0 1px 2px rgba(88,60,40,.06); --s-md: 0 4px 14px -6px rgba(88,60,40,.14);
@@ -87,7 +88,7 @@
   --c-bg: #f6f4ef; --c-paper: #efebe3; --c-paper-deep: #e4dfd3;
   --c-ink: #14233f; --c-muted: #5c6b82; --c-line: #d9d3c6;
   --c-accent: #14233f; --c-accent-dark: #0b1528; --c-accent-soft: #e6eaf2; --c-gold: #b8893b;
-  --f-display: var(--font-display-raw), "Cormorant Garamond", Georgia, serif;
+  --f-display: var(--font-be), ui-sans-serif, system-ui, sans-serif;
   --f-sans: var(--font-be), ui-sans-serif, system-ui, sans-serif;
   --r-xs: 0; --r-sm: 0; --r-md: 0; --r-lg: 1px; --r-xl: 1px; --r-2xl: 2px; --r-3xl: 2px;
   --s-sm: 0 0 0 1px rgba(20,35,63,.06); --s-md: 0 1px 0 rgba(20,35,63,.08), 0 0 0 1px rgba(20,35,63,.06);

@@ -4,11 +4,6 @@ import { AuthProvider } from "@/providers/AuthProvider";
 import { UiThemeSwitcher } from "@/components/ui/UiThemeSwitcher";
 import "./globals.css";
 import "@/styles/local-fonts.css";
-import "@fontsource/inter/300.css";
-import "@fontsource/inter/400.css";
-import "@fontsource/inter/500.css";
-import "@fontsource/inter/600.css";
-import "@fontsource/playfair-display/700.css";
 
 const be = Be_Vietnam_Pro({ subsets: ["vietnamese", "latin"], weight: ["400", "500", "600", "700"], style: ["normal", "italic"], variable: "--font-be" });
 const display = Cormorant_Garamond({ subsets: ["latin", "vietnamese"], weight: ["400", "500", "600"], style: ["normal", "italic"], variable: "--font-display-raw", display: "swap" });
