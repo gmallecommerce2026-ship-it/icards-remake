@@ -1,4 +1,4 @@
-// Kiểu chữ tên mẫu thiệp. Backend (GET /api/invitation-templates) trả `titleStyle` chỉ gồm khóa font + số + màu hex đã lọc;
+// Kiểu chữ tên danh mục (khối dịp trên trang chủ). Backend (GET /api/template-blocks) trả `titleStyle` chỉ gồm khóa font + số + màu hex đã lọc;
 // FE đổi sang CSS tại đây và kiểm tra lại một lần nữa nên dữ liệu lạ không thể chèn CSS tùy ý.
 // Danh sách khóa phải khớp TITLE_FONT_KEYS ở backend (src/catalog/catalog.types.ts).
 import type { CSSProperties } from "react";

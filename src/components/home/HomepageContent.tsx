@@ -9,8 +9,8 @@ import { settingsApi, templatesApi } from "@/lib/api";
 import { listOf, templatesOf } from "@/lib/api/list";
 import { titleStyleToCss, type TemplateTitleStyle } from "@/lib/title-style";
 
-type Block = { _id: string; title: string; slug: string; isActive?: boolean; templates?: { _id: string; imgSrc?: string }[] };
-type Template = { _id: string; title: string; slug: string; imgSrc?: string; titleStyle?: TemplateTitleStyle };
+type Block = { _id: string; title: string; slug: string; isActive?: boolean; titleStyle?: TemplateTitleStyle; templates?: { _id: string; imgSrc?: string }[] };
+type Template = { _id: string; title: string; slug: string; imgSrc?: string };
 type Banner = { id?: string; name?: string; displayPage?: string; isEnabled?: boolean; imgSrc?: string; link?: string };
 
 const HERO_FALLBACK = "https://pub-f720e3221ef5464a93d19bbdae2cfb86.r2.dev/herohome.png";
@@ -64,6 +64,34 @@ function ArrowButton({ direction, onClick }: { direction: "prev" | "next"; onCli
   );
 }
 
+/* ---- Khối "Những dịp lan tỏa niềm vui" ----
+ * Quy tắc áp dụng (lưới 4px, thang cỡ chữ 12 / 14 / 36):
+ *  - Nhịp dọc: eyebrow → tiêu đề 12px · tiêu đề → nội dung 32px (24px trên mobile).
+ *  - Thẻ: ảnh → tên 16px (một khoảng duy nhất, không cộng margin).
+ *  - Tỉ lệ ảnh cố định 3:4 để các thẻ đều nhau khi co giãn.
+ *  - Tên thẻ: 14px, semibold, viết hoa có giãn chữ nhẹ, tối đa 2 dòng, cao cố định để các thẻ thẳng hàng.
+ *  - Tiêu đề khối: 36px → 30px → 26px, semibold, không quá đậm để không lấn át nội dung.
+ */
+const OCC_HEADER = "mb-8 flex flex-col items-center gap-3 text-center max-[769px]:mb-6";
+const OCC_EYEBROW = "m-0 text-xs font-semibold uppercase leading-none tracking-[0.18em] text-[#6b6b6b]";
+const OCC_TITLE =
+  "m-0 max-w-[720px] font-playfair text-[36px] font-semibold leading-[1.2] tracking-[-0.01em] text-[#1a1a1a] max-[993px]:text-[30px] max-[769px]:text-[26px]";
+const OCC_CARD = "group flex w-[clamp(160px,20vw,220px)] shrink-0 cursor-pointer snap-start flex-col gap-4 transition-transform duration-300 hover:-translate-y-1";
+const OCC_IMAGE_BOX = "relative aspect-[3/4] w-full overflow-hidden bg-[#f3f1ee] shadow-[0_4px_15px_rgba(0,0,0,0.08)] transition-shadow duration-300 group-hover:shadow-[0_10px_24px_rgba(0,0,0,0.14)]";
+/* Kiểu chữ mặc định của TÊN danh mục. Khi danh mục cài titleStyle (dashboard / seed), các trường đó đè lên mặc định này. */
+const OCC_LABEL_DEFAULT: TemplateTitleStyle = { font: "sans", weight: 600, size: 14, color: "#222222", align: "center", uppercase: true, letterSpacing: 0.08 };
+const OCC_LABEL =
+  "m-0 line-clamp-2 min-h-[2.8em] leading-[1.4] transition-opacity duration-300 group-hover:opacity-70";
+
+function OccasionsHeader({ sub, title }: { sub: string; title: string }) {
+  return (
+    <div className={OCC_HEADER}>
+      <p className={OCC_EYEBROW}>{sub}</p>
+      <h2 className={OCC_TITLE}>{title}</h2>
+    </div>
+  );
+}
+
 function Occasions({ items }: { items: Block[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const scroll = (dir: 1 | -1) => {
@@ -72,26 +100,25 @@ function Occasions({ items }: { items: Block[] }) {
   };
 
   return (
-    <div className="relative mb-8 flex w-full items-center">
+    <div className="relative flex w-full items-center">
       <ArrowButton direction="prev" onClick={() => scroll(-1)} />
       <div
         ref={ref}
-        className="flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-5 py-2.5 [-ms-overflow-style:none] [scrollbar-width:none] max-[769px]:px-[15px] [&::-webkit-scrollbar]:hidden"
+        className="flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-5 py-3 [-ms-overflow-style:none] [scrollbar-width:none] max-[769px]:gap-4 max-[769px]:px-[15px] [&::-webkit-scrollbar]:hidden"
       >
         {items.map((o) => (
-          <Link
-            key={o._id}
-            href="/templates"
-            className="group flex w-[clamp(160px,20vw,220px)] shrink-0 cursor-pointer snap-start flex-col items-center gap-4 transition-transform duration-300 hover:-translate-y-[5px]"
-          >
-            <div className="mb-3 flex h-[324px] w-full items-center justify-center overflow-hidden bg-white shadow-[0_4px_15px_rgba(0,0,0,0.08)]">
+          <Link key={o._id} href="/templates" className={OCC_CARD}>
+            <div className={OCC_IMAGE_BOX}>
               <img
-                src={o.templates?.[0]?.imgSrc || placeholder(o.title, "324x324")}
+                src={o.templates?.[0]?.imgSrc || placeholder(o.title, "330x440")}
                 alt={o.title}
-                className="h-full w-full object-cover transition-transform duration-500 ease-[ease] group-hover:scale-110"
+                loading="lazy"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
               />
             </div>
-            <p className="m-0 text-center text-base font-semibold uppercase leading-[1.4] tracking-[0.05em] text-[#333]">{o.title}</p>
+            <p className={OCC_LABEL} style={titleStyleToCss({ ...OCC_LABEL_DEFAULT, ...o.titleStyle })}>
+              {o.title}
+            </p>
           </Link>
         ))}
       </div>
@@ -100,27 +127,21 @@ function Occasions({ items }: { items: Block[] }) {
   );
 }
 
-/* Tên mẫu nằm phía trên, bên trong thẻ (nền gradient tối để chữ luôn đọc được). Font/cỡ/màu theo t.titleStyle, do dashboard cài cho từng mẫu hoặc từng danh mục. */
+/* Thẻ mẫu thiệp: ảnh vuông, tên nằm dưới ảnh với kiểu chữ chung (không cài font riêng cho từng mẫu). */
 function FeaturedCard({ t }: { t: Template }) {
   return (
-    <Link
-      href={`/templates/${t.slug}`}
-      className="group relative block w-full cursor-pointer overflow-hidden bg-white pt-[100%] transition-shadow duration-300 hover:shadow-[0_8px_25px_rgba(0,0,0,0.12)]"
-    >
-      <img
-        src={t.imgSrc || placeholder("Thiệp", "365x365")}
-        alt={t.title}
-        loading="lazy"
-        className="absolute left-0 top-0 h-full w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] group-hover:scale-[1.03]"
-      />
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-black/60 via-black/25 to-transparent px-4 pb-10 pt-4">
-        <h5
-          style={titleStyleToCss(t.titleStyle)}
-          className="m-0 leading-[1.25] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden [text-shadow:0_1px_6px_rgba(0,0,0,0.45)]"
-        >
-          {t.title}
-        </h5>
+    <Link href={`/templates/${t.slug}`} className="group flex w-full cursor-pointer flex-col gap-4">
+      <div className="relative aspect-square w-full overflow-hidden bg-white shadow-[0_4px_15px_rgba(0,0,0,0.08)] transition-shadow duration-300 group-hover:shadow-[0_8px_25px_rgba(0,0,0,0.12)]">
+        <img
+          src={t.imgSrc || placeholder("Thiệp", "365x365")}
+          alt={t.title}
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] group-hover:scale-[1.03]"
+        />
       </div>
+      <h3 className="m-0 line-clamp-1 text-center font-inter text-base font-semibold leading-[1.4] text-[#222] transition-opacity duration-300 group-hover:opacity-70">
+        {t.title}
+      </h3>
     </Link>
   );
 }
@@ -239,14 +260,14 @@ export function HomepageContent() {
 
       <main className={MAIN}>
         <section className={SECTION}>
-          <SectionHeader sub="NHỮNG CƠ HỘI MỌI NGƯỜI KẾT NỐI THÂN THIẾT" title="NHỮNG DỊP LAN TỎA NIỀM VUI" />
+          <OccasionsHeader sub="NHỮNG CƠ HỘI MỌI NGƯỜI KẾT NỐI THÂN THIẾT" title="NHỮNG DỊP LAN TỎA NIỀM VUI" />
           {occasions.length > 0 ? <Occasions items={occasions} /> : <p className="text-center text-[#666]">Đang cập nhật các khối...</p>}
         </section>
 
         <section className={SECTION}>
           <SectionHeader sub="KHÁM PHÁ NHỮNG MẪU THIỆP ĐỘC ĐÁO" title="MẪU THIỆP NỔI BẬT" />
           {featured.length > 0 ? (
-            <div className="grid w-full grid-cols-4 gap-6 max-[1200px]:grid-cols-3 max-[993px]:grid-cols-2 max-[769px]:gap-4 max-[577px]:grid-cols-1">
+            <div className="grid w-full grid-cols-4 gap-x-6 gap-y-10 max-[1200px]:grid-cols-3 max-[993px]:grid-cols-2 max-[769px]:gap-x-4 max-[769px]:gap-y-8 max-[577px]:grid-cols-1">
               {featured.map((t) => <FeaturedCard key={t._id} t={t} />)}
             </div>
           ) : (
