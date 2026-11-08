@@ -23,6 +23,7 @@ import { useCardMotion } from "@/components/invitation/editor/useCardMotion";
 import { useEditorStore, type Snap } from "@/components/invitation/editor/useEditorStore";
 import { ENVELOPES, LINERS } from "@/components/invitation/envelope/envelope.data";
 import { STAMPS, Stamp } from "@/components/invitation/envelope/Stamp";
+import { WaxSeal } from "@/components/invitation/envelope/WaxSeal";
 
 /* ------------------------------------------------------------------ */
 /*  Chuyển động: giữ NGUYÊN như ImmersiveScrollHero (máy quay, lấy thiệp  */
@@ -38,7 +39,6 @@ const SERIF = "var(--font-card-serif), 'Cormorant Garamond', 'Times New Roman', 
 const SANS = "var(--font-card-sans), 'Be Vietnam Pro', system-ui, sans-serif";
 
 const BG = "#FFFCF6";
-const HERO_DARK = "linear-gradient(to bottom, #454547 0%, #1c1c1c 55%, #000 100%)";
 const CRIMSON = "#A3152F";
 const INK = "#1D1B2A";
 const NAVY = "#14233F";
@@ -192,7 +192,11 @@ export function PublicEnvelopeIntro({ info, design, guestName }: { info: IntroIn
   const envZFront = useTransform(envPush, (v) => v + 3);
   const flapRot = useTransform(p, [0.08, 0.2], [0, 180], E);
   const flapZ = useTransform([p, envPush], ([pp, e]: number[]) => (pp < 0.17 ? 5 : 1) + e);
-  const sealP = useTransform(p, [0, 0.08], [0, 1]);
+  // mặt trước (có tem + tên người nhận) xoay đi ở đầu, để lộ mặt sau có nắp và dấu sáp
+  const sealDone = useMotionValue(1);   // dấu sáp đã đóng xong (trạng thái của studio)
+  const frontRot = useTransform(p, [0, 0.07], [0, -90], E);
+  const frontOpacity = useTransform(p, [0.05, 0.07], [1, 0]);
+  const sealOpacity = useTransform(p, [0.03, 0.08], [1, 0]);
 
   /* thiệp rút ra */
   const cardY = useTransform(p, [0, 0.2, 0.42, 0.54, 1], ["-48.5%", "-48.5%", "-133%", "-53%", "-53%"], E);
@@ -237,7 +241,7 @@ export function PublicEnvelopeIntro({ info, design, guestName }: { info: IntroIn
         <div
           ref={stageRef}
           className="relative h-full w-full overflow-hidden"
-          style={{ ...vars, background: HERO_DARK }}
+          style={{ ...vars, background: BG }}
           onPointerMove={(e) => {
             if (e.pointerType === "touch" || reduceMotion) return;
             const r = e.currentTarget.getBoundingClientRect();
@@ -257,7 +261,7 @@ export function PublicEnvelopeIntro({ info, design, guestName }: { info: IntroIn
               <motion.div className="absolute inset-0" style={{ x: rigX, y: rigY, z: rigZ, rotateY: yaw, transformStyle: "preserve-3d" }}>
                 {/* phong bì - lưng */}
                 <EnvLayer y={envY} scale={envScale} opacity={envOpacity} z={envPush}>
-                  <div className="absolute inset-0 rounded-[4px]" style={{ background: `linear-gradient(180deg, rgba(0,0,0,.18), transparent 42%), ${envColor}`, boxShadow: "0 40px 70px -28px rgba(0,0,0,.45)" }} />
+                  <div className="absolute inset-0 rounded-[4px]" style={{ background: `linear-gradient(180deg, rgba(0,0,0,.22), transparent 42%), ${liner}`, boxShadow: "0 40px 70px -28px rgba(0,0,0,.25)" }} />
                 </EnvLayer>
 
                 {/* thiệp = FoldingCard của studio */}
@@ -272,17 +276,23 @@ export function PublicEnvelopeIntro({ info, design, guestName }: { info: IntroIn
                   </motion.div>
                 </motion.div>
 
-                {/* phong bì - mặt trước: thân, tem, tên người nhận */}
+                {/* phong bì - mặt sau: thân (màu phong bì) */}
                 <EnvLayer y={envY} scale={envScale} opacity={envOpacity} z={envZFront}>
                   <Tri clip="polygon(0 0, 50% 62%, 0 100%)" bg={`linear-gradient(90deg, rgba(0,0,0,.10), transparent), ${envColor}`} />
                   <Tri clip="polygon(100% 0, 50% 62%, 100% 100%)" bg={`linear-gradient(270deg, rgba(0,0,0,.10), transparent), ${envColor}`} />
                   <Tri clip="polygon(0 100%, 50% 62%, 100% 100%)" bg={`linear-gradient(180deg, rgba(255,255,255,.12), transparent), ${envColor}`} />
-                  <div className="absolute right-[6%] top-[6%]" style={{ width: "calc(var(--cw) * 0.2)", height: "calc(var(--cw) * 0.24)" }}>
-                    <Stamp id={stampId} />
-                  </div>
-                  <div className="absolute left-1/2 top-[66%] -translate-x-1/2 whitespace-nowrap" style={{ ...fs(0.05), fontFamily: SERIF, color: INK }}>
-                    {recipientName}
-                  </div>
+                </EnvLayer>
+
+                {/* mặt trước phong bì: tem + tên người nhận (xoay đi khi mở đầu) */}
+                <EnvLayer y={envY} scale={envScale} opacity={envOpacity} z={30}>
+                  <motion.div className="absolute inset-0 rounded-[4px] overflow-hidden" style={{ rotateY: frontRot, opacity: frontOpacity, transformOrigin: "left center", transformStyle: "preserve-3d", background: `linear-gradient(180deg, rgba(255,255,255,.16), transparent 40%), ${envColor}`, boxShadow: "0 40px 70px -28px rgba(0,0,0,.35)", ...HIDE_BACK }}>
+                    <div className="absolute right-[6%] top-[6%]" style={{ width: "calc(var(--cw) * 0.2)", height: "calc(var(--cw) * 0.24)" }}>
+                      <Stamp id={stampId} />
+                    </div>
+                    <div className="absolute left-1/2 top-[58%] -translate-x-1/2 whitespace-nowrap" style={{ ...fs(0.05), fontFamily: SERIF, color: INK }}>
+                      {recipientName}
+                    </div>
+                  </motion.div>
                 </EnvLayer>
 
                 {/* nắp phong bì: mặt ngoài = màu thiết kế, mặt trong = lớp lót */}
@@ -290,7 +300,9 @@ export function PublicEnvelopeIntro({ info, design, guestName }: { info: IntroIn
                   <motion.div className="absolute inset-0" style={{ rotateX: flapRot, transformOrigin: "50% 0%", transformStyle: "preserve-3d" }}>
                     <Tri clip={FLAP_CLIP} bg={`linear-gradient(180deg, rgba(255,255,255,.18), transparent), ${envColor}`} face="front" />
                     <Tri clip={FLAP_CLIP} bg={liner} face="back" />
-                    <Seal progress={sealP} />
+                    <motion.div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ top: "55%", width: "calc(var(--cw) * 0.22)", height: "calc(var(--cw) * 0.22)", opacity: sealOpacity, filter: "drop-shadow(0 5px 6px rgba(90,10,30,.45))", ...HIDE_BACK }}>
+                      <WaxSeal p={sealDone} color={CRIMSON} />
+                    </motion.div>
                   </motion.div>
                 </EnvLayer>
               </motion.div>
@@ -451,31 +463,4 @@ function Tri({ clip, bg, face }: { clip: string; bg: string; face?: "front" | "b
   return <div className="absolute inset-0" style={{ clipPath: clip, background: bg, ...faceStyle }} />;
 }
 
-/** Dấu sáp: nứt đôi khi mở nắp (hình học như bản gốc, màu sáp đỏ) */
-function Seal({ progress }: { progress: MotionValue<number> }) {
-  return (
-    <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ top: "55%", width: "calc(var(--cw) * 0.22)", height: "calc(var(--cw) * 0.22)", filter: "drop-shadow(0 5px 6px rgba(90,10,30,.45))", ...HIDE_BACK }}>
-      <SealHalf side="l" progress={progress} />
-      <SealHalf side="r" progress={progress} />
-    </div>
-  );
-}
-
-function SealHalf({ side, progress }: { side: "l" | "r"; progress: MotionValue<number> }) {
-  const dir = side === "l" ? -1 : 1;
-  const x = useTransform(progress, [0, 1], ["0%", `${dir * 60}%`], E);
-  const y = useTransform(progress, [0, 1], ["0%", "90%"], E);
-  const rotate = useTransform(progress, [0, 1], [0, dir * 26], E);
-  const opacity = useTransform(progress, [0.6, 1], [1, 0]);
-  const clip = side === "l"
-    ? "polygon(0 0, 53% 0, 48% 20%, 55% 40%, 47% 60%, 54% 80%, 50% 100%, 0 100%)"
-    : "polygon(52% 0, 100% 0, 100% 100%, 49% 100%, 53% 80%, 46% 60%, 54% 40%, 47% 20%)";
-  return (
-    <motion.div className="absolute inset-0" style={{ x, y, rotate, opacity, clipPath: clip }}>
-      <div className="grid h-full w-full place-items-center rounded-full" style={{ background: `radial-gradient(circle at 35% 30%, #D8405A, ${CRIMSON} 58%, #5E0A1C)`, color: "#F1D9A6", fontFamily: "'Songti SC','Noto Serif CJK SC','SimSun',serif", ...fs(0.1) }}>
-        囍
-      </div>
-    </motion.div>
-  );
-}
 
