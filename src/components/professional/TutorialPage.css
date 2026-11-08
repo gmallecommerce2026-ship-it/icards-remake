@@ -1,0 +1,551 @@
+.pro-page-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Hero Section */
+.hero-section-pro {
+    width: 100%;
+    height: 544px;
+    overflow: hidden;
+}
+
+.hero-image-pro {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Main Content Area */
+.pro-page-content {
+    width: 100%;
+    max-width: 1520px;
+    padding: 120px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 120px;
+}
+
+/* General Section Header */
+.section-header-pro {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 60px;
+}
+.section-header-pro.center { align-items: center; text-align: center; }
+.section-header-pro.left { align-items: flex-start; text-align: left; }
+
+.section-title-pro {
+    font-size: 36px;
+    color: var(--color-primary);
+    line-height: 1.1;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    max-width: 600px;
+}
+.section-header-pro.left .section-title-pro { max-width: none; }
+
+.section-subtitle-pro {
+    font-size: 16px;
+    line-height: 1.3;
+    font-weight: 500;
+    max-width: 600px;
+}
+.section-header-pro.left .section-subtitle-pro { max-width: none; }
+
+/* Features Pro Section */
+.features-pro-section {
+    background-color: var(--color-background);
+    box-shadow: var(--shadow-medium); /* Thay thế rgba(0,0,0,0.3) */
+    padding: 40px;
+    border-radius: var(--border-radius);
+}
+.features-pro-grid {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 54px;
+}
+.feature-card-column {
+    display: flex;
+    flex-direction: column;
+    gap: 54px;
+    width: 476px;
+}
+.main-image-pro {
+    width: 400px;
+    height: 544px;
+    object-fit: cover;
+    border-radius: var(--border-radius);
+}
+.feature-card-pro {
+    background-color: var(--color-background);
+    box-shadow: var(--shadow-medium); /* Thay thế rgba(0,0,0,0.3) */
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 20px;
+    border-radius: var(--border-radius);
+}
+.feature-icon-pro {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: var(--color-secondary);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+.feature-icon-pro img { height: 24px; width: auto; }
+.feature-content-pro h4 {
+    font-size: 20px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin-bottom: 12px;
+}
+.feature-content-pro p {
+    font-size: 16px;
+    line-height: 1.3;
+    color: var(--color-text-light);
+    font-weight: 500;
+}
+
+/* Category Showcase Section */
+.category-showcase-section {
+    background-color: var(--color-background);
+    box-shadow: var(--shadow-medium); /* Thay thế rgba(0,0,0,0.3) */
+    padding: 40px 0;
+    border-radius: var(--border-radius);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.category-showcase-grid {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+    padding: 0 40px;
+}
+.category-showcase-card {
+    border: 0.5px solid var(--color-text-light); /* Thay thế #808080 */
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex: 1;
+    max-width: 480px;
+    border-radius: var(--border-radius);
+}
+.category-showcase-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+    flex: 1;
+}
+.category-showcase-text h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-primary);
+    line-height: 1;
+    letter-spacing: 0.02em;
+}
+.category-showcase-text p {
+    font-size: 16px;
+    color: var(--color-text-light);
+    line-height: 1.3;
+    font-weight: 500;
+}
+.category-showcase-text button {
+    border: 0.5px solid var(--color-text-dark); /* Thay thế #000 */
+    background: transparent;
+    height: 40px;
+    padding: 0 20px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.category-showcase-text button:hover {
+    background-color: var(--color-text-dark); /* Thay thế #000 */
+    color: var(--color-text-white); /* Thay thế #fff */
+}
+.category-showcase-image img {
+    width: 160px;
+    height: 160px;
+    object-fit: cover;
+    background-color: var(--color-placeholder); /* Thay thế #e6e6e6 */
+    border-radius: var(--border-radius);
+}
+
+/* Print Process Section */
+.print-process-section-pro {
+    display: flex;
+    gap: 80px;
+    align-items: center;
+}
+.print-process-content-pro {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+.print-process-steps-pro {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 60px;
+    width: 100%;
+}
+.print-process-step-pro {
+    border: 0.5px solid var(--color-text-dark); /* Thay thế #000 */
+    height: 80px;
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    padding: 0 40px;
+    border-radius: var(--border-radius);
+}
+.step-number-pro {
+    font-size: 64px;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+.step-title-pro {
+    font-size: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.print-process-note-pro {
+    margin-top: 40px;
+    font-size: 16px;
+    font-weight: 500;
+}
+.print-process-image-pro img {
+    width: 750px;
+    height: 500px;
+    object-fit: cover;
+    border-radius: var(--border-radius);
+}
+
+/* Download Section */
+.download-section-pro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+.download-section-pro img {
+    width: 100%;
+    max-width: 1519px;
+    height: auto;
+    border-radius: var(--border-radius);
+}
+.download-note-pro { font-size: 16px; font-weight: 500; }
+
+/* Template Discovery Section */
+.template-discovery-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+.template-showcase-grid-pro {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    width: 100%;
+}
+.template-card-pro {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    cursor: pointer;
+}
+.card-image-wrapper-pro {
+    width: 100%;
+    padding-top: 100%;
+    position: relative;
+    background-color: var(--color-placeholder); /* Thay thế #e6e6e6 */
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+.card-image-wrapper-pro img {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+}
+.card-info-pro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+.card-info-pro h5 {
+    font-size: 16px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-text-dark); /* Thay thế #000 */
+}
+.heart-icon-pro svg {
+    width: 20px;
+    height: 17px;
+    fill: var(--color-border); /* Thay thế #e0e0e0 */
+    transition: fill 0.3s;
+}
+.heart-icon-pro.liked svg { fill: var(--color-error); /* Thay thế #e74c3c */ }
+.view-more-btn-pro {
+    border: 0.5px solid var(--color-text-dark); /* Thay thế #000 */
+    width: 156px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: transparent;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--color-text-dark); /* Thay thế #000 */
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-top: 40px;
+    transition: all 0.3s;
+}
+.view-more-btn-pro:hover {
+    background-color: var(--color-text-dark); /* Thay thế #000 */
+    color: var(--color-text-white); /* Thay thế #fff */
+}
+
+/* FAQ Section */
+.faq-section-pro {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.faq-container-pro {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.faq-item-pro {
+    border: 1px solid var(--color-text-dark); /* Thay thế #000 */
+    border-radius: var(--border-radius);
+    padding: 40px;
+    background-color: var(--color-background);
+}
+.faq-question-pro {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+.faq-question-pro h4 {
+    font-size: 16px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+.faq-toggle-pro { transition: transform 0.3s ease; }
+.faq-item-pro.open .faq-toggle-pro { transform: rotate(180deg); }
+.faq-answer-pro {
+    margin-top: 20px;
+    font-size: 16px;
+    line-height: 1.3;
+    color: var(--color-text-light); /* Thay thế #666 */
+    font-weight: 500;
+}
+.faq-answer-pro p { white-space: pre-wrap; }
+
+/* Carousel Styles */
+.category-showcase-carousel-wrapper {
+    position: relative;
+    width: 100%;
+    padding: 0 50px;
+}
+.carousel-viewport {
+    width: 100%;
+    overflow: hidden;
+}
+.category-showcase-grid-transform {
+    display: flex;
+    gap: 20px;
+    transition: transform 0.5s ease-in-out;
+}
+.category-showcase-grid-transform .category-showcase-card {
+    flex: 0 0 calc((100% / 3) - (40px / 3));
+    min-width: calc((100% / 3) - (40px / 3));
+    max-width: none;
+    flex-grow: 0;
+    flex-shrink: 0;
+    border: 1px solid var(--color-border); /* Thay thế #E0E0E0 */
+    box-shadow: none;
+}
+.carousel-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: var(--color-background); /* Thay thế white */
+    border: 1px solid var(--color-border); /* Thay thế #E0E0E0 */
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    color: var(--color-text-dark); /* Thay thế #333 */
+    transition: all 0.2s ease;
+}
+.carousel-arrow:hover {
+    background-color: var(--color-background-light); /* Thay thế #f5f5f5 */
+    border-color: var(--color-border); /* Giữ nguyên hoặc dùng màu đậm hơn một chút */
+}
+.carousel-arrow:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.carousel-arrow.left { left: 0; }
+.carousel-arrow.right { right: 0; }
+
+
+/* --- SHARED STYLES (giữ nguyên từ file cũ) --- */
+.related-categories-pro {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 40px;
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 10px;
+}
+.related-categories-pro::-webkit-scrollbar { height: 6px; }
+.related-categories-pro::-webkit-scrollbar-track { background: var(--color-background-light); }
+.related-categories-pro::-webkit-scrollbar-thumb { background: var(--color-secondary); }
+.related-categories-pro::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .pro-page-content {
+        padding: 80px 20px;
+        gap: 80px;
+    }
+    .features-pro-grid, .print-process-section-pro {
+        flex-direction: column;
+    }
+    .main-image-pro { order: -1; }
+    .template-showcase-grid-pro {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .category-showcase-grid-transform .category-showcase-card {
+        flex-basis: calc((100% / 2) - (20px / 2));
+        min-width: calc((100% / 2) - (20px / 2));
+    }
+}
+
+@media (max-width: 768px) {
+    .section-title-pro { font-size: 28px; }
+    .features-pro-grid { gap: 30px; }
+    .feature-card-column { width: 100%; gap: 20px; }
+    .category-showcase-grid { flex-direction: column; }
+    .print-process-steps-pro { grid-template-columns: 1fr; }
+    .template-showcase-grid-pro { grid-template-columns: 1fr; }
+    .category-showcase-carousel-wrapper { padding: 0; }
+    .category-showcase-grid-transform .category-showcase-card {
+        flex-basis: 100%;
+        min-width: 100%;
+    }
+    .carousel-arrow { display: none; }
+}
+
+.ads-container {
+    width: 100%;
+    max-width: 1520px;
+    margin: 40px auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 250px;
+    text-align: center;
+}
+
+.placeholder-ad {
+    width: 100%;
+    max-width: 970px; /* Kích thước phổ biến của banner ngang */
+    height: 250px; /* Chiều cao phổ biến của banner ngang */
+    background-color: #f0f0f0;
+    border: 2px dashed #ccc;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 16px;
+    color: #888;
+    text-align: center;
+    line-height: 1.5;
+    font-weight: 500;
+}
+
+/* Đảm bảo file CSS này được import vào các trang cần thiết */
+.hero-section .hero-image { width: 100%; height: auto; max-height: 80vh; object-fit: cover; }
+
+.hero-section {
+    position: relative; /* Bắt buộc phải có để các lớp con định vị theo */
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    overflow: hidden;
+}
+
+.hero-video-background, .hero-image-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Đảm bảo video/ảnh lấp đầy */
+    z-index: 0; /* Nằm dưới nội dung */
+    background-size: cover;
+    background-position: center;
+}
+
+/* Thêm lớp phủ để chữ dễ đọc hơn */
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 1;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2; /* Nằm trên lớp phủ */
+    padding: 20px;
+}
+
+.hero-title {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.hero-subtitle {
+    font-size: 1.2rem;
+}
