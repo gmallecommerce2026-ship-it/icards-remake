@@ -174,7 +174,7 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
           <div className="grid gap-x-[30px] gap-y-10 py-[45px] [grid-template-columns:repeat(auto-fill,minmax(250px,1fr))]">
             {list.map((t) => (
               <Link key={t.slug} href={`/templates/${t.slug}`} className="group flex cursor-pointer flex-col items-center gap-4 [color:inherit] no-underline">
-                <div className="w-full transition-transform duration-300 group-hover:scale-[1.03]">
+                <div className="w-full">
                   <TemplateShowcase template={t} />
                 </div>
                 <h3 className="box-border h-[45px] w-full overflow-hidden px-[5px] text-center text-base font-semibold uppercase leading-[1.4] tracking-[0.02em] text-[#27548A] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] text-ellipsis">
