@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatPrice, type InvitationTemplate } from "@/lib/templates";
-import { InvitationPreview } from "./InvitationPreview";
+import { TemplateShowcase } from "./TemplateShowcase";
 
 export function TemplateCard({ template, categoryName }: { template: InvitationTemplate; categoryName?: string }) {
   const free = template.price === 0;
@@ -9,9 +9,7 @@ export function TemplateCard({ template, categoryName }: { template: InvitationT
       href={`/templates/${template.slug}`}
       className="group block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#27548A]"
     >
-      <div className="overflow-hidden rounded-lg ring-1 ring-[#0E1B2C]/10">
-        <InvitationPreview template={template} />
-      </div>
+      <TemplateShowcase template={template} />
       <div className="mt-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-base font-semibold text-[#0E1B2C] group-hover:underline group-hover:underline-offset-4">

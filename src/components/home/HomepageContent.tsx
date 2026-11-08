@@ -1,16 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { settingsApi, templatesApi } from "@/lib/api";
 
 /* Giá trị lấy trực tiếp từ HomepageContent.css của bản src (đã áp dụng đúng thứ tự cascade). */
 
 import { listOf, templatesOf } from "@/lib/api/list";
 import { InvitationPreview } from "@/components/templates/InvitationPreview";
-import { useEnvelopeCatalog, type EnvelopeCatalog } from "@/lib/envelope-catalog";
+import { TemplateShowcase } from "@/components/templates/TemplateShowcase";
 import type { InvitationTemplate } from "@/lib/templates";
-import { titleStyleToCss, type TemplateTitleStyle } from "@/lib/title-style";
+import type { TemplateTitleStyle } from "@/lib/title-style";
 
 type Block = { _id: string; title: string; slug: string; isActive?: boolean; templates?: { _id: string; imgSrc?: string }[] };
 type Template = InvitationTemplate & { _id: string; title: string; imgSrc?: string; titleStyle?: TemplateTitleStyle };
@@ -114,51 +114,23 @@ function Occasions({ items }: { items: Block[] }) {
   );
 }
 
-/* Thẻ mẫu thiệp nổi bật: thiệp 5:7 đứng (cùng tỉ lệ thiệp trong studio) đặt trước một phong bì.
- * Phong bì vừa đủ để thiệp xoay ngang rồi đút vào: rộng = cạnh dài thiệp + lề, cao = cạnh ngắn thiệp + lề.
- * Đơn vị là % của khung vuông: thiệp rộng 40%, cao 56%; lề 3% mỗi bên => phong bì 62% x 46%. */
-const CARD_W = 40;
-const CARD_H = (CARD_W * 7) / 5;            // 56
-const MARGIN = 3;
-const ENV_W = CARD_H + 2 * MARGIN;          // 62
-const ENV_H = CARD_W + 2 * MARGIN;          // 46
-const FEATURED_ENV_DEFAULT = { envId: "burgundy", linerId: "ink" };
-const FEATURED_NAME_COLOR = "#0E1B2C";
-const FLAP = "polygon(0% 0%, 100% 0%, 50% 100%)";
+/* Tên mẫu dưới thẻ: cùng font serif với tên danh mục ở khối "Những dịp" */
+const FEATURED_NAME_STYLE: CSSProperties = {
+  fontFamily: "var(--font-tpl-display), Georgia, serif",
+  fontSize: 20,
+  fontWeight: 600,
+  lineHeight: 1.25,
+  color: "#0E1B2C",
+};
 
-function FeaturedCard({ t, catalog }: { t: Template; catalog: EnvelopeCatalog }) {
-  const env =
-    catalog.envelopes.find((e) => e.id === (t.envelope?.envId ?? FEATURED_ENV_DEFAULT.envId)) ?? catalog.envelopes[0];
-  const liner =
-    catalog.liners.find((l) => l.id === (t.envelope?.linerId ?? FEATURED_ENV_DEFAULT.linerId)) ?? catalog.liners[0];
-  const nameStyle = titleStyleToCss({ size: 16, ...t.titleStyle, color: FEATURED_NAME_COLOR });
-
+function FeaturedCard({ t }: { t: Template }) {
   return (
     <Link
       href={`/templates/${t.slug}`}
       className="group block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#27548A]"
     >
-      <div className="relative aspect-square w-full">
-        {/* Phong bì (nằm sau): thân, nắp tam giác và lớp lót bên trong nắp */}
-        <div
-          aria-hidden
-          className="absolute transition-transform duration-500 group-hover:translate-y-1"
-          style={{ left: `${100 - ENV_W - 2}%`, top: `${100 - ENV_H - 4}%`, width: `${ENV_W}%`, height: `${ENV_H}%` }}
-        >
-          <div className="absolute inset-0 rounded-[2px] shadow-[0_10px_22px_-10px_rgba(0,0,0,0.5)]" style={{ background: env.color }} />
-          <div className="absolute inset-x-0 top-0 h-[58%]" style={{ background: env.color, filter: "brightness(1.12)", clipPath: FLAP }} />
-          <div className="absolute left-[6%] right-[6%] top-0 h-[42%]" style={{ background: liner.background, clipPath: FLAP }} />
-        </div>
-
-        {/* Thiệp (nằm trước), tỉ lệ 5:7 như trong studio */}
-        <div
-          className="absolute z-10 overflow-hidden rounded-[3px] bg-white shadow-[0_8px_20px_-8px_rgba(14,27,44,0.4)] ring-1 ring-[#0E1B2C]/10 transition-transform duration-500 group-hover:-translate-y-1"
-          style={{ left: "4%", top: "4%", width: `${CARD_W}%` }}
-        >
-          <InvitationPreview template={t} ratio="tall" />
-        </div>
-      </div>
-      <h3 style={nameStyle} className="mt-3 truncate group-hover:underline group-hover:underline-offset-4">
+      <TemplateShowcase template={t} />
+      <h3 style={FEATURED_NAME_STYLE} className="mt-3 truncate text-center group-hover:underline group-hover:underline-offset-4">
         {t.title}
       </h3>
     </Link>
@@ -213,7 +185,6 @@ function Intro({ html }: { html?: string }) {
 }
 
 export function HomepageContent() {
-  const catalog = useEnvelopeCatalog();
   const [loading, setLoading] = useState(true);
   const [occasions, setOccasions] = useState<Block[]>([]);
   const [featured, setFeatured] = useState<Template[]>([]);
@@ -289,7 +260,7 @@ export function HomepageContent() {
           <SectionHeader sub="KHÁM PHÁ NHỮNG MẪU THIỆP ĐỘC ĐÁO" title="MẪU THIỆP NỔI BẬT" />
           {featured.length > 0 ? (
             <div className="grid w-full grid-cols-4 gap-x-6 gap-y-10 max-[1200px]:grid-cols-3 max-[993px]:grid-cols-2 max-[769px]:gap-x-4 max-[769px]:gap-y-8 max-[577px]:grid-cols-1">
-              {featured.map((t) => <FeaturedCard key={t._id} t={t} catalog={catalog} />)}
+              {featured.map((t) => <FeaturedCard key={t._id} t={t} />)}
             </div>
           ) : (
             <p className="col-span-full text-center text-[#666]">Chưa có mẫu thiệp nổi bật nào.</p>
