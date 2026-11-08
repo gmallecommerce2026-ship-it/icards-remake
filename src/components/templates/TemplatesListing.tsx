@@ -63,7 +63,7 @@ export function TemplatesListing({ templates, categories }: Props) {
   return (
     <div className="bg-[#FEFDFD] font-inter text-[#333]">
       {/* Tiêu đề trang (UniversalBanner của bản src chưa có mã nguồn, dùng tiêu đề thay thế) */}
-      <section className="flex flex-col items-center gap-2 px-5 pb-10 pt-40 text-center">
+      <section className="flex flex-col items-center gap-2 px-5 pb-10 pt-10 text-center">
         <h1 className="font-playfair text-[42px] font-bold leading-[1.2] text-[#1a1a1a] max-[769px]:text-[28px]">
           {current?.label ?? "Khám Phá Các Mẫu Thiệp"}
         </h1>

@@ -13,7 +13,7 @@ export default async function ShopLayout({ children }: { children: ReactNode }) 
   return (
     <CartProvider products={products}>
       <PageShell>
-        <div className="pt-[72px]">
+        <div>
           <Container className="pt-6">
             <Carousel slides={SHOP_BANNERS} />
           </Container>
