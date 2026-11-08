@@ -7,10 +7,12 @@ import { settingsApi, templatesApi } from "@/lib/api";
 /* Giá trị lấy trực tiếp từ HomepageContent.css của bản src (đã áp dụng đúng thứ tự cascade). */
 
 import { listOf, templatesOf } from "@/lib/api/list";
+import { InvitationPreview } from "@/components/templates/InvitationPreview";
+import type { InvitationTemplate } from "@/lib/templates";
 import { titleStyleToCss, type TemplateTitleStyle } from "@/lib/title-style";
 
 type Block = { _id: string; title: string; slug: string; isActive?: boolean; templates?: { _id: string; imgSrc?: string }[] };
-type Template = { _id: string; title: string; slug: string; imgSrc?: string; titleStyle?: TemplateTitleStyle };
+type Template = InvitationTemplate & { _id: string; title: string; imgSrc?: string; titleStyle?: TemplateTitleStyle };
 type Banner = { id?: string; name?: string; displayPage?: string; isEnabled?: boolean; imgSrc?: string; link?: string };
 
 const HERO_FALLBACK = "https://pub-f720e3221ef5464a93d19bbdae2cfb86.r2.dev/herohome.png";
@@ -84,9 +86,12 @@ function Occasions({ items }: { items: Block[] }) {
           <Link
             key={o._id}
             href="/templates"
-            className="group flex w-[clamp(160px,20vw,220px)] shrink-0 cursor-pointer snap-start flex-col gap-4 transition-transform duration-300 hover:-translate-y-1"
+            className="group flex w-[clamp(160px,20vw,220px)] shrink-0 cursor-pointer snap-start flex-col gap-3 transition-transform duration-300 hover:-translate-y-1"
           >
-            <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#f3f1ee] shadow-[0_4px_15px_rgba(0,0,0,0.08)] transition-shadow duration-300 group-hover:shadow-[0_10px_24px_rgba(0,0,0,0.14)]">
+            <p className="m-0 line-clamp-2 min-h-[2.8em] text-center text-sm font-semibold uppercase leading-[1.4] tracking-[0.08em] text-[#0E1B2C] transition-opacity duration-300 group-hover:opacity-70">
+              {o.title}
+            </p>
+            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-[#f3f1ee] shadow-[0_6px_18px_-8px_rgba(14,27,44,0.28)] ring-1 ring-[#0E1B2C]/10 transition-shadow duration-300 group-hover:shadow-[0_12px_28px_-10px_rgba(14,27,44,0.35)]">
               <img
                 src={o.templates?.[0]?.imgSrc || placeholder(o.title, "330x440")}
                 alt={o.title}
@@ -94,9 +99,6 @@ function Occasions({ items }: { items: Block[] }) {
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
               />
             </div>
-            <p className="m-0 line-clamp-2 min-h-[2.8em] text-center text-sm font-semibold uppercase leading-[1.4] tracking-[0.08em] text-[#222] transition-opacity duration-300 group-hover:opacity-70">
-              {o.title}
-            </p>
           </Link>
         ))}
       </div>
@@ -105,27 +107,22 @@ function Occasions({ items }: { items: Block[] }) {
   );
 }
 
-/* Tên mẫu nằm phía trên, bên trong thẻ (nền gradient tối để chữ luôn đọc được). Font/cỡ/màu theo t.titleStyle, do dashboard cài cho từng mẫu hoặc từng danh mục. */
+/* Thẻ mẫu thiệp: dùng đúng hình hiển thị của trang /templates (InvitationPreview), khung và shadow giống TemplateCard.
+ * Tên nằm DƯỚI thẻ. Font/cỡ/độ đậm lấy từ t.titleStyle (dashboard); màu cố định để đọc được trên nền trắng. */
+const FEATURED_NAME_COLOR = "#0E1B2C";
 function FeaturedCard({ t }: { t: Template }) {
+  const nameStyle = titleStyleToCss({ size: 16, ...t.titleStyle, color: FEATURED_NAME_COLOR });
   return (
     <Link
       href={`/templates/${t.slug}`}
-      className="group relative block w-full cursor-pointer overflow-hidden bg-white pt-[100%] transition-shadow duration-300 hover:shadow-[0_8px_25px_rgba(0,0,0,0.12)]"
+      className="group block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#27548A]"
     >
-      <img
-        src={t.imgSrc || placeholder("Thiệp", "365x365")}
-        alt={t.title}
-        loading="lazy"
-        className="absolute left-0 top-0 h-full w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] group-hover:scale-[1.03]"
-      />
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-black/60 via-black/25 to-transparent px-4 pb-10 pt-4">
-        <h5
-          style={titleStyleToCss(t.titleStyle)}
-          className="m-0 leading-[1.25] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden [text-shadow:0_1px_6px_rgba(0,0,0,0.45)]"
-        >
-          {t.title}
-        </h5>
+      <div className="overflow-hidden rounded-lg shadow-[0_6px_18px_-8px_rgba(14,27,44,0.28)] ring-1 ring-[#0E1B2C]/10 transition-shadow duration-300 group-hover:shadow-[0_12px_28px_-10px_rgba(14,27,44,0.35)]">
+        <InvitationPreview template={t} />
       </div>
+      <h3 style={nameStyle} className="mt-3 truncate group-hover:underline group-hover:underline-offset-4">
+        {t.title}
+      </h3>
     </Link>
   );
 }
@@ -198,7 +195,8 @@ export function HomepageContent() {
         const usedIds = new Set(blocks.flatMap((b) => b.templates?.map((t) => t._id) ?? []));
         setOccasions(blocks.filter((b) => b.isActive));
 
-        const all: Template[] = templatesRes.status === "fulfilled" ? templatesOf(templatesRes.value.data) : [];
+        // list.ts giữ nguyên mọi trường backend trả về (palette, sample, motif...) nên đủ dữ liệu cho InvitationPreview.
+        const all = (templatesRes.status === "fulfilled" ? templatesOf(templatesRes.value.data) : []) as unknown as Template[];
         setFeatured(all.filter((t) => !usedIds.has(t._id)).slice(0, 8));
 
         if (settingsRes.status === "fulfilled") {
@@ -251,7 +249,7 @@ export function HomepageContent() {
         <section className={SECTION}>
           <SectionHeader sub="KHÁM PHÁ NHỮNG MẪU THIỆP ĐỘC ĐÁO" title="MẪU THIỆP NỔI BẬT" />
           {featured.length > 0 ? (
-            <div className="grid w-full grid-cols-4 gap-6 max-[1200px]:grid-cols-3 max-[993px]:grid-cols-2 max-[769px]:gap-4 max-[577px]:grid-cols-1">
+            <div className="grid w-full grid-cols-4 gap-x-6 gap-y-10 max-[1200px]:grid-cols-3 max-[993px]:grid-cols-2 max-[769px]:gap-x-4 max-[769px]:gap-y-8 max-[577px]:grid-cols-1">
               {featured.map((t) => <FeaturedCard key={t._id} t={t} />)}
             </div>
           ) : (
