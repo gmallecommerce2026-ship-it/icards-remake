@@ -25,6 +25,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Be_Vietnam_Pro, Cormorant_Garamond, Space_Mono, Great_Vibes, Oswald } from "@/lib/fonts";
+import { EventSettings } from "./EventSettings";
 
 /* Font: tất cả đều có subset "vietnamese" */
 const fSerif = Cormorant_Garamond({ subsets: ["latin", "vietnamese"], weight: ["400", "500", "600"], style: ["normal", "italic"], variable: "--ev-serif", display: "swap" });
@@ -302,8 +303,7 @@ export function EventDetailsEditor({ initial, guests, onClose, onSave, onAddGues
 
               {tab === "settings" && (
                 <Panel title="Cài đặt sự kiện" onClose={() => setTab(null)}>
-                  <Toggle label="Hiện nút phản hồi tham dự" checked={showRsvp} onChange={setShowRsvp} />
-                  <Toggle label="Hiện danh sách khách mời" checked={showGuests} onChange={setShowGuests} />
+                  <EventSettings showRsvp={showRsvp} setShowRsvp={setShowRsvp} showGuests={showGuests} setShowGuests={setShowGuests} />
                 </Panel>
               )}
 
@@ -482,14 +482,6 @@ function ColorWheel({ label, value, onPick }: { label: string; value: string; on
   );
 }
 
-function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <label className="flex cursor-pointer items-center justify-between gap-4 border-b border-black/10 py-3 text-sm">
-      <span>{label}</span>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="size-5" style={{ accentColor: CRIMSON }} />
-    </label>
-  );
-}
 
 function MiniBtn({ label, icon: Icon, onClick, disabled }: { label: string; icon: LucideIcon; onClick: () => void; disabled?: boolean }) {
   return (
