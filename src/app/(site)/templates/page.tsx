@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getTemplateCategories, getTemplates } from "@/lib/catalog";
-import { TemplatesView } from "@/components/templates/TemplatesView";
+import { TemplatesListing } from "@/components/templates/TemplatesListing";
 
 export const metadata: Metadata = {
   title: "Mẫu thiệp mời online",
@@ -10,5 +10,5 @@ export const metadata: Metadata = {
 
 export default async function TemplatesPage() {
   const [templates, categories] = await Promise.all([getTemplates(), getTemplateCategories()]);
-  return <TemplatesView templates={templates} categories={categories} />;
+  return <TemplatesListing templates={templates} categories={categories} />;
 }
