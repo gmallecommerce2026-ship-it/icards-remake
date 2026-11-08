@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Menu, X } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
+import { TemplatesMenu } from "./TemplatesMenu";
 
 // Tab nằm cạnh logo (thêm mục mới vào đây, ví dụ { href: "/business", label: "Doanh nghiệp" })
 const tabs = [{ href: "/professional", label: "Chuyên nghiệp" }];
@@ -61,7 +62,7 @@ export function Header() {
                   key={t.href}
                   href={t.href}
                   aria-current={active ? "page" : undefined}
-                  className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+                  className={`rounded-sm px-3.5 py-1.5 text-sm font-semibold transition-colors ${
                     active
                       ? "bg-lacquer text-white"
                       : "bg-lacquer-soft text-lacquer hover:bg-lacquer hover:text-white"
@@ -77,6 +78,7 @@ export function Header() {
         {/* Giữa: menu chính */}
         <nav className="hidden items-center gap-8 lg:flex" aria-label="Điều hướng chính">
           {links.map((l) => {
+            if (l.href === "/templates") return <TemplatesMenu key={l.href} label={l.label} href={l.href} />;
             const active = isActive(pathname, l.href);
             return (
               <Link
@@ -98,7 +100,7 @@ export function Header() {
           {!loading && isAuthenticated ? (
             <Link
               href="/invitation-management"
-              className="rounded-full bg-lacquer px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-lacquer-dark"
+              className="rounded-sm bg-lacquer px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-lacquer-dark"
             >
               Xin chào, {user?.username ?? "bạn"}
             </Link>
@@ -109,7 +111,7 @@ export function Header() {
               </Link>
               <Link
                 href="/sign-up"
-                className="rounded-full bg-lacquer px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_-8px_rgba(163,21,47,.6)] transition hover:bg-lacquer-dark"
+                className="rounded-sm bg-lacquer px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-lacquer-dark"
               >
                 Tạo thiệp miễn phí
               </Link>
@@ -153,7 +155,7 @@ export function Header() {
               ))}
               <Link
                 href="/sign-up"
-                className="mt-2 rounded-full bg-lacquer px-5 py-3 text-center font-semibold text-white"
+                className="mt-2 rounded-sm bg-lacquer px-5 py-3 text-center font-semibold text-white"
               >
                 Tạo thiệp miễn phí
               </Link>

@@ -4,6 +4,8 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { getFaq, getProfessionalPortfolio, getProfessionalProcess, getProfessionalTiers } from "@/lib/catalog";
 import PortfolioCover from "@/components/professional/PortfolioCover";
 import { Container } from "@/components/ui/Primitives";
+import { Carousel } from "@/components/ui/Carousel";
+import { PROFESSIONAL_BANNERS } from "@/lib/banners";
 
 export const metadata: Metadata = {
   title: "Thiết kế chuyên nghiệp | iCards",
@@ -22,8 +24,14 @@ export default async function ProfessionalPage() {
 
   return (
     <main className="min-h-screen bg-porcelain">
-      {/* Custom Hero đồng bộ với cấu trúc padding của Header */}
-      <div className="border-b border-line bg-white pt-[72px]">
+      <div className="bg-porcelain pt-[72px]">
+        <Container className="py-6">
+          <Carousel slides={PROFESSIONAL_BANNERS} />
+        </Container>
+      </div>
+
+      {/* Custom Hero */}
+      <div className="border-b border-line bg-white">
         <Container className="flex flex-col items-center text-center py-16 md:py-24">
           <div className="inline-flex items-center rounded-full bg-lacquer-soft px-4 py-1.5 text-sm font-medium text-lacquer mb-6">
             Dành cho khách hàng cao cấp & Doanh nghiệp

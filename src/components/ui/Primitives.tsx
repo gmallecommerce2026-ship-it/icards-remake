@@ -31,11 +31,11 @@ export function PageHero({ title, description, crumbs }: { title: string; descri
   );
 }
 
-const base = "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition disabled:cursor-not-allowed disabled:opacity-60";
-const sizes = { md: "px-6 py-3 text-sm", lg: "px-7 py-4 text-base" };
+const base = "inline-flex items-center justify-center gap-2 rounded-sm font-semibold tracking-tight transition-colors disabled:cursor-not-allowed disabled:opacity-60";
+const sizes = { md: "px-5 py-2.5 text-sm", lg: "px-6 py-3.5 text-base" };
 const variants = {
-  primary: "bg-lacquer text-white hover:bg-lacquer-dark shadow-[0_12px_32px_-12px_rgba(163,21,47,.6)]",
-  secondary: "border border-line bg-white text-ink hover:border-lacquer hover:text-lacquer",
+  primary: "bg-lacquer text-white hover:bg-lacquer-dark",
+  secondary: "border border-line bg-white text-ink hover:border-ink hover:text-ink",
   ghost: "text-lacquer hover:bg-lacquer-soft",
 };
 export const btn = (v: keyof typeof variants = "primary", s: keyof typeof sizes = "md", extra = "") => `${base} ${sizes[s]} ${variants[v]} ${extra}`;

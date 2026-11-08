@@ -29,8 +29,8 @@ export function Hero() {
   return (
     <section className="relative overflow-hidden">
       <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="animate-drift absolute -right-24 top-10 h-[480px] w-[480px] rounded-full bg-lacquer/15 blur-3xl" />
-        <div className="animate-drift absolute -left-32 bottom-0 h-[380px] w-[380px] rounded-full bg-gold/15 blur-3xl [animation-delay:-6s]" />
+        <div className="animate-drift absolute -right-24 top-10 h-[480px] w-[480px] rounded-sm bg-lacquer/15 blur-3xl" />
+        <div className="animate-drift absolute -left-32 bottom-0 h-[380px] w-[380px] rounded-sm bg-gold/15 blur-3xl [animation-delay:-6s]" />
       </div>
 
       {/* BLEND: đầu section mang đúng màu nền của hero cuộn (#F8F8FB) rồi tan dần sang nền của trang -> không có đường ranh giữa hai phần */}
@@ -43,9 +43,9 @@ export function Hero() {
         <div>
           <motion.span
             {...rise(0, 12)}
-            className="inline-flex items-center gap-2 rounded-full border border-lacquer/20 bg-lacquer-soft px-4 py-1.5 text-sm font-medium text-lacquer"
+            className="inline-flex items-center gap-2 rounded-sm border border-lacquer/20 bg-lacquer-soft px-4 py-1.5 text-sm font-medium text-lacquer"
           >
-            <span className="size-1.5 rounded-full bg-lacquer" /> Hơn 12.000 cặp đôi đã gửi thiệp qua iCards
+            <span className="size-1.5 rounded-sm bg-lacquer" /> Hơn 12.000 cặp đôi đã gửi thiệp qua iCards
           </motion.span>
 
           <motion.h1
@@ -60,10 +60,10 @@ export function Hero() {
           </motion.p>
 
           <motion.div {...rise(0.4, 24)} className="mt-9 flex flex-wrap items-center gap-4">
-            <Link href="/sign-up" className="group inline-flex items-center gap-2 rounded-full bg-lacquer px-7 py-4 font-semibold text-white shadow-[0_16px_40px_-12px_rgba(163,21,47,.7)] transition hover:bg-lacquer-dark">
+            <Link href="/sign-up" className="group inline-flex items-center gap-2 rounded-sm bg-lacquer px-7 py-4 font-semibold text-white shadow-[0_16px_40px_-12px_rgba(163,21,47,.7)] transition hover:bg-lacquer-dark">
               Tạo thiệp miễn phí <ArrowRight className="size-5 transition-transform group-hover:translate-x-1" />
             </Link>
-            <Link href="/invitations" className="rounded-full border border-line bg-white px-7 py-4 font-semibold text-ink transition hover:border-lacquer hover:text-lacquer">Xem mẫu thiệp</Link>
+            <Link href="/invitations" className="rounded-sm border border-line bg-white px-7 py-4 font-semibold text-ink transition hover:border-lacquer hover:text-lacquer">Xem mẫu thiệp</Link>
           </motion.div>
 
           <motion.p {...rise(0.5, 12)} className="mt-6 text-sm text-muted">
@@ -103,7 +103,7 @@ export function Hero() {
             {confirmed && (
               <>
                 <motion.div key="a" initial={{ opacity: 0, x: 30, scale: 0.9 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 220, damping: 18 }} className="absolute -left-10 top-16 flex items-center gap-3 rounded-2xl border border-line bg-white px-4 py-3 shadow-xl max-sm:-left-2">
-                  <span className="grid size-9 place-items-center rounded-full bg-emerald-50 text-emerald-600"><Users className="size-4" /></span>
+                  <span className="grid size-9 place-items-center rounded-sm bg-emerald-50 text-emerald-600"><Users className="size-4" /></span>
                   <div><p className="text-sm font-semibold">Cô Lan xác nhận</p><p className="text-xs text-muted">Đi cùng 2 khách</p></div>
                 </motion.div>
                 <motion.div key="b" initial={{ opacity: 0, x: -30, scale: 0.9 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 220, damping: 18, delay: 0.5 }} className="absolute -right-8 bottom-24 max-w-[200px] rounded-2xl border border-line bg-white px-4 py-3 shadow-xl max-sm:-right-2">

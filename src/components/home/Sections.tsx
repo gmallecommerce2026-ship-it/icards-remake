@@ -141,7 +141,7 @@ export function Templates() {
                 ) : (
                   <div className="grid size-full place-items-center text-5xl text-lacquer/40 transition duration-700 group-hover:scale-110">囍</div>
                 )}
-                <span className="absolute inset-x-3 bottom-3 translate-y-3 rounded-full bg-white px-4 py-2 text-center text-sm font-semibold text-lacquer opacity-0 shadow-lg transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">Dùng mẫu này</span>
+                <span className="absolute inset-x-3 bottom-3 translate-y-3 rounded-sm bg-white px-4 py-2 text-center text-sm font-semibold text-lacquer opacity-0 shadow-lg transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">Dùng mẫu này</span>
               </div>
               <h3 className="mt-3 font-semibold">{t.name}</h3>
             </Link>
@@ -193,7 +193,7 @@ export function FinalCta() {
           <Heart aria-hidden className="absolute -left-6 -top-6 size-32 text-white/5" />
           <h2 className="mx-auto max-w-2xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl">Ngày vui của bạn xứng đáng có một tấm thiệp đẹp.</h2>
           <p className="mx-auto mt-4 max-w-lg text-white/80">Tạo tài khoản và bắt đầu thiết kế ngay. Bạn chỉ trả tiền khi đã ưng ý.</p>
-          <Link href="/sign-up" className="mt-8 inline-block rounded-full bg-white px-8 py-4 font-semibold text-lacquer transition hover:scale-105">Tạo thiệp miễn phí</Link>
+          <Link href="/sign-up" className="mt-8 inline-block rounded-sm bg-white px-8 py-4 font-semibold text-lacquer transition hover:scale-105">Tạo thiệp miễn phí</Link>
         </div>
       </Reveal>
     </section>

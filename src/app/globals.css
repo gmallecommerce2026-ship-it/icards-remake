@@ -2,6 +2,23 @@
 
 @theme inline {
   --font-sans: var(--font-be), ui-sans-serif, system-ui, sans-serif;
+
+  /* Bo góc: nhỏ, vuông vắn. Mọi rounded-lg/xl/2xl/3xl đều theo thang này */
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
+  --radius-2xl: 4px;
+  --radius-3xl: 6px;
+
+  /* Bóng đổ: mảnh, tinh tế (minimalism) */
+  --shadow-sm: 0 1px 2px rgba(28, 26, 36, 0.05);
+  --shadow-md: 0 2px 6px -2px rgba(28, 26, 36, 0.08);
+  --shadow-lg: 0 6px 16px -6px rgba(28, 26, 36, 0.10);
+  --shadow-xl: 0 12px 28px -10px rgba(28, 26, 36, 0.14);
+  --shadow-2xl: 0 20px 40px -16px rgba(28, 26, 36, 0.18);
+
   --color-porcelain: #f7f8fb;
   --color-ink: #1c1a24;
   --color-muted: #5f5b6b;
@@ -14,7 +31,7 @@
 
 html { scroll-behavior: smooth; }
 body { background: var(--color-porcelain); color: var(--color-ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
-:focus-visible { outline: 2px solid var(--color-lacquer); outline-offset: 3px; border-radius: 6px; }
+:focus-visible { outline: 1px solid var(--color-lacquer); outline-offset: 3px; border-radius: 2px; }
 
 @keyframes float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
 @keyframes marquee { to { transform: translateX(-50%) } }
