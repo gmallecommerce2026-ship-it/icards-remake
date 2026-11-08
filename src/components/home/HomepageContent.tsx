@@ -2,19 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { settingsApi, templatesApi } from "@/lib/api";
 
-/* ------------------------------------------------------------------ */
-/*  Kiểu dữ liệu & hằng số (giữ tên trường như bản src gốc)             */
-/* ------------------------------------------------------------------ */
+/* Giá trị lấy trực tiếp từ HomepageContent.css của bản src (đã áp dụng đúng thứ tự cascade). */
+
 type Block = { _id: string; title: string; slug: string; isActive?: boolean; templates?: { _id: string; imgSrc?: string }[] };
 type Template = { _id: string; title: string; slug: string; imgSrc?: string };
 type Banner = { id?: string; name?: string; displayPage?: string; isEnabled?: boolean; imgSrc?: string; link?: string };
 
 const HERO_FALLBACK = "https://pub-f720e3221ef5464a93d19bbdae2cfb86.r2.dev/herohome.png";
-const PLACEHOLDER = (text: string, size: string) =>
-  `https://placehold.co/${size}/e6e6e6/999?text=${encodeURIComponent(text)}`;
+const placeholder = (text: string, size: string) => `https://placehold.co/${size}/e6e6e6/999?text=${encodeURIComponent(text)}`;
 
 const DEFAULT_INTRO = `
   <h3>Về iCards - Nền Tảng Thiết Kế Thiệp Online Hàng Đầu</h3>
@@ -30,103 +27,94 @@ const DEFAULT_INTRO = `
   <p>Hãy bắt đầu hành trình sáng tạo của bạn ngay hôm nay cùng iCards và biến những khoảnh khắc đặc biệt trở nên đáng nhớ hơn bao giờ hết!</p>
 `;
 
-/* ------------------------------------------------------------------ */
-/*  Tiện ích giao diện                                                   */
-/* ------------------------------------------------------------------ */
+/* ---- Class theo CSS gốc (.homepage-main, .section-header, ...) ---- */
+const MAIN =
+  "mx-auto flex max-w-[1520px] flex-col items-center gap-[140px] px-10 py-20 max-[1200px]:gap-[120px] max-[1200px]:px-[30px] max-[1200px]:py-[60px] max-[769px]:gap-20 max-[769px]:px-5 max-[769px]:py-10";
+const SECTION = "flex w-full flex-col items-center";
+const HEADER = "mb-10 flex flex-col items-center gap-2 text-center";
+const SUBTITLE = "text-sm font-medium uppercase leading-[1.5] tracking-[0.1em] text-[#555]";
+const TITLE =
+  "max-w-[700px] font-playfair text-[42px] font-bold leading-[1.2] text-[#1a1a1a] max-[993px]:text-[36px] max-[769px]:text-[28px]";
+
 function SectionHeader({ sub, title }: { sub: string; title: string }) {
   return (
-    <header className="mb-10 text-center md:mb-14">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lacquer">{sub}</p>
-      <h2 className="mt-3 font-display text-3xl font-medium md:text-4xl">{title}</h2>
-    </header>
+    <div className={HEADER}>
+      <p className={SUBTITLE}>{sub}</p>
+      <h2 className={TITLE}>{title}</h2>
+    </div>
   );
 }
 
-const sectionCls = "mx-auto max-w-[1440px] px-5 py-16 lg:px-8 md:py-20";
-
-/* ------------------------------------------------------------------ */
-/*  Hero (banner chính)                                                  */
-/* ------------------------------------------------------------------ */
-function Hero({ banner }: { banner?: Banner }) {
-  const img = (
-    <img
-      src={banner?.imgSrc || HERO_FALLBACK}
-      alt={banner?.name ?? "iCards"}
-      className="block aspect-[16/9] max-h-[600px] w-full object-cover"
-    />
+/* Mũi tên: SVG và rotate giống hệt bản gốc (cả hai nút đều được xoay 180°, xem ghi chú) */
+function ArrowButton({ direction, onClick }: { direction: "prev" | "next"; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`absolute top-1/2 z-10 flex h-[44px] w-[44px] -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-[#eee] bg-white shadow-[0_4px_10px_rgba(0,0,0,0.1)] backdrop-blur-[5px] transition-all duration-200 hover:bg-[#f8f9fa] hover:shadow-[0_6px_15px_rgba(0,0,0,0.15)] max-[993px]:hidden [&_svg]:rotate-180 ${
+        direction === "prev" ? "left-[-20px]" : "right-[-20px]"
+      }`}
+    >
+      <svg width="13" height="22" viewBox="0 0 13 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11 2L3 11L11 20" stroke="black" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    </button>
   );
-  return <section className="w-full overflow-hidden">{banner?.link ? <a href={banner.link}>{img}</a> : img}</section>;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Các dịp (carousel cuộn ngang)                                        */
-/* ------------------------------------------------------------------ */
 function Occasions({ items }: { items: Block[] }) {
   const ref = useRef<HTMLDivElement>(null);
-
   const scroll = (dir: 1 | -1) => {
     const el = ref.current;
     if (el) el.scrollBy({ left: dir * el.offsetWidth * 0.8, behavior: "smooth" });
   };
 
-  const arrow = "absolute top-1/2 z-10 hidden size-11 -translate-y-1/2 cursor-pointer place-items-center rounded-full bg-white shadow-md transition hover:scale-105 md:grid";
-
   return (
-    <div className="relative">
-      <button aria-label="Trước" onClick={() => scroll(-1)} className={`${arrow} -left-4`}>
-        <ChevronLeft className="size-5" />
-      </button>
+    <div className="relative mb-8 flex w-full items-center">
+      <ArrowButton direction="prev" onClick={() => scroll(-1)} />
       <div
         ref={ref}
-        className="flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-5 py-2.5 [-ms-overflow-style:none] [scrollbar-width:none] max-[769px]:px-[15px] [&::-webkit-scrollbar]:hidden"
       >
         {items.map((o) => (
-          <Link key={o._id} href="/templates" className="group w-40 shrink-0 snap-start text-center md:w-52">
-            <div className="aspect-square overflow-hidden rounded-2xl bg-paper ring-1 ring-line">
+          <Link
+            key={o._id}
+            href="/templates"
+            className="group flex w-[clamp(160px,20vw,220px)] shrink-0 cursor-pointer snap-start flex-col items-center gap-4 transition-transform duration-300 hover:-translate-y-[5px]"
+          >
+            <div className="mb-3 flex h-[324px] w-full items-center justify-center overflow-hidden bg-white shadow-[0_4px_15px_rgba(0,0,0,0.08)]">
               <img
-                src={o.templates?.[0]?.imgSrc || PLACEHOLDER(o.title, "324x324")}
+                src={o.templates?.[0]?.imgSrc || placeholder(o.title, "324x324")}
                 alt={o.title}
-                className="size-full object-cover transition duration-500 group-hover:scale-105"
+                className="h-full w-full object-cover transition-transform duration-500 ease-[ease] group-hover:scale-110"
               />
             </div>
-            <p className="mt-3 text-sm font-semibold md:text-base">{o.title}</p>
+            <p className="m-0 text-center text-base font-semibold uppercase leading-[1.4] tracking-[0.05em] text-[#333]">{o.title}</p>
           </Link>
         ))}
       </div>
-      <button aria-label="Sau" onClick={() => scroll(1)} className={`${arrow} -right-4`}>
-        <ChevronRight className="size-5" />
-      </button>
+      <ArrowButton direction="next" onClick={() => scroll(1)} />
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Lưới mẫu thiệp nổi bật                                               */
-/* ------------------------------------------------------------------ */
-function FeaturedGrid({ items }: { items: Template[] }) {
-  if (!items.length) return <p className="text-center text-muted">Chưa có mẫu thiệp nổi bật nào.</p>;
+function FeaturedCard({ t }: { t: Template }) {
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-      {items.map((t) => (
-        <Link key={t._id} href={`/templates/${t.slug}`} className="group block">
-          <div className="aspect-square overflow-hidden bg-paper ring-1 ring-line">
-            <img
-              src={t.imgSrc || PLACEHOLDER("Thiệp", "365x365")}
-              alt={t.title}
-              loading="lazy"
-              className="size-full object-cover transition duration-500 group-hover:scale-105"
-            />
-          </div>
-          <h3 className="mt-3 line-clamp-2 text-sm font-semibold md:text-base">{t.title}</h3>
-        </Link>
-      ))}
-    </div>
+    <Link href={`/templates/${t.slug}`} className="group flex cursor-pointer flex-col gap-4 transition-shadow duration-300 hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)]">
+      <div className="relative w-full overflow-hidden bg-white pt-[100%]">
+        <img
+          src={t.imgSrc || placeholder("Thiệp", "365x365")}
+          alt={t.title}
+          loading="lazy"
+          className="absolute left-0 top-0 h-full w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] group-hover:scale-[1.03]"
+        />
+      </div>
+      <div className="flex flex-col items-center gap-2">
+        <h5 className="m-0 text-center text-base font-semibold leading-[1.4] text-[#333]">{t.title}</h5>
+      </div>
+    </Link>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Giới thiệu (thu gọn / xem thêm)                                      */
-/* ------------------------------------------------------------------ */
 function Intro({ html }: { html?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -137,42 +125,43 @@ function Intro({ html }: { html?: string }) {
   }, [html]);
 
   return (
-    <section className={sectionCls}>
+    <section className="mt-10 flex w-full max-w-[1000px] flex-col items-center gap-6">
       <SectionHeader sub="VỀ CHÚNG TÔI" title="GIỚI THIỆU ICARDS" />
 
-      <div className={`relative mx-auto max-w-4xl overflow-hidden ${!open && long ? "max-h-[200px]" : ""}`}>
+      <div
+        className={`relative w-full overflow-hidden transition-[max-height] duration-500 ease-in-out ${open ? "max-h-[2000px]" : "max-h-[200px]"}`}
+      >
         <div
           ref={ref}
-          className="space-y-4 text-[15px] leading-relaxed text-muted md:text-base
-            [&_h3]:mt-0 [&_h3]:font-display [&_h3]:text-2xl [&_h3]:font-medium [&_h3]:text-ink
-            [&_h4]:mt-6 [&_h4]:font-display [&_h4]:text-xl [&_h4]:font-medium [&_h4]:text-ink
-            [&_strong]:font-semibold [&_strong]:text-ink
-            [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-6"
+          className="text-base leading-[1.8] text-[#444] text-justify max-[769px]:px-2.5 max-[769px]:text-left
+            [&_h3]:mb-3 [&_h3]:mt-5 [&_h3]:font-playfair [&_h3]:text-[1.17em] [&_h3]:font-bold [&_h3]:text-[#222]
+            [&_h4]:mb-3 [&_h4]:mt-5 [&_h4]:font-playfair [&_h4]:text-base [&_h4]:font-bold [&_h4]:text-[#222]
+            [&_p]:mb-4 [&_ul]:mb-4 [&_ul]:ml-5 [&_ul]:list-disc"
           dangerouslySetInnerHTML={{ __html: html || DEFAULT_INTRO }}
         />
         {!open && long && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-porcelain to-transparent" />
+          <div className="pointer-events-none absolute bottom-0 left-0 h-20 w-full bg-[linear-gradient(to_bottom,rgba(254,253,253,0),rgba(254,253,253,1))]" />
         )}
       </div>
 
       {long && (
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => setOpen((v) => !v)}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-lacquer transition hover:text-lacquer-dark"
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="mt-2.5 flex cursor-pointer items-center gap-2 rounded-[30px] border border-[#ddd] bg-transparent px-6 py-2.5 font-inter text-sm font-semibold text-[#555] transition-all duration-300 hover:border-[#333] hover:bg-[#f9f9f9] hover:text-[#222]"
+        >
+          {open ? "Thu gọn" : "Xem thêm"}
+          <svg
+            width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"
+            className={`transition-transform duration-300 ${open ? "rotate-180" : ""}`}
           >
-            {open ? "Thu gọn" : "Xem thêm"}
-            <ChevronDown className={`size-4 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
-          </button>
-        </div>
+            <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
       )}
     </section>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Trang chủ                                                            */
-/* ------------------------------------------------------------------ */
 export function HomepageContent() {
   const [loading, setLoading] = useState(true);
   const [occasions, setOccasions] = useState<Block[]>([]);
@@ -187,24 +176,23 @@ export function HomepageContent() {
       templatesApi.getTemplateBlocks(),
       templatesApi.getTemplates({ limit: 50 }),
       settingsApi.getPublicSettings(),
-    ]).then(([blocksRes, templatesRes, settingsRes]) => {
-      if (!alive) return;
+    ])
+      .then(([blocksRes, templatesRes, settingsRes]) => {
+        if (!alive) return;
+        const blocks: Block[] = blocksRes.status === "fulfilled" ? blocksRes.value.data?.data ?? [] : [];
+        const usedIds = new Set(blocks.flatMap((b) => b.templates?.map((t) => t._id) ?? []));
+        setOccasions(blocks.filter((b) => b.isActive));
 
-      const blocks: Block[] =
-        blocksRes.status === "fulfilled" ? blocksRes.value.data?.data ?? [] : [];
-      const usedIds = new Set(blocks.flatMap((b) => b.templates?.map((t) => t._id) ?? []));
-      setOccasions(blocks.filter((b) => b.isActive));
+        const all: Template[] = templatesRes.status === "fulfilled" ? templatesRes.value.data?.data ?? [] : [];
+        setFeatured(all.filter((t) => !usedIds.has(t._id)).slice(0, 8));
 
-      const all: Template[] =
-        templatesRes.status === "fulfilled" ? templatesRes.value.data?.data ?? [] : [];
-      setFeatured(all.filter((t) => !usedIds.has(t._id)).slice(0, 8));
-
-      if (settingsRes.status === "fulfilled") {
-        const s = settingsRes.value.data?.data ?? settingsRes.value.data ?? {};
-        setBanners((s.banners ?? []).filter((b: Banner) => b.displayPage === "home" && b.isEnabled));
-        setIntroHtml(s.introText || undefined);
-      }
-    }).finally(() => alive && setLoading(false));
+        if (settingsRes.status === "fulfilled") {
+          const s = settingsRes.value.data?.data ?? settingsRes.value.data ?? {};
+          setBanners((s.banners ?? []).filter((b: Banner) => b.displayPage === "home" && b.isEnabled));
+          setIntroHtml(s.introText || undefined);
+        }
+      })
+      .finally(() => alive && setLoading(false));
 
     return () => {
       alive = false;
@@ -213,11 +201,11 @@ export function HomepageContent() {
 
   if (loading) {
     return (
-      <div className={`${sectionCls} animate-pulse`}>
-        <div className="aspect-[16/9] max-h-[600px] w-full bg-paper-deep" />
-        <div className="mt-16 grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+      <div className="animate-pulse bg-[#FEFDFD] px-10 py-20">
+        <div className="aspect-[16/9] max-h-[600px] w-full bg-[#eee]" />
+        <div className="mx-auto mt-16 grid max-w-[1520px] grid-cols-2 gap-6 md:grid-cols-4">
           {Array.from({ length: 8 }, (_, i) => (
-            <div key={i} className="aspect-square bg-paper-deep" />
+            <div key={i} className="aspect-square bg-[#eee]" />
           ))}
         </div>
       </div>
@@ -228,37 +216,45 @@ export function HomepageContent() {
   const secondary = banners.filter((b) => b !== hero).slice(0, 2);
 
   return (
-    <>
-      <Hero banner={hero} />
+    <div className="bg-[#FEFDFD] font-inter text-[#333]">
+      <section className="w-full overflow-hidden">
+        {hero?.link ? (
+          <a href={hero.link}>
+            <img src={hero.imgSrc || HERO_FALLBACK} alt={hero.name ?? "iCards"} className="block aspect-[16/9] max-h-[600px] w-full object-cover" />
+          </a>
+        ) : (
+          <img src={hero?.imgSrc || HERO_FALLBACK} alt={hero?.name ?? "iCards"} className="block aspect-[16/9] max-h-[600px] w-full object-cover" />
+        )}
+      </section>
 
-      <main>
-        <section className={sectionCls}>
+      <main className={MAIN}>
+        <section className={SECTION}>
           <SectionHeader sub="NHỮNG CƠ HỘI MỌI NGƯỜI KẾT NỐI THÂN THIẾT" title="NHỮNG DỊP LAN TỎA NIỀM VUI" />
-          {occasions.length > 0 ? (
-            <Occasions items={occasions} />
-          ) : (
-            <p className="text-center text-muted">Đang cập nhật các khối...</p>
-          )}
+          {occasions.length > 0 ? <Occasions items={occasions} /> : <p className="text-center text-[#666]">Đang cập nhật các khối...</p>}
         </section>
 
-        <section className={sectionCls}>
+        <section className={SECTION}>
           <SectionHeader sub="KHÁM PHÁ NHỮNG MẪU THIỆP ĐỘC ĐÁO" title="MẪU THIỆP NỔI BẬT" />
-          <FeaturedGrid items={featured} />
-          <div className="mt-12 text-center">
-            <Link
-              href="/templates"
-              className="inline-block border border-ink px-10 py-3.5 text-sm font-semibold tracking-wide transition hover:bg-ink hover:text-white"
-            >
-              XEM TẤT CẢ
-            </Link>
-          </div>
+          {featured.length > 0 ? (
+            <div className="grid w-full grid-cols-4 gap-6 max-[1200px]:grid-cols-3 max-[993px]:grid-cols-2 max-[769px]:gap-4 max-[577px]:grid-cols-1">
+              {featured.map((t) => <FeaturedCard key={t._id} t={t} />)}
+            </div>
+          ) : (
+            <p className="col-span-full text-center text-[#666]">Chưa có mẫu thiệp nổi bật nào.</p>
+          )}
+          <Link
+            href="/templates"
+            className="mt-0 flex h-12 w-fit cursor-pointer items-center justify-center border border-[#222] bg-transparent px-10 text-sm font-semibold uppercase leading-[1.3] tracking-[0.08em] text-[#222] transition-colors duration-300 hover:bg-[#222] hover:text-white"
+          >
+            XEM TẤT CẢ
+          </Link>
         </section>
 
         {secondary.length > 0 && (
-          <section className={`${sectionCls} grid gap-6 md:grid-cols-2`}>
+          <section className="flex w-full flex-col gap-10">
             {secondary.map((b, i) => (
-              <a key={b.id ?? i} href={b.link ?? "#"} className="block overflow-hidden rounded-2xl ring-1 ring-line">
-                <img src={b.imgSrc} alt={b.name ?? ""} className="aspect-[16/9] w-full object-cover transition duration-500 hover:scale-105" />
+              <a key={b.id ?? i} href={b.link ?? "#"} className="block w-full">
+                <img src={b.imgSrc} alt={b.name ?? ""} className="h-auto w-full object-cover" />
               </a>
             ))}
           </section>
@@ -266,7 +262,7 @@ export function HomepageContent() {
 
         <Intro html={introHtml} />
       </main>
-    </>
+    </div>
   );
 }
 

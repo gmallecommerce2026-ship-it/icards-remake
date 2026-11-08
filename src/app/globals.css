@@ -4,6 +4,8 @@
   /* Mọi màu, font, bo góc, bóng đều đọc từ biến --c-* / --f-* / --r-* / --s-* của theme đang bật */
   --font-sans: var(--f-sans);
   --font-display: var(--f-display);
+  --font-inter: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-playfair: "Playfair Display", Georgia, serif;
 
   --color-porcelain: var(--c-bg);
   --color-ink: var(--c-ink);

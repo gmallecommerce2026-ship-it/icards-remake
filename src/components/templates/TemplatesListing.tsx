@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Option } from "@/lib/catalog";
-import { formatPrice, type InvitationTemplate } from "@/lib/templates";
+import { type InvitationTemplate } from "@/lib/templates";
 import { InvitationPreview } from "./InvitationPreview";
+
+/* Giá trị lấy từ InvitationContent.css của bản src. */
 
 type Sort = "popular" | "newest" | "price-asc";
 const SORTS: { value: Sort; label: string }[] = [
@@ -22,11 +24,11 @@ export function TemplatesListing({ templates, categories }: Props) {
   const [category, setCategory] = useState<string>("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("popular");
-  const chipsRef = useRef<HTMLDivElement>(null);
+  const filtersRef = useRef<HTMLDivElement>(null);
 
-  // Cuộn ngang dải danh mục bằng con lăn chuột (giống bản src)
+  // Cuộn ngang dải lọc bằng con lăn chuột (như bản src)
   useEffect(() => {
-    const el = chipsRef.current;
+    const el = filtersRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       if (el.scrollWidth <= el.clientWidth) return;
@@ -55,109 +57,87 @@ export function TemplatesListing({ templates, categories }: Props) {
     });
   }, [templates, category, query, sort]);
 
-  const counts = useMemo(() => {
-    const map: Record<string, number> = { all: templates.length };
-    for (const t of templates) map[t.category] = (map[t.category] ?? 0) + 1;
-    return map;
-  }, [templates]);
-
   const tabs: Option[] = [{ id: "all", label: "Tất cả" }, ...categories];
   const current = categories.find((c) => c.id === category);
-  const reset = () => { setCategory("all"); setQuery(""); setSort("popular"); };
 
   return (
-    <>
-      {/* Banner tiêu đề: đổi theo danh mục đang chọn */}
-      <section className="bg-gradient-to-br from-paper via-white to-porcelain px-5 pb-16 pt-40 text-center lg:px-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lacquer">Thư viện mẫu thiệp</p>
-        <h1 className="mx-auto mt-3 max-w-3xl font-display text-4xl font-medium md:text-5xl">
+    <div className="bg-[#FEFDFD] font-inter text-[#333]">
+      {/* Tiêu đề trang (UniversalBanner của bản src chưa có mã nguồn, dùng tiêu đề thay thế) */}
+      <section className="flex flex-col items-center gap-2 px-5 pb-10 pt-40 text-center">
+        <h1 className="font-playfair text-[42px] font-bold leading-[1.2] text-[#1a1a1a] max-[769px]:text-[28px]">
           {current?.label ?? "Khám Phá Các Mẫu Thiệp"}
         </h1>
-        <p className="mx-auto mt-4 max-w-xl text-muted">
-          Thiết kế ấn tượng, thao tác dễ dàng chỉ trong vài phút.
-        </p>
+        <p className="text-base text-[#555]">Thiết kế ấn tượng, thao tác dễ dàng chỉ trong vài phút</p>
       </section>
 
-      <main className="mx-auto max-w-[1440px] px-5 py-10 lg:px-8">
-        {/* Bộ lọc danh mục */}
+      <div className="mx-auto w-full max-w-[1520px] px-5 py-[20px]">
+        {/* Bộ lọc danh mục: nền xanh, chữ trắng như bản src */}
         <div
-          ref={chipsRef}
-          className="flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          ref={filtersRef}
           role="tablist"
           aria-label="Danh mục"
+          className="mt-[25px] flex w-full justify-start gap-5 overflow-x-auto whitespace-nowrap pb-2.5 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb:hover]:bg-[#27548A] [&::-webkit-scrollbar-thumb]:rounded-[10px] [&::-webkit-scrollbar-thumb]:bg-[#CDD7E5] [&::-webkit-scrollbar-track]:rounded-[10px] [&::-webkit-scrollbar-track]:bg-[#f1f1f1]"
         >
-          {tabs.map((t) => {
-            const active = category === t.id;
-            return (
-              <button
-                key={t.id}
-                role="tab"
-                aria-selected={active}
-                onClick={() => setCategory(t.id)}
-                className={`shrink-0 rounded-full border px-5 py-2 text-sm font-medium transition ${
-                  active ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink"
-                }`}
-              >
-                {t.label} <span className="opacity-60">{counts[t.id] ?? 0}</span>
-              </button>
-            );
-          })}
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={category === t.id}
+              onClick={() => setCategory(t.id)}
+              className="h-10 shrink-0 cursor-pointer rounded-[2px] border-[0.5px] border-black bg-[#27548A] px-6 text-base font-medium uppercase text-white transition-all duration-300 hover:border-[#27548A] hover:bg-[#27548A]"
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        {/* Tìm kiếm & sắp xếp */}
-        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        {/* Tìm kiếm & sắp xếp (không có trong bản src, giữ lại từ bản cũ) */}
+        <div className="mt-6 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Tìm theo tên hoặc phong cách"
             aria-label="Tìm mẫu thiệp"
-            className="w-full rounded-full border border-line bg-white px-5 py-2.5 text-sm outline-none placeholder:text-muted focus:border-lacquer sm:max-w-sm"
+            className="w-full rounded-[2px] border border-[#ddd] bg-white px-4 py-2.5 outline-none focus:border-[#27548A] sm:max-w-sm"
           />
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-muted" aria-live="polite">{list.length} mẫu</span>
+          <div className="flex items-center gap-3">
+            <span className="text-[#666]" aria-live="polite">{list.length} mẫu</span>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as Sort)}
               aria-label="Sắp xếp"
-              className="rounded-full border border-line bg-white px-4 py-2 outline-none"
+              className="rounded-[2px] border border-[#ddd] bg-white px-3 py-2 outline-none"
             >
               {SORTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
         </div>
 
-        {/* Lưới mẫu thiệp */}
+        {/* Lưới thẻ: auto-fill minmax(250px, 1fr), gap 40px 30px */}
         {list.length === 0 ? (
-          <p className="mt-16 text-center text-muted">
-            Chưa có mẫu thiệp nào trong danh mục này.{" "}
-            <button onClick={reset} className="font-semibold text-ink underline underline-offset-4">Xem tất cả</button>
-          </p>
+          <p className="col-span-full px-5 py-20 text-center text-lg text-[#666]">Chưa có mẫu thiệp nào trong danh mục này.</p>
         ) : (
-          <div className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">
+          <div className="grid gap-x-[30px] gap-y-10 py-[45px] [grid-template-columns:repeat(auto-fill,minmax(250px,1fr))]">
             {list.map((t) => (
-              <Link key={t.slug} href={`/templates/${t.slug}`} className="group block">
-                <div className="overflow-hidden rounded-2xl bg-paper ring-1 ring-line">
-                  {t.previewImage ? (
-                    <img
-                      src={t.previewImage}
-                      alt={t.name}
-                      loading="lazy"
-                      className="aspect-[3/4] w-full object-cover transition duration-500 group-hover:scale-105"
-                    />
-                  ) : (
-                    <InvitationPreview template={t} />
-                  )}
+              <Link key={t.slug} href={`/templates/${t.slug}`} className="group flex cursor-pointer flex-col items-center gap-4 [color:inherit] no-underline">
+                <div className="relative w-full overflow-hidden rounded-[4px] bg-white pt-[100%] transition-all duration-300 group-hover:scale-[1.03] group-hover:shadow-[0_8px_25px_rgba(0,0,0,0.1)]">
+                  <div className="absolute inset-0">
+                    {t.previewImage ? (
+                      <img src={t.previewImage} alt={t.name} loading="lazy" className="h-full w-full object-cover" />
+                    ) : (
+                      <InvitationPreview template={t} />
+                    )}
+                  </div>
                 </div>
-                <h3 className="mt-3 line-clamp-2 text-sm font-semibold md:text-base">{t.name}</h3>
-                <p className="mt-0.5 text-xs text-muted">
-                  {formatPrice(t.price)} · {categories.find((c) => c.id === t.category)?.label}
-                </p>
+                <h3 className="box-border h-[45px] w-full overflow-hidden px-[5px] text-center text-base font-semibold uppercase leading-[1.4] tracking-[0.02em] text-[#27548A] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] text-ellipsis">
+                  {t.name}
+                </h3>
               </Link>
             ))}
           </div>
         )}
-      </main>
-    </>
+      </div>
+    </div>
   );
 }
