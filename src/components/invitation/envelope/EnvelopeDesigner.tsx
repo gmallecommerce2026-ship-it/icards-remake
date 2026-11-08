@@ -13,6 +13,7 @@ import { EnvelopeScene } from './EnvelopeScene';
 import { dbg } from './flapDebug';
 import { Stamp, STAMPS } from './Stamp';
 import { ENVELOPES, LINERS, TONES, type Tone } from './envelope.data';
+import { useEnvelopeCatalog } from '@/lib/envelope-catalog';
 import { FoldingCard } from '../editor/FoldingCard';
 import { useCardMotion } from '../editor/useCardMotion';
 import { CardPanel, type CardTab } from '../editor/CardPanel';
@@ -70,6 +71,7 @@ const DOTS: PageId[] = ['cover', 'inside', 'back'];
 const draftKey = (slug?: string | null) => `icards:draft:${slug ?? 'blank'}`;
 
 export function EnvelopeDesigner({ recipientName: recipientProp, editable = false, templateSlug, invitationId }: Props) {
+  const catalog = useEnvelopeCatalog();
   const [recipientName, setRecipientName] = useState(recipientProp);
   // Thiệp đã lưu trên máy chủ (mở lại bằng ?invitation=). Khi có, nội dung lấy từ server thay vì mẫu.
   const [invId, setInvId] = useState<string | null>(invitationId ?? null);
@@ -97,9 +99,9 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
   useEffect(() => {
     const e = template?.envelope;
     if (!e) return;
-    if (e.envId && ENVELOPES.some((x) => x.id === e.envId)) setEnvId(e.envId);
-    if (e.linerId && LINERS.some((x) => x.id === e.linerId)) setLinerId(e.linerId);
-  }, [template]);
+    if (e.envId && catalog.envelopes.some((x) => x.id === e.envId)) setEnvId(e.envId);
+    if (e.linerId && catalog.liners.some((x) => x.id === e.linerId)) setLinerId(e.linerId);
+  }, [template, catalog]);
   // Mở lại thiệp đã lưu: nạp thiết kế (trang, nền) và thông tin sự kiện từ server
   useEffect(() => {
     if (!invitationId) return;
@@ -209,16 +211,16 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
     return () => window.removeEventListener('keydown', onKey);
   }, [canEdit]);
 
-  const env = ENVELOPES.find((e) => e.id === envId)!;
-  const liner = LINERS.find((l) => l.id === linerId)!;
+  const env = catalog.envelopes.find((e) => e.id === envId) ?? catalog.envelopes[0];
+  const liner = catalog.liners.find((l) => l.id === linerId) ?? catalog.liners[0];
   const inCard = editable && isCardTab(tab);                       // đang chỉnh thiệp hay phong bì -> quyết định cả thanh tab
   const railTabs: TabDef<Tab>[] = inCard ? CARD_TABS : ENV_TABS;
   const cur = (inCard ? CARD_TABS : ENV_TABS).find((t) => t.id === tab) ?? ENV_TABS[0];
 
   const q = query.trim().toLowerCase();
   const ok = (name: string, t: Tone) => (!q || name.toLowerCase().includes(q)) && (!tone || t === tone);
-  const envelopes = ENVELOPES.filter((e) => ok(e.name, e.tone));
-  const liners = LINERS.filter((l) => ok(l.name, l.tone));
+  const envelopes = catalog.envelopes.filter((e) => ok(e.name, e.tone));
+  const liners = catalog.liners.filter((l) => ok(l.name, l.tone));
   const stamps = STAMPS.filter((x) => ok(x.name, x.tone));
   const shown = tab === 'envelope' ? envelopes.length : tab === 'liner' ? liners.length : tab === 'stamp' ? stamps.length : 1;
 

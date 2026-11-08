@@ -5,8 +5,8 @@ type Props = {
   template: InvitationTemplate;
   /** card: chỉ trang bìa, tỉ lệ 3:4. full: toàn bộ thiệp dạng trang dài (dùng trong khung điện thoại) */
   variant?: "card" | "full";
-  /** portrait: 3:4 (mặc định, trang mẫu thiệp). square: vuông (khối mẫu nổi bật trên trang chủ). */
-  ratio?: "portrait" | "square";
+  /** portrait: 3:4 (mặc định, trang mẫu thiệp). tall: 5:7 (thiệp trong studio). square: vuông. */
+  ratio?: "portrait" | "tall" | "square";
   className?: string;
 };
 
@@ -95,7 +95,7 @@ function Block({ title, children, template }: { title: string; children: ReactNo
 
 export function InvitationPreview({ template, variant = "card", ratio = "portrait", className = "" }: Props) {
   const { palette: p, sample } = template;
-  const ratioCls = ratio === "square" ? "aspect-square" : "aspect-[3/4]";
+  const ratioCls = ratio === "square" ? "aspect-square" : ratio === "tall" ? "aspect-[5/7]" : "aspect-[3/4]";
   const root: CSSProperties = { background: p.bg, color: p.ink, containerType: "inline-size" };
 
   if (variant === "card") {

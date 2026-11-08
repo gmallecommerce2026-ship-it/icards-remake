@@ -8,7 +8,7 @@ import { settingsApi, templatesApi } from "@/lib/api";
 
 import { listOf, templatesOf } from "@/lib/api/list";
 import { InvitationPreview } from "@/components/templates/InvitationPreview";
-import { ENVELOPES, LINERS } from "@/components/invitation/envelope/envelope.data";
+import { useEnvelopeCatalog, type EnvelopeCatalog } from "@/lib/envelope-catalog";
 import type { InvitationTemplate } from "@/lib/templates";
 import { titleStyleToCss, type TemplateTitleStyle } from "@/lib/title-style";
 
@@ -114,18 +114,23 @@ function Occasions({ items }: { items: Block[] }) {
   );
 }
 
-/* Thẻ mẫu thiệp nổi bật: thiệp vuông (cùng bản xem trước với trang /templates) đặt trước một phong bì.
- * Phong bì và lớp lót lấy từ t.envelope (cấu hình theo mẫu ở backend), mặc định là phong bì nâu đỏ + lớp lót đen.
- * Đây là hình tĩnh minh họa; cảnh phong bì đầy đủ chỉ hiện trong studio. Tên nằm DƯỚI thẻ. */
+/* Thẻ mẫu thiệp nổi bật: thiệp 5:7 đứng (cùng tỉ lệ thiệp trong studio) đặt trước một phong bì.
+ * Phong bì vừa đủ để thiệp xoay ngang rồi đút vào: rộng = cạnh dài thiệp + lề, cao = cạnh ngắn thiệp + lề.
+ * Đơn vị là % của khung vuông: thiệp rộng 40%, cao 56%; lề 3% mỗi bên => phong bì 62% x 46%. */
+const CARD_W = 40;
+const CARD_H = (CARD_W * 7) / 5;            // 56
+const MARGIN = 3;
+const ENV_W = CARD_H + 2 * MARGIN;          // 62
+const ENV_H = CARD_W + 2 * MARGIN;          // 46
 const FEATURED_ENV_DEFAULT = { envId: "burgundy", linerId: "ink" };
 const FEATURED_NAME_COLOR = "#0E1B2C";
-function FeaturedCard({ t }: { t: Template }) {
+const FLAP = "polygon(0% 0%, 100% 0%, 50% 100%)";
+
+function FeaturedCard({ t, catalog }: { t: Template; catalog: EnvelopeCatalog }) {
   const env =
-    ENVELOPES.find((e) => e.id === (t.envelope?.envId ?? FEATURED_ENV_DEFAULT.envId)) ??
-    ENVELOPES.find((e) => e.id === FEATURED_ENV_DEFAULT.envId)!;
+    catalog.envelopes.find((e) => e.id === (t.envelope?.envId ?? FEATURED_ENV_DEFAULT.envId)) ?? catalog.envelopes[0];
   const liner =
-    LINERS.find((l) => l.id === (t.envelope?.linerId ?? FEATURED_ENV_DEFAULT.linerId)) ??
-    LINERS.find((l) => l.id === FEATURED_ENV_DEFAULT.linerId)!;
+    catalog.liners.find((l) => l.id === (t.envelope?.linerId ?? FEATURED_ENV_DEFAULT.linerId)) ?? catalog.liners[0];
   const nameStyle = titleStyleToCss({ size: 16, ...t.titleStyle, color: FEATURED_NAME_COLOR });
 
   return (
@@ -134,26 +139,23 @@ function FeaturedCard({ t }: { t: Template }) {
       className="group block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#27548A]"
     >
       <div className="relative aspect-square w-full">
-        {/* Thân phong bì (nằm sau) */}
+        {/* Phong bì (nằm sau): thân, nắp tam giác và lớp lót bên trong nắp */}
         <div
           aria-hidden
-          className="absolute bottom-0 right-0 h-[60%] w-[88%] rounded-sm shadow-[0_10px_24px_-12px_rgba(0,0,0,0.45)] transition-transform duration-500 group-hover:translate-y-1"
-          style={{ background: env.color }}
-        />
-        {/* Nắp phong bì (tam giác chĩa lên) và lớp lót bên trong */}
+          className="absolute transition-transform duration-500 group-hover:translate-y-1"
+          style={{ left: `${100 - ENV_W - 2}%`, top: `${100 - ENV_H - 4}%`, width: `${ENV_W}%`, height: `${ENV_H}%` }}
+        >
+          <div className="absolute inset-0 rounded-[2px] shadow-[0_10px_22px_-10px_rgba(0,0,0,0.5)]" style={{ background: env.color }} />
+          <div className="absolute inset-x-0 top-0 h-[58%]" style={{ background: env.color, filter: "brightness(1.12)", clipPath: FLAP }} />
+          <div className="absolute left-[6%] right-[6%] top-0 h-[42%]" style={{ background: liner.background, clipPath: FLAP }} />
+        </div>
+
+        {/* Thiệp (nằm trước), tỉ lệ 5:7 như trong studio */}
         <div
-          aria-hidden
-          className="absolute right-0 top-[14%] h-[30%] w-[88%] brightness-90"
-          style={{ background: env.color, clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }}
-        />
-        <div
-          aria-hidden
-          className="absolute right-[6%] top-[24%] h-[20%] w-[76%]"
-          style={{ background: liner.background, clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }}
-        />
-        {/* Thiệp vuông (nằm trước) */}
-        <div className="absolute left-[4%] top-[8%] z-10 w-[64%] overflow-hidden rounded-sm bg-white shadow-[0_8px_20px_-8px_rgba(14,27,44,0.35)] ring-1 ring-[#0E1B2C]/10 transition-transform duration-500 group-hover:-translate-y-1">
-          <InvitationPreview template={t} ratio="square" />
+          className="absolute z-10 overflow-hidden rounded-[3px] bg-white shadow-[0_8px_20px_-8px_rgba(14,27,44,0.4)] ring-1 ring-[#0E1B2C]/10 transition-transform duration-500 group-hover:-translate-y-1"
+          style={{ left: "4%", top: "4%", width: `${CARD_W}%` }}
+        >
+          <InvitationPreview template={t} ratio="tall" />
         </div>
       </div>
       <h3 style={nameStyle} className="mt-3 truncate group-hover:underline group-hover:underline-offset-4">
@@ -211,6 +213,7 @@ function Intro({ html }: { html?: string }) {
 }
 
 export function HomepageContent() {
+  const catalog = useEnvelopeCatalog();
   const [loading, setLoading] = useState(true);
   const [occasions, setOccasions] = useState<Block[]>([]);
   const [featured, setFeatured] = useState<Template[]>([]);
@@ -286,7 +289,7 @@ export function HomepageContent() {
           <SectionHeader sub="KHÁM PHÁ NHỮNG MẪU THIỆP ĐỘC ĐÁO" title="MẪU THIỆP NỔI BẬT" />
           {featured.length > 0 ? (
             <div className="grid w-full grid-cols-4 gap-x-6 gap-y-10 max-[1200px]:grid-cols-3 max-[993px]:grid-cols-2 max-[769px]:gap-x-4 max-[769px]:gap-y-8 max-[577px]:grid-cols-1">
-              {featured.map((t) => <FeaturedCard key={t._id} t={t} />)}
+              {featured.map((t) => <FeaturedCard key={t._id} t={t} catalog={catalog} />)}
             </div>
           ) : (
             <p className="col-span-full text-center text-[#666]">Chưa có mẫu thiệp nổi bật nào.</p>
