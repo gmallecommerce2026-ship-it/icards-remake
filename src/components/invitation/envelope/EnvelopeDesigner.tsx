@@ -93,6 +93,13 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
       .finally(() => { if (alive) setTemplateReady(true); });
     return () => { alive = false; };
   }, [templateSlug]);
+  // Phong bì mặc định của mẫu (cấu hình ở backend): chọn sẵn khi mẫu vừa nạp xong
+  useEffect(() => {
+    const e = template?.envelope;
+    if (!e) return;
+    if (e.envId && ENVELOPES.some((x) => x.id === e.envId)) setEnvId(e.envId);
+    if (e.linerId && LINERS.some((x) => x.id === e.linerId)) setLinerId(e.linerId);
+  }, [template]);
   // Mở lại thiệp đã lưu: nạp thiết kế (trang, nền) và thông tin sự kiện từ server
   useEffect(() => {
     if (!invitationId) return;

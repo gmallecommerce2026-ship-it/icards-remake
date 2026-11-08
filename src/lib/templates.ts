@@ -18,6 +18,8 @@ export type InvitationTemplate = {
   features: string[];
   /** Nếu có ảnh thật (vd: /templates/so-mai.jpg) thì card sẽ dùng ảnh thay cho bản xem trước dựng bằng CSS */
   previewImage?: string;
+  /** Phong bì mặc định khi mở studio với mẫu này (id trong envelope.data.ts). Không có thì dùng mặc định chung. */
+  envelope?: { envId?: string; linerId?: string };
   motif: Motif;
   palette: { bg: string; ink: string; accent: string; soft: string };
   sample: {

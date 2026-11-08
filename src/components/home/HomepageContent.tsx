@@ -8,6 +8,7 @@ import { settingsApi, templatesApi } from "@/lib/api";
 
 import { listOf, templatesOf } from "@/lib/api/list";
 import { InvitationPreview } from "@/components/templates/InvitationPreview";
+import { ENVELOPES, LINERS } from "@/components/invitation/envelope/envelope.data";
 import type { InvitationTemplate } from "@/lib/templates";
 import { titleStyleToCss, type TemplateTitleStyle } from "@/lib/title-style";
 
@@ -86,11 +87,8 @@ function Occasions({ items }: { items: Block[] }) {
           <Link
             key={o._id}
             href="/templates"
-            className="group flex w-[clamp(160px,20vw,220px)] shrink-0 cursor-pointer snap-start flex-col gap-3 transition-transform duration-300 hover:-translate-y-1"
+            className="group block w-[clamp(160px,20vw,220px)] shrink-0 cursor-pointer snap-start transition-transform duration-300 hover:-translate-y-1"
           >
-            <p className="m-0 line-clamp-2 min-h-[2.8em] text-center text-sm font-semibold uppercase leading-[1.4] tracking-[0.08em] text-[#0E1B2C] transition-opacity duration-300 group-hover:opacity-70">
-              {o.title}
-            </p>
             <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-[#f3f1ee] shadow-[0_6px_18px_-8px_rgba(14,27,44,0.28)] ring-1 ring-[#0E1B2C]/10 transition-shadow duration-300 group-hover:shadow-[0_12px_28px_-10px_rgba(14,27,44,0.35)]">
               <img
                 src={o.templates?.[0]?.imgSrc || placeholder(o.title, "330x440")}
@@ -98,6 +96,15 @@ function Occasions({ items }: { items: Block[] }) {
                 loading="lazy"
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
               />
+              {/* Tên danh mục nằm phía trên, trong thẻ, trên nền gradient tối để chữ luôn đọc được */}
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-black/65 via-black/30 to-transparent px-4 pb-10 pt-4">
+                <p
+                  style={{ fontFamily: "var(--font-tpl-display), Georgia, serif" }}
+                  className="m-0 line-clamp-2 text-center text-[22px] font-semibold leading-[1.2] tracking-[0.01em] text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.45)]"
+                >
+                  {o.title}
+                </p>
+              </div>
             </div>
           </Link>
         ))}
@@ -107,18 +114,47 @@ function Occasions({ items }: { items: Block[] }) {
   );
 }
 
-/* Thẻ mẫu thiệp: dùng đúng hình hiển thị của trang /templates (InvitationPreview), khung và shadow giống TemplateCard.
- * Tên nằm DƯỚI thẻ. Font/cỡ/độ đậm lấy từ t.titleStyle (dashboard); màu cố định để đọc được trên nền trắng. */
+/* Thẻ mẫu thiệp nổi bật: thiệp vuông (cùng bản xem trước với trang /templates) đặt trước một phong bì.
+ * Phong bì và lớp lót lấy từ t.envelope (cấu hình theo mẫu ở backend), mặc định là phong bì nâu đỏ + lớp lót đen.
+ * Đây là hình tĩnh minh họa; cảnh phong bì đầy đủ chỉ hiện trong studio. Tên nằm DƯỚI thẻ. */
+const FEATURED_ENV_DEFAULT = { envId: "burgundy", linerId: "ink" };
 const FEATURED_NAME_COLOR = "#0E1B2C";
 function FeaturedCard({ t }: { t: Template }) {
+  const env =
+    ENVELOPES.find((e) => e.id === (t.envelope?.envId ?? FEATURED_ENV_DEFAULT.envId)) ??
+    ENVELOPES.find((e) => e.id === FEATURED_ENV_DEFAULT.envId)!;
+  const liner =
+    LINERS.find((l) => l.id === (t.envelope?.linerId ?? FEATURED_ENV_DEFAULT.linerId)) ??
+    LINERS.find((l) => l.id === FEATURED_ENV_DEFAULT.linerId)!;
   const nameStyle = titleStyleToCss({ size: 16, ...t.titleStyle, color: FEATURED_NAME_COLOR });
+
   return (
     <Link
       href={`/templates/${t.slug}`}
       className="group block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#27548A]"
     >
-      <div className="overflow-hidden rounded-lg shadow-[0_6px_18px_-8px_rgba(14,27,44,0.28)] ring-1 ring-[#0E1B2C]/10 transition-shadow duration-300 group-hover:shadow-[0_12px_28px_-10px_rgba(14,27,44,0.35)]">
-        <InvitationPreview template={t} />
+      <div className="relative aspect-square w-full">
+        {/* Thân phong bì (nằm sau) */}
+        <div
+          aria-hidden
+          className="absolute bottom-0 right-0 h-[60%] w-[88%] rounded-sm shadow-[0_10px_24px_-12px_rgba(0,0,0,0.45)] transition-transform duration-500 group-hover:translate-y-1"
+          style={{ background: env.color }}
+        />
+        {/* Nắp phong bì (tam giác chĩa lên) và lớp lót bên trong */}
+        <div
+          aria-hidden
+          className="absolute right-0 top-[14%] h-[30%] w-[88%] brightness-90"
+          style={{ background: env.color, clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }}
+        />
+        <div
+          aria-hidden
+          className="absolute right-[6%] top-[24%] h-[20%] w-[76%]"
+          style={{ background: liner.background, clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }}
+        />
+        {/* Thiệp vuông (nằm trước) */}
+        <div className="absolute left-[4%] top-[8%] z-10 w-[64%] overflow-hidden rounded-sm bg-white shadow-[0_8px_20px_-8px_rgba(14,27,44,0.35)] ring-1 ring-[#0E1B2C]/10 transition-transform duration-500 group-hover:-translate-y-1">
+          <InvitationPreview template={t} ratio="square" />
+        </div>
       </div>
       <h3 style={nameStyle} className="mt-3 truncate group-hover:underline group-hover:underline-offset-4">
         {t.title}

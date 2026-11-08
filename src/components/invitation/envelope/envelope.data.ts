@@ -26,6 +26,7 @@ export const ENVELOPES: EnvelopeOption[] = [
   { id: 'cobalt', name: 'Cobalt', color: '#4a6de0', tone: 'blue' },
   { id: 'orchid', name: 'Orchid', color: '#d9aed3', tone: 'purple' },
   { id: 'sky', name: 'Sky', color: '#8ad1e8', tone: 'blue' },
+  { id: 'burgundy', name: 'Burgundy', color: '#6e2b22', tone: 'red' },
 ];
 
 export type LinerOption = { id: string; name: string; background: string; tone: Tone };
@@ -37,6 +38,7 @@ export const LINERS: LinerOption[] = [
   { id: 'midnight', name: 'Midnight', tone: 'dark', background: 'radial-gradient(circle at 30% 40%, #fff 1px, transparent 1.6px) 0 0/40px 40px, radial-gradient(circle at 75% 75%, #ffe 1.2px, transparent 2px) 0 0/55px 55px, linear-gradient(180deg, #1b1f4b, #0b0d24)' },
   { id: 'blush', name: 'Blush', tone: 'pink', background: 'linear-gradient(135deg, #ffe3ea, #f7b7c8)' },
   { id: 'cream', name: 'Cream', tone: 'neutral', background: '#fbf6ea' },
+  { id: 'ink', name: 'Ink', tone: 'dark', background: '#1c1b1b' },
   { id: 'plaid', name: 'Plaid', tone: 'red', background: 'repeating-linear-gradient(0deg, rgb(200 40 40 / .45) 0 10px, transparent 10px 30px), repeating-linear-gradient(90deg, rgb(200 40 40 / .45) 0 10px, transparent 10px 30px), #f7efe1' },
 ];
 
