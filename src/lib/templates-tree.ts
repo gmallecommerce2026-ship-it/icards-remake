@@ -40,3 +40,10 @@ export function collectSlugs(node: TreeNode, out = new Set<string>()): Set<strin
   node.children.forEach((c) => collectSlugs(c, out));
   return out;
 }
+
+/** Mẫu thiệp của nút và mọi nút con, theo thứ tự cây (nhóm con đầu tiên trước). */
+export function flattenTemplates(node: TreeNode, out: TreeTemplate[] = []): TreeTemplate[] {
+  node.templates.forEach((t) => out.push(t));
+  node.children.forEach((c) => flattenTemplates(c, out));
+  return out;
+}

@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Menu, X, ChevronRight, Search } from "lucide-react";
 import { settingsApi, templatesApi } from "@/lib/api";
-import { FALLBACK_ROOTS, rootOf, type TreeNode } from "@/lib/templates-tree";
+import { FALLBACK_ROOTS, flattenTemplates, rootOf, type TreeNode } from "@/lib/templates-tree";
 import { useAuth } from "@/providers/AuthProvider";
 import "./GlobalHeader.css";
 
@@ -25,7 +25,7 @@ const SHOP = "/shop";
 const BLOG = "/blog";
 /* Số danh mục hiện thẳng trên thanh menu (còn lại gom vào "Thiệp khác"); số link tối đa mỗi cột */
 const MAIN_SLOTS = 5;
-const MAX_LINKS = 6;
+const MAX_LINKS = 4;
 const OTHER_TITLE = "Thiệp khác";
 
 const UserMenu = ({ name, email, initial, onLogout }: { name: string; email: string; initial: string; onLogout: () => void }) => {
@@ -345,10 +345,12 @@ export function Header({ className }: { className?: string }) {
     const overflow = roots.slice(MAIN_SLOTS);
 
     /* 3) Một cột = một nhóm: liệt kê mẫu thiệp (bấm vào ra trang chi tiết), nhóm con và nút "Xem tất cả" */
+    // Cột của một nhóm: mẫu thiệp ở mọi cấp bên dưới (bấm vào ra trang chi tiết), rồi tên các nhóm con và "Xem tất cả" (ra trang lọc)
     const columnOf = (n: TreeNode): Column => {
-      const links: Link[] = n.templates.slice(0, MAX_LINKS).map((t) => ({ text: t.name, href: `${TEMPLATES}/${t.slug}` }));
-      for (const c of n.children) links.push({ text: `${c.label} ›`, href: c.path });
-      if (n.count > n.templates.slice(0, MAX_LINKS).length && n.templates.length) links.push({ text: `Xem tất cả (${n.count})`, href: n.path });
+      const shown = flattenTemplates(n).slice(0, MAX_LINKS);
+      const links: Link[] = shown.map((t) => ({ text: t.name, href: `${TEMPLATES}/${t.slug}` }));
+      n.children.slice(0, 3).forEach((c) => links.push({ text: `${c.label} ›`, href: c.path }));
+      if (n.count > shown.length) links.push({ text: `Xem tất cả (${n.count})`, href: n.path });
       return { title: n.label, path: n.path, links };
     };
     const columnsOf = (root: TreeNode): Column[] => {

@@ -7,9 +7,10 @@ import { settingsApi, templatesApi } from "@/lib/api";
 /* Giá trị lấy trực tiếp từ HomepageContent.css của bản src (đã áp dụng đúng thứ tự cascade). */
 
 import { listOf, templatesOf } from "@/lib/api/list";
+import { titleStyleToCss, type TemplateTitleStyle } from "@/lib/title-style";
 
 type Block = { _id: string; title: string; slug: string; isActive?: boolean; templates?: { _id: string; imgSrc?: string }[] };
-type Template = { _id: string; title: string; slug: string; imgSrc?: string };
+type Template = { _id: string; title: string; slug: string; imgSrc?: string; titleStyle?: TemplateTitleStyle };
 type Banner = { id?: string; name?: string; displayPage?: string; isEnabled?: boolean; imgSrc?: string; link?: string };
 
 const HERO_FALLBACK = "https://pub-f720e3221ef5464a93d19bbdae2cfb86.r2.dev/herohome.png";
@@ -99,19 +100,26 @@ function Occasions({ items }: { items: Block[] }) {
   );
 }
 
+/* Tên mẫu nằm phía trên, bên trong thẻ (nền gradient tối để chữ luôn đọc được). Font/cỡ/màu theo t.titleStyle, do dashboard cài cho từng mẫu hoặc từng danh mục. */
 function FeaturedCard({ t }: { t: Template }) {
   return (
-    <Link href={`/templates/${t.slug}`} className="group flex cursor-pointer flex-col gap-4 transition-shadow duration-300 hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)]">
-      <div className="relative w-full overflow-hidden bg-white pt-[100%]">
-        <img
-          src={t.imgSrc || placeholder("Thiệp", "365x365")}
-          alt={t.title}
-          loading="lazy"
-          className="absolute left-0 top-0 h-full w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] group-hover:scale-[1.03]"
-        />
-      </div>
-      <div className="flex flex-col items-center gap-2">
-        <h5 className="m-0 text-center text-base font-semibold leading-[1.4] text-[#333]">{t.title}</h5>
+    <Link
+      href={`/templates/${t.slug}`}
+      className="group relative block w-full cursor-pointer overflow-hidden bg-white pt-[100%] transition-shadow duration-300 hover:shadow-[0_8px_25px_rgba(0,0,0,0.12)]"
+    >
+      <img
+        src={t.imgSrc || placeholder("Thiệp", "365x365")}
+        alt={t.title}
+        loading="lazy"
+        className="absolute left-0 top-0 h-full w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] group-hover:scale-[1.03]"
+      />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-black/60 via-black/25 to-transparent px-4 pb-10 pt-4">
+        <h5
+          style={titleStyleToCss(t.titleStyle)}
+          className="m-0 leading-[1.25] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden [text-shadow:0_1px_6px_rgba(0,0,0,0.45)]"
+        >
+          {t.title}
+        </h5>
       </div>
     </Link>
   );

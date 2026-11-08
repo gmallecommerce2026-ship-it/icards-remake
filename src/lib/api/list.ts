@@ -7,7 +7,7 @@ export function listOf<T>(body: unknown): T[] {
   return ((body as { data?: T[] } | null)?.data ?? []) as T[];
 }
 
-type RawTemplate = { _id: string; slug: string; name?: string; title?: string; category: string; description?: string; previewImage?: string; imgSrc?: string };
+type RawTemplate = { titleStyle?: import("@/lib/title-style").TemplateTitleStyle; _id: string; slug: string; name?: string; title?: string; category: string; description?: string; previewImage?: string; imgSrc?: string };
 
 export const templatesOf = (body: unknown) =>
   listOf<RawTemplate>(body).map((t) => ({ ...t, title: t.title ?? t.name ?? "", imgSrc: t.imgSrc ?? t.previewImage }));
