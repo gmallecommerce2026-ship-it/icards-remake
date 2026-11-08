@@ -6,10 +6,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { settingsApi, templatesApi } from "@/lib/api";
+import { templatesOf } from "@/lib/api/list";
 import "./TutorialPage.css";
 
 type Template = { _id: string; title: string; slug?: string; category: string; description?: string; imgSrc?: string };
 type Banner = { displayPage?: string; isEnabled?: boolean; imageUrl?: string; title?: string; subtitle?: string; link?: string; mediaType?: string; videoUrl?: string; htmlContent?: string };
+
 
 const FAQ = [
   { q: "Thiệp mời online là gì?", a: "Thiệp mời online là thiệp mời trên nền tảng số trực tuyến, thay vì được in ra giấy như các tấm thiệp mời truyền thống. Sau khi tạo thiệp mời online, bạn sẽ gửi tấm thiệp tới khách mời thông qua tin nhắn hoặc mạng xã hội như Facebook, Zalo,... Khi đó, khách mời chỉ cần có kết nối Internet là đã có thể xem được tấm thiệp mời của bạn." },
@@ -176,12 +178,12 @@ export default function TutorialPage() {
     const load = async () => {
       try {
         setLoading(true);
-        const [showcaseRes, allRes] = await Promise.all([templatesApi.getTemplates({ limit: 10 }), templatesApi.getTemplates({ limit: 1000 })]);
-        const showcaseAll: Template[] = showcaseRes.data?.data ?? [];
+        const [showcaseRes, allRes] = await Promise.all([templatesApi.getTemplates({ limit: 10 }), templatesApi.getTemplates({ limit: 50 })]);
+        const showcaseAll = templatesOf(showcaseRes.data) as Template[];
         const uniq = [...new Set(showcaseAll.map((t) => t.category))];
         setShowcaseTemplates(uniq.map((c) => showcaseAll.find((t) => t.category === c)).filter(Boolean) as Template[]);
 
-        const allData: Template[] = allRes.data?.data ?? [];
+        const allData = templatesOf(allRes.data) as Template[];
         const cats = [...new Set(allData.map((t) => t.category).filter(Boolean))];
         setAllCategories(cats);
         if (cats.length) setActiveCategory(cats[0]);
@@ -197,7 +199,7 @@ export default function TutorialPage() {
     if (!activeCategory) return;
     templatesApi
       .getTemplates({ category: activeCategory, limit: 8 })
-      .then((res) => setTemplates(res.data?.data ?? []))
+      .then((res) => setTemplates(templatesOf(res.data) as Template[]))
       .catch(() => setTemplates([]))
       .finally(() => setLoading(false));
   }, [activeCategory]);

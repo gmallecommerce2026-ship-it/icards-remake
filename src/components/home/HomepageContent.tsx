@@ -6,6 +6,8 @@ import { settingsApi, templatesApi } from "@/lib/api";
 
 /* Giá trị lấy trực tiếp từ HomepageContent.css của bản src (đã áp dụng đúng thứ tự cascade). */
 
+import { listOf, templatesOf } from "@/lib/api/list";
+
 type Block = { _id: string; title: string; slug: string; isActive?: boolean; templates?: { _id: string; imgSrc?: string }[] };
 type Template = { _id: string; title: string; slug: string; imgSrc?: string };
 type Banner = { id?: string; name?: string; displayPage?: string; isEnabled?: boolean; imgSrc?: string; link?: string };
@@ -179,11 +181,11 @@ export function HomepageContent() {
     ])
       .then(([blocksRes, templatesRes, settingsRes]) => {
         if (!alive) return;
-        const blocks: Block[] = blocksRes.status === "fulfilled" ? blocksRes.value.data?.data ?? [] : [];
+        const blocks: Block[] = blocksRes.status === "fulfilled" ? listOf<Block>(blocksRes.value.data) : [];
         const usedIds = new Set(blocks.flatMap((b) => b.templates?.map((t) => t._id) ?? []));
         setOccasions(blocks.filter((b) => b.isActive));
 
-        const all: Template[] = templatesRes.status === "fulfilled" ? templatesRes.value.data?.data ?? [] : [];
+        const all: Template[] = templatesRes.status === "fulfilled" ? templatesOf(templatesRes.value.data) : [];
         setFeatured(all.filter((t) => !usedIds.has(t._id)).slice(0, 8));
 
         if (settingsRes.status === "fulfilled") {
