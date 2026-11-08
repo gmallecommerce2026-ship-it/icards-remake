@@ -2,6 +2,9 @@
 
 @theme inline {
   --font-sans: var(--font-be), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-raw), "Cormorant Garamond", Georgia, serif;
+  --color-paper: #fbf8f2;
+  --color-paper-deep: #f1ebdf;
 
   /* Bo góc: nhỏ, vuông vắn. Mọi rounded-lg/xl/2xl/3xl đều theo thang này */
   --radius-xs: 1px;

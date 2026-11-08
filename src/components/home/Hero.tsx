@@ -1,119 +1,79 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useInView } from "motion/react";
-import { ArrowRight, Check, MessageCircle, Users } from "lucide-react";
+import { motion } from "motion/react";
 
-const EASE_OUT = [0.22, 1, 0.36, 1] as const;
-
-/** Hiện dần khi cuộn tới (thay cho animate-ngay-khi-mount: section này nằm dưới hero cuộn nên trước đó animation đã chạy xong khi chưa ai thấy) */
-const rise = (delay = 0, y = 28) => ({
-  initial: { opacity: 0, y },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, amount: 0.25 },
-  transition: { delay, duration: 0.9, ease: EASE_OUT },
+const EASE = [0.22, 1, 0.36, 1] as const;
+const rise = (delay: number) => ({
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+  transition: { delay, duration: 0.9, ease: EASE },
 });
 
-export function Hero() {
-  const [confirmed, setConfirmed] = useState(false);
-  const phoneRef = useRef<HTMLDivElement>(null);
-  const phoneInView = useInView(phoneRef, { once: true, amount: 0.6 });
-
-  // Khoảnh khắc chính của trang: khi chiếc điện thoại hiện ra, khách tự "xác nhận" để người xem thấy luồng hoạt động
-  useEffect(() => {
-    if (!phoneInView) return;
-    const t = setTimeout(() => setConfirmed(true), 1400);
-    return () => clearTimeout(t);
-  }, [phoneInView]);
-
+/** Tấm thiệp giấy dựng bằng CSS: hình ảnh chính của trang, mô phỏng đúng tấm thiệp người dùng sẽ gửi */
+function StationeryCard() {
   return (
-    <section className="relative overflow-hidden">
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="animate-drift absolute -right-24 top-10 h-[480px] w-[480px] rounded-sm bg-lacquer/15 blur-3xl" />
-        <div className="animate-drift absolute -left-32 bottom-0 h-[380px] w-[380px] rounded-sm bg-gold/15 blur-3xl [animation-delay:-6s]" />
+    <div className="relative mx-auto w-full max-w-[380px]">
+      {/* tấm thiệp phía sau, lệch nhẹ để có chiều sâu */}
+      <div aria-hidden className="absolute inset-0 translate-x-4 translate-y-4 rotate-[3deg] border border-line bg-paper-deep" />
+      <div className="relative aspect-[5/7] border border-line bg-white shadow-xl">
+        <div className="absolute inset-4 border border-[#B8893B]/50" />
+        <div className="relative flex h-full flex-col items-center justify-center px-10 text-center text-ink">
+          <p className="font-display text-base italic text-muted">Trân trọng kính mời</p>
+          <p className="mt-6 font-display text-[2.6rem] font-medium leading-[1.05]">Minh Anh</p>
+          <p className="my-1 font-display text-2xl italic text-[#8C6420]">&amp;</p>
+          <p className="font-display text-[2.6rem] font-medium leading-[1.05]">Quốc Bảo</p>
+          <span aria-hidden className="my-7 block h-px w-14 bg-[#B8893B]" />
+          <p className="text-sm tracking-wide text-muted">Chủ nhật · 13.12.2026</p>
+          <p className="mt-1 text-sm text-muted">Trung tâm Tiệc cưới Sen Vàng</p>
+          {/* con dấu sáp */}
+          <div
+            aria-hidden
+            className="absolute -bottom-5 -right-5 grid size-14 place-items-center rounded-full bg-lacquer font-display text-2xl text-[#F1D9A6] shadow-md"
+            style={{ fontFamily: "'Songti SC','Noto Serif CJK SC','SimSun',serif" }}
+          >
+            囍
+          </div>
+        </div>
       </div>
+    </div>
+  );
+}
 
-      {/* BLEND: đầu section mang đúng màu nền của hero cuộn (#F8F8FB) rồi tan dần sang nền của trang -> không có đường ranh giữa hai phần */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-56 bg-gradient-to-b from-[#F8F8FB] via-[#F8F8FB]/70 to-transparent"
-      />
-
-      <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-12 px-5 py-24 lg:grid-cols-[1.1fr_.9fr] lg:px-8 lg:py-32">
+export function Hero() {
+  return (
+    <section className="bg-paper">
+      <div className="mx-auto grid max-w-7xl items-center gap-16 px-5 pb-24 pt-36 lg:grid-cols-[1.08fr_.92fr] lg:gap-20 lg:px-8 lg:pb-36 lg:pt-44">
         <div>
-          <motion.span
-            {...rise(0, 12)}
-            className="inline-flex items-center gap-2 rounded-sm border border-lacquer/20 bg-lacquer-soft px-4 py-1.5 text-sm font-medium text-lacquer"
-          >
-            <span className="size-1.5 rounded-sm bg-lacquer" /> Hơn 12.000 cặp đôi đã gửi thiệp qua iCards
-          </motion.span>
-
           <motion.h1
-            {...rise(0.1, 24)}
-            className="mt-6 text-4xl font-semibold leading-[1.15] tracking-tight text-ink sm:text-5xl lg:text-6xl"
+            {...rise(0.05)}
+            className="font-display text-[2.75rem] font-medium leading-[1.04] tracking-[-0.015em] text-ink sm:text-6xl lg:text-[4.5rem]"
           >
-            Gửi lời mời cưới đẹp từ chiếc điện thoại, nhận câu trả lời ngay trong tay.
+            Lời mời cưới đẹp,
+            <br />
+            gửi bằng một đường link.
           </motion.h1>
 
-          <motion.p {...rise(0.25, 24)} className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
-            Chọn mẫu thiệp, chỉnh sửa theo ý bạn, gửi đến từng khách bằng một đường dẫn riêng. Ai đến, ai bận, ai gửi lời chúc đều hiện trên một bảng theo dõi.
+          <motion.p {...rise(0.2)} className="mt-8 max-w-[34rem] text-lg leading-[1.7] text-muted">
+            Chọn mẫu, chỉnh theo câu chuyện của hai bạn, rồi gửi đến từng khách. Ai sẽ đến và lời chúc đều hiện trên một bảng theo dõi.
           </motion.p>
 
-          <motion.div {...rise(0.4, 24)} className="mt-9 flex flex-wrap items-center gap-4">
-            <Link href="/sign-up" className="group inline-flex items-center gap-2 rounded-sm bg-lacquer px-7 py-4 font-semibold text-white shadow-[0_16px_40px_-12px_rgba(163,21,47,.7)] transition hover:bg-lacquer-dark">
-              Tạo thiệp miễn phí <ArrowRight className="size-5 transition-transform group-hover:translate-x-1" />
+          <motion.div {...rise(0.35)} className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-5">
+            <Link href="/sign-up" className="bg-lacquer px-7 py-4 text-[15px] font-semibold text-white transition-colors hover:bg-lacquer-dark">
+              Tạo thiệp miễn phí
             </Link>
-            <Link href="/invitations" className="rounded-sm border border-line bg-white px-7 py-4 font-semibold text-ink transition hover:border-lacquer hover:text-lacquer">Xem mẫu thiệp</Link>
+            <Link href="/invitations" className="group text-[15px] font-semibold text-ink underline decoration-[#B8893B] decoration-1 underline-offset-[6px] transition-colors hover:text-lacquer">
+              Xem mẫu thiệp
+            </Link>
           </motion.div>
 
-          <motion.p {...rise(0.5, 12)} className="mt-6 text-sm text-muted">
+          <motion.p {...rise(0.45)} className="mt-10 text-sm text-muted">
             Không cần cài ứng dụng. Khách mở thiệp trực tiếp trên trình duyệt.
           </motion.p>
         </div>
 
-        {/* Điện thoại + thiệp mời */}
-        <div ref={phoneRef} className="relative mx-auto w-full max-w-[340px]">
-          <motion.div
-            initial={{ opacity: 0, y: 48, rotate: 4 }}
-            whileInView={{ opacity: 1, y: 0, rotate: 0 }}
-            viewport={{ once: true, amount: 0.25 }}
-            transition={{ delay: 0.2, duration: 1.1, ease: EASE_OUT }}
-            className="animate-float"
-          >
-            <div className="rounded-[2.8rem] border border-ink/10 bg-ink p-3 shadow-[0_40px_80px_-24px_rgba(28,26,36,.5)]">
-              <div className="overflow-hidden rounded-[2.2rem] bg-white">
-                <div className="relative flex h-[400px] flex-col items-center justify-center bg-gradient-to-b from-lacquer-soft via-white to-white px-6 text-center">
-                  <div className="absolute inset-3 rounded-[1.6rem] border border-gold/50" aria-hidden />
-                  <span className="text-4xl text-gold" aria-hidden>囍</span>
-                  <p className="mt-4 text-xs text-muted">Trân trọng kính mời bạn đến dự lễ thành hôn</p>
-                  <h2 className="mt-3 text-3xl font-semibold leading-tight text-lacquer">Minh Anh<br /><span className="text-xl font-medium italic text-gold">&amp;</span><br />Hoàng Nam</h2>
-                  <p className="mt-4 text-sm font-medium text-ink">18:00 · 14.12.2026</p>
-                  <p className="text-xs text-muted">Trung tâm Tiệc cưới Hương Giang, Huế</p>
-                </div>
-                <div className="p-4">
-                  <button onClick={() => setConfirmed((c) => !c)} className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-colors ${confirmed ? "bg-emerald-600 text-white" : "bg-lacquer text-white hover:bg-lacquer-dark"}`}>
-                    {confirmed ? (<><Check className="size-4" /> Đã xác nhận tham dự</>) : "Xác nhận tham dự"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          <AnimatePresence>
-            {confirmed && (
-              <>
-                <motion.div key="a" initial={{ opacity: 0, x: 30, scale: 0.9 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 220, damping: 18 }} className="absolute -left-10 top-16 flex items-center gap-3 rounded-2xl border border-line bg-white px-4 py-3 shadow-xl max-sm:-left-2">
-                  <span className="grid size-9 place-items-center rounded-sm bg-emerald-50 text-emerald-600"><Users className="size-4" /></span>
-                  <div><p className="text-sm font-semibold">Cô Lan xác nhận</p><p className="text-xs text-muted">Đi cùng 2 khách</p></div>
-                </motion.div>
-                <motion.div key="b" initial={{ opacity: 0, x: -30, scale: 0.9 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0 }} transition={{ type: "spring", stiffness: 220, damping: 18, delay: 0.5 }} className="absolute -right-8 bottom-24 max-w-[200px] rounded-2xl border border-line bg-white px-4 py-3 shadow-xl max-sm:-right-2">
-                  <p className="flex items-center gap-1.5 text-xs font-semibold text-lacquer"><MessageCircle className="size-3.5" /> Lời chúc mới</p>
-                  <p className="mt-1 text-sm">Chúc hai bạn trăm năm hạnh phúc!</p>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-        </div>
+        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 1.1, ease: EASE }}>
+          <StationeryCard />
+        </motion.div>
       </div>
     </section>
   );
