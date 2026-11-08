@@ -4,6 +4,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { invitationsApi, wishesApi } from "@/lib/api";
 import { errorText, formatEventDate } from "@/lib/invitation-flow";
+import { EventDetailsEditor } from "@/components/invitation-send/EventDetailsEditor";
+import { PublicEnvelopeIntro } from "./PublicEnvelopeIntro";
 
 type Guest = { name: string; status: "pending" | "attending" | "declined"; companions: number } | null;
 type Settings = { allowRsvp: boolean; allowWishes: boolean; maxCompanions: number; rsvpDeadline?: string | null };
@@ -55,6 +57,16 @@ export function PublicInvitation() {
   const info = inv.info ?? {};
   const deadlinePassed = !!inv.settings.rsvpDeadline && new Date(inv.settings.rsvpDeadline) < new Date();
   const canRsvp = inv.settings.allowRsvp && !!guestId && !!inv.guest && !deadlinePassed;
+  // nội dung thiệp hiển thị y như phần dưới của luồng gửi thiệp trong studio
+  const eventInfo = {
+    title: info.title || inv.title,
+    description: info.description ?? "",
+    host: info.host ?? "",
+    date: info.date || formatEventDate(inv.eventDate),
+    time: info.time ?? "",
+    venue: info.venue ?? "",
+    address: info.address ?? "",
+  };
 
   async function onRsvp(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -92,21 +104,14 @@ export function PublicInvitation() {
   }
 
   return (
-    <main className="mx-auto max-w-xl px-5 py-12 text-[#0E1B2C]">
-      {inv.cover && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={inv.cover} alt="" className="mb-8 w-full rounded-2xl object-cover" />
-      )}
-      <p className="text-sm text-[#5B6B7F]">{info.host ?? ""}</p>
-      <h1 className="mt-1 text-3xl font-bold tracking-tight">{info.title || inv.title}</h1>
-      {inv.guest && <p className="mt-4 text-lg">Kính mời <strong>{inv.guest.name}</strong></p>}
-      {info.description && <p className="mt-4 leading-relaxed text-[#3D4C61]">{info.description}</p>}
+    <>
+      <PublicEnvelopeIntro />
+      <section className="bg-white">
+        <EventDetailsEditor readOnly initial={eventInfo} defaultShowRsvp={false} defaultShowGuests={false} />
+      </section>
 
-      <dl className="mt-8 space-y-3 rounded-2xl border border-[#DDE4EE] bg-white p-6 text-[15px]">
-        <div><dt className="text-[#5B6B7F]">Thời gian</dt><dd className="font-semibold">{info.time ? `${info.time} · ` : ""}{info.date || formatEventDate(inv.eventDate)}</dd></div>
-        {info.venue && <div><dt className="text-[#5B6B7F]">Địa điểm</dt><dd className="font-semibold">{info.venue}</dd></div>}
-        {info.address && <div><dt className="text-[#5B6B7F]">Địa chỉ</dt><dd>{info.address}</dd></div>}
-      </dl>
+      <main className="mx-auto max-w-xl px-5 py-12 text-[#0E1B2C]">
+        {inv.guest && <p className="mb-2 text-lg">Kính mời <strong>{inv.guest.name}</strong></p>}
 
       {inv.guest && (
         <section className="mt-10" aria-labelledby="rsvp-title">
@@ -158,5 +163,6 @@ export function PublicInvitation() {
         </ul>
       </section>
     </main>
+    </>
   );
 }

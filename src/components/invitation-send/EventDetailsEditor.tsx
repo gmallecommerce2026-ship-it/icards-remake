@@ -137,18 +137,25 @@ export type EventDetailsEditorProps = {
   /** bấm "Thêm khách mời": nhận luôn cấu hình trang hiện tại để lưu trước khi chuyển bước */
   onAddGuests?: (data: EventPageData) => void;
   onReplay?: () => void;
+  /** chế độ xem cho khách mời: ẩn thanh công cụ, chỉ hiện nội dung thiệp */
+  readOnly?: boolean;
+  defaultShowRsvp?: boolean;
+  defaultShowGuests?: boolean;
 };
 
-export function EventDetailsEditor({ initial, guests, onClose, onSave, onAddGuests, onReplay }: EventDetailsEditorProps) {
+export function EventDetailsEditor({
+  initial, guests, onClose, onSave, onAddGuests, onReplay,
+  readOnly = false, defaultShowRsvp = true, defaultShowGuests = true,
+}: EventDetailsEditorProps) {
   const [info, setInfo] = useState<EventInfo>({ ...DEFAULT_INFO, ...initial });
   const [styleId, setStyleId] = useState(PAGE_STYLES[0].id);
   const [accent, setAccent] = useState(ACCENTS[0]);
   const [bg, setBg] = useState(BGS[0]);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [tab, setTab] = useState<Tab | null>(null);
-  const [showRsvp, setShowRsvp] = useState(true);
-  const [showGuests, setShowGuests] = useState(true);
-  const [preview, setPreview] = useState(false);
+  const [showRsvp, setShowRsvp] = useState(defaultShowRsvp);
+  const [showGuests, setShowGuests] = useState(defaultShowGuests);
+  const [preview, setPreview] = useState(readOnly);
 
   const st = PAGE_STYLES.find((s) => s.id === styleId) ?? PAGE_STYLES[0];
   const vars = {
@@ -206,7 +213,8 @@ export function EventDetailsEditor({ initial, guests, onClose, onSave, onAddGues
 
   return (
     <div className="relative flex min-h-full flex-col bg-white text-[#1D1B2A]" style={{ fontFamily: "var(--ev-sans), system-ui, sans-serif" }}>
-      {/* THANH TRÊN */}
+      {/* THANH TRÊN (ẩn ở chế độ xem của khách mời) */}
+      {!readOnly && (
       <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-black/10 bg-white/90 px-4 backdrop-blur">
         <button type="button" onClick={onClose} aria-label="Đóng" className="grid size-9 place-items-center rounded-full hover:bg-black/5">
           <X className="size-5" />
@@ -235,6 +243,7 @@ export function EventDetailsEditor({ initial, guests, onClose, onSave, onAddGues
           </button>
         </div>
       </header>
+      )}
 
       <div className="flex flex-1 items-stretch">
         {/* THANH CÔNG CỤ BÊN TRÁI */}
