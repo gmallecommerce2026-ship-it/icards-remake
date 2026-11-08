@@ -9,8 +9,8 @@ import { settingsApi, templatesApi } from "@/lib/api";
 import { listOf, templatesOf } from "@/lib/api/list";
 import { titleStyleToCss, type TemplateTitleStyle } from "@/lib/title-style";
 
-type Block = { _id: string; title: string; slug: string; isActive?: boolean; titleStyle?: TemplateTitleStyle; templates?: { _id: string; imgSrc?: string }[] };
-type Template = { _id: string; title: string; slug: string; imgSrc?: string };
+type Block = { _id: string; title: string; slug: string; isActive?: boolean; templates?: { _id: string; imgSrc?: string }[] };
+type Template = { _id: string; title: string; slug: string; imgSrc?: string; titleStyle?: TemplateTitleStyle };
 type Banner = { id?: string; name?: string; displayPage?: string; isEnabled?: boolean; imgSrc?: string; link?: string };
 
 const HERO_FALLBACK = "https://pub-f720e3221ef5464a93d19bbdae2cfb86.r2.dev/herohome.png";
@@ -31,13 +31,15 @@ const DEFAULT_INTRO = `
 `;
 
 /* ---- Class theo CSS gốc (.homepage-main, .section-header, ...) ---- */
+/* Quy tắc: lưới 4px; khoảng cách giữa các khối 96 / 80 / 56px theo breakpoint. */
 const MAIN =
-  "mx-auto flex max-w-[1520px] flex-col items-center gap-[140px] px-10 py-20 max-[1200px]:gap-[120px] max-[1200px]:px-[30px] max-[1200px]:py-[60px] max-[769px]:gap-20 max-[769px]:px-5 max-[769px]:py-10";
+  "mx-auto flex max-w-[1520px] flex-col items-center gap-24 px-10 py-20 max-[1200px]:gap-20 max-[1200px]:px-[30px] max-[1200px]:py-[60px] max-[769px]:gap-14 max-[769px]:px-5 max-[769px]:py-10";
 const SECTION = "flex w-full flex-col items-center";
-const HEADER = "mb-10 flex flex-col items-center gap-2 text-center";
-const SUBTITLE = "text-sm font-medium uppercase leading-[1.5] tracking-[0.1em] text-[#555]";
+/* Tiêu đề mục: eyebrow 12px · tiêu đề 36 → 30 → 26px, semibold · khoảng cách tiêu đề → nội dung 32px (24px trên mobile). */
+const HEADER = "mb-8 flex flex-col items-center gap-3 text-center max-[769px]:mb-6";
+const SUBTITLE = "m-0 text-xs font-semibold uppercase leading-none tracking-[0.18em] text-[#6b6b6b]";
 const TITLE =
-  "max-w-[700px] font-playfair text-[42px] font-bold leading-[1.2] text-[#1a1a1a] max-[993px]:text-[36px] max-[769px]:text-[28px]";
+  "m-0 max-w-[720px] font-playfair text-[36px] font-semibold leading-[1.2] tracking-[-0.01em] text-[#1a1a1a] max-[993px]:text-[30px] max-[769px]:text-[26px]";
 
 function SectionHeader({ sub, title }: { sub: string; title: string }) {
   return (
@@ -64,34 +66,6 @@ function ArrowButton({ direction, onClick }: { direction: "prev" | "next"; onCli
   );
 }
 
-/* ---- Khối "Những dịp lan tỏa niềm vui" ----
- * Quy tắc áp dụng (lưới 4px, thang cỡ chữ 12 / 14 / 36):
- *  - Nhịp dọc: eyebrow → tiêu đề 12px · tiêu đề → nội dung 32px (24px trên mobile).
- *  - Thẻ: ảnh → tên 16px (một khoảng duy nhất, không cộng margin).
- *  - Tỉ lệ ảnh cố định 3:4 để các thẻ đều nhau khi co giãn.
- *  - Tên thẻ: 14px, semibold, viết hoa có giãn chữ nhẹ, tối đa 2 dòng, cao cố định để các thẻ thẳng hàng.
- *  - Tiêu đề khối: 36px → 30px → 26px, semibold, không quá đậm để không lấn át nội dung.
- */
-const OCC_HEADER = "mb-8 flex flex-col items-center gap-3 text-center max-[769px]:mb-6";
-const OCC_EYEBROW = "m-0 text-xs font-semibold uppercase leading-none tracking-[0.18em] text-[#6b6b6b]";
-const OCC_TITLE =
-  "m-0 max-w-[720px] font-playfair text-[36px] font-semibold leading-[1.2] tracking-[-0.01em] text-[#1a1a1a] max-[993px]:text-[30px] max-[769px]:text-[26px]";
-const OCC_CARD = "group flex w-[clamp(160px,20vw,220px)] shrink-0 cursor-pointer snap-start flex-col gap-4 transition-transform duration-300 hover:-translate-y-1";
-const OCC_IMAGE_BOX = "relative aspect-[3/4] w-full overflow-hidden bg-[#f3f1ee] shadow-[0_4px_15px_rgba(0,0,0,0.08)] transition-shadow duration-300 group-hover:shadow-[0_10px_24px_rgba(0,0,0,0.14)]";
-/* Kiểu chữ mặc định của TÊN danh mục. Khi danh mục cài titleStyle (dashboard / seed), các trường đó đè lên mặc định này. */
-const OCC_LABEL_DEFAULT: TemplateTitleStyle = { font: "sans", weight: 600, size: 14, color: "#222222", align: "center", uppercase: true, letterSpacing: 0.08 };
-const OCC_LABEL =
-  "m-0 line-clamp-2 min-h-[2.8em] leading-[1.4] transition-opacity duration-300 group-hover:opacity-70";
-
-function OccasionsHeader({ sub, title }: { sub: string; title: string }) {
-  return (
-    <div className={OCC_HEADER}>
-      <p className={OCC_EYEBROW}>{sub}</p>
-      <h2 className={OCC_TITLE}>{title}</h2>
-    </div>
-  );
-}
-
 function Occasions({ items }: { items: Block[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const scroll = (dir: 1 | -1) => {
@@ -100,15 +74,19 @@ function Occasions({ items }: { items: Block[] }) {
   };
 
   return (
-    <div className="relative flex w-full items-center">
+    <div className="relative mb-8 flex w-full items-center">
       <ArrowButton direction="prev" onClick={() => scroll(-1)} />
       <div
         ref={ref}
         className="flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-5 py-3 [-ms-overflow-style:none] [scrollbar-width:none] max-[769px]:gap-4 max-[769px]:px-[15px] [&::-webkit-scrollbar]:hidden"
       >
         {items.map((o) => (
-          <Link key={o._id} href="/templates" className={OCC_CARD}>
-            <div className={OCC_IMAGE_BOX}>
+          <Link
+            key={o._id}
+            href="/templates"
+            className="group flex w-[clamp(160px,20vw,220px)] shrink-0 cursor-pointer snap-start flex-col gap-4 transition-transform duration-300 hover:-translate-y-1"
+          >
+            <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#f3f1ee] shadow-[0_4px_15px_rgba(0,0,0,0.08)] transition-shadow duration-300 group-hover:shadow-[0_10px_24px_rgba(0,0,0,0.14)]">
               <img
                 src={o.templates?.[0]?.imgSrc || placeholder(o.title, "330x440")}
                 alt={o.title}
@@ -116,7 +94,7 @@ function Occasions({ items }: { items: Block[] }) {
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
               />
             </div>
-            <p className={OCC_LABEL} style={titleStyleToCss({ ...OCC_LABEL_DEFAULT, ...o.titleStyle })}>
+            <p className="m-0 line-clamp-2 min-h-[2.8em] text-center text-sm font-semibold uppercase leading-[1.4] tracking-[0.08em] text-[#222] transition-opacity duration-300 group-hover:opacity-70">
               {o.title}
             </p>
           </Link>
@@ -127,21 +105,27 @@ function Occasions({ items }: { items: Block[] }) {
   );
 }
 
-/* Thẻ mẫu thiệp: ảnh vuông, tên nằm dưới ảnh với kiểu chữ chung (không cài font riêng cho từng mẫu). */
+/* Tên mẫu nằm phía trên, bên trong thẻ (nền gradient tối để chữ luôn đọc được). Font/cỡ/màu theo t.titleStyle, do dashboard cài cho từng mẫu hoặc từng danh mục. */
 function FeaturedCard({ t }: { t: Template }) {
   return (
-    <Link href={`/templates/${t.slug}`} className="group flex w-full cursor-pointer flex-col gap-4">
-      <div className="relative aspect-square w-full overflow-hidden bg-white shadow-[0_4px_15px_rgba(0,0,0,0.08)] transition-shadow duration-300 group-hover:shadow-[0_8px_25px_rgba(0,0,0,0.12)]">
-        <img
-          src={t.imgSrc || placeholder("Thiệp", "365x365")}
-          alt={t.title}
-          loading="lazy"
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] group-hover:scale-[1.03]"
-        />
+    <Link
+      href={`/templates/${t.slug}`}
+      className="group relative block w-full cursor-pointer overflow-hidden bg-white pt-[100%] transition-shadow duration-300 hover:shadow-[0_8px_25px_rgba(0,0,0,0.12)]"
+    >
+      <img
+        src={t.imgSrc || placeholder("Thiệp", "365x365")}
+        alt={t.title}
+        loading="lazy"
+        className="absolute left-0 top-0 h-full w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] group-hover:scale-[1.03]"
+      />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-black/60 via-black/25 to-transparent px-4 pb-10 pt-4">
+        <h5
+          style={titleStyleToCss(t.titleStyle)}
+          className="m-0 leading-[1.25] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden [text-shadow:0_1px_6px_rgba(0,0,0,0.45)]"
+        >
+          {t.title}
+        </h5>
       </div>
-      <h3 className="m-0 line-clamp-1 text-center font-inter text-base font-semibold leading-[1.4] text-[#222] transition-opacity duration-300 group-hover:opacity-70">
-        {t.title}
-      </h3>
     </Link>
   );
 }
@@ -156,7 +140,7 @@ function Intro({ html }: { html?: string }) {
   }, [html]);
 
   return (
-    <section className="mt-10 flex w-full max-w-[1000px] flex-col items-center gap-6">
+    <section className="flex w-full max-w-[1000px] flex-col items-center gap-6">
       <SectionHeader sub="VỀ CHÚNG TÔI" title="GIỚI THIỆU ICARDS" />
 
       <div
@@ -260,14 +244,14 @@ export function HomepageContent() {
 
       <main className={MAIN}>
         <section className={SECTION}>
-          <OccasionsHeader sub="NHỮNG CƠ HỘI MỌI NGƯỜI KẾT NỐI THÂN THIẾT" title="NHỮNG DỊP LAN TỎA NIỀM VUI" />
+          <SectionHeader sub="NHỮNG CƠ HỘI MỌI NGƯỜI KẾT NỐI THÂN THIẾT" title="NHỮNG DỊP LAN TỎA NIỀM VUI" />
           {occasions.length > 0 ? <Occasions items={occasions} /> : <p className="text-center text-[#666]">Đang cập nhật các khối...</p>}
         </section>
 
         <section className={SECTION}>
           <SectionHeader sub="KHÁM PHÁ NHỮNG MẪU THIỆP ĐỘC ĐÁO" title="MẪU THIỆP NỔI BẬT" />
           {featured.length > 0 ? (
-            <div className="grid w-full grid-cols-4 gap-x-6 gap-y-10 max-[1200px]:grid-cols-3 max-[993px]:grid-cols-2 max-[769px]:gap-x-4 max-[769px]:gap-y-8 max-[577px]:grid-cols-1">
+            <div className="grid w-full grid-cols-4 gap-6 max-[1200px]:grid-cols-3 max-[993px]:grid-cols-2 max-[769px]:gap-4 max-[577px]:grid-cols-1">
               {featured.map((t) => <FeaturedCard key={t._id} t={t} />)}
             </div>
           ) : (
@@ -275,7 +259,7 @@ export function HomepageContent() {
           )}
           <Link
             href="/templates"
-            className="mt-0 flex h-12 w-fit cursor-pointer items-center justify-center border border-[#222] bg-transparent px-10 text-sm font-semibold uppercase leading-[1.3] tracking-[0.08em] text-[#222] transition-colors duration-300 hover:bg-[#222] hover:text-white"
+            className="mt-2 flex h-12 w-fit cursor-pointer items-center justify-center border border-[#222] bg-transparent px-10 text-sm font-semibold uppercase leading-[1.3] tracking-[0.08em] text-[#222] transition-colors duration-300 hover:bg-[#222] hover:text-white"
           >
             XEM TẤT CẢ
           </Link>
