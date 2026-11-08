@@ -212,7 +212,7 @@ export function EventDetailsEditor({
       : { border: "1px solid var(--ev-ink)", color: "var(--ev-ink)" };
 
   return (
-    <div className="relative flex min-h-full flex-col bg-white text-[#1D1B2A]" style={{ fontFamily: "var(--ev-sans), system-ui, sans-serif" }}>
+    <div className={`relative flex min-h-full flex-col ${readOnly ? "" : "bg-white"} text-[#1D1B2A]`} style={{ fontFamily: "var(--ev-sans), system-ui, sans-serif" }}>
       {/* THANH TRÊN (ẩn ở chế độ xem của khách mời) */}
       {!readOnly && (
       <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-black/10 bg-white/90 px-4 backdrop-blur">

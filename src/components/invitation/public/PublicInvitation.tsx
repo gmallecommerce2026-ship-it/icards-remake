@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { invitationsApi, wishesApi } from "@/lib/api";
 import { errorText, formatEventDate } from "@/lib/invitation-flow";
-import { EventDetailsEditor } from "@/components/invitation-send/EventDetailsEditor";
+import { EVENT_FONT_VARS, EventDetailsEditor } from "@/components/invitation-send/EventDetailsEditor";
 import { PublicEnvelopeIntro } from "./PublicEnvelopeIntro";
 
 type Guest = { name: string; status: "pending" | "attending" | "declined"; companions: number } | null;
-type Settings = { allowRsvp: boolean; allowWishes: boolean; maxCompanions: number; rsvpDeadline?: string | null };
+type Settings = { allowRsvp: boolean; allowWishes: boolean; moderateWishes?: boolean; maxCompanions: number; rsvpDeadline?: string | null };
 type PublicInv = {
   _id: string;
   slug: string;
@@ -21,7 +21,35 @@ type PublicInv = {
 };
 type Wish = { _id: string; name: string; message: string };
 
-const input = "h-11 w-full rounded-lg border border-[#C5D0DE] bg-white px-3 text-[15px] outline-none focus-visible:ring-2 focus-visible:ring-[#27548A]/30";
+/* Cùng bảng màu mặc định với EventDetailsEditor, để phần xác nhận và lưu bút
+   liền mạch với nội dung thiệp phía trên (cùng nền, cùng chữ, cùng màu nhấn). */
+const THEME = {
+  "--ev-accent": "#2F4C8F",
+  "--ev-bg": "#FFFCF6",
+  "--ev-ink": "#1D1B2A",
+  "--ev-on-accent": "#FFFFFF",
+} as CSSProperties;
+
+const LABEL: CSSProperties = {
+  fontFamily: "var(--ev-sans), sans-serif",
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: "0.2em",
+  textTransform: "uppercase",
+  opacity: 0.65,
+};
+const TITLE: CSSProperties = { fontFamily: "var(--ev-serif), serif", fontWeight: 500, fontSize: "clamp(1.7rem,4.5vw,2.4rem)", lineHeight: 1.15 };
+const FIELD: CSSProperties = { borderBottom: "1px dotted var(--ev-accent)", background: "transparent", font: "inherit", color: "inherit" };
+const BOX: CSSProperties = { border: "1px solid rgba(29,27,42,.15)", background: "transparent", font: "inherit", color: "inherit" };
+const PILL: CSSProperties = {
+  background: "var(--ev-accent)",
+  color: "var(--ev-on-accent)",
+  border: "1px solid var(--ev-accent)",
+  fontFamily: "var(--ev-sans), sans-serif",
+  fontWeight: 600,
+  letterSpacing: "0.18em",
+  textTransform: "uppercase",
+};
 
 export function PublicInvitation() {
   const sp = useSearchParams();
@@ -105,64 +133,91 @@ export function PublicInvitation() {
 
   return (
     <>
-      <PublicEnvelopeIntro />
-      <section className="bg-white">
+      <PublicEnvelopeIntro info={eventInfo} />
+
+      {/* Toàn bộ phần dưới dùng CHUNG một nền + một bộ font/màu, nên nội dung thiệp và phần xác nhận liền mạch */}
+      <div className={`${EVENT_FONT_VARS} min-h-dvh`} style={{ ...THEME, background: "var(--ev-bg)", color: "var(--ev-ink)" }}>
         <EventDetailsEditor readOnly initial={eventInfo} defaultShowRsvp={false} defaultShowGuests={false} />
-      </section>
 
-      <main className="mx-auto max-w-xl px-5 py-12 text-[#0E1B2C]">
-        {inv.guest && <p className="mb-2 text-lg">Kính mời <strong>{inv.guest.name}</strong></p>}
-
-      {inv.guest && (
-        <section className="mt-10" aria-labelledby="rsvp-title">
-          <h2 id="rsvp-title" className="text-xl font-bold">Xác nhận tham dự</h2>
-          {!inv.settings.allowRsvp || deadlinePassed ? (
-            <p className="mt-2 text-[#5B6B7F]">Đã hết hạn xác nhận tham dự.</p>
-          ) : canRsvp ? (
-            <form onSubmit={onRsvp} className="mt-4 space-y-4">
-              <fieldset className="flex gap-6">
-                <label className="flex items-center gap-2"><input type="radio" name="status" value="attending" defaultChecked={inv.guest.status !== "declined"} /> Tôi sẽ đến</label>
-                <label className="flex items-center gap-2"><input type="radio" name="status" value="declined" defaultChecked={inv.guest.status === "declined"} /> Rất tiếc, không đến được</label>
-              </fieldset>
-              <label className="block text-sm font-medium">
-                Số người đi cùng (tối đa {inv.settings.maxCompanions})
-                <input name="companions" type="number" min={0} max={inv.settings.maxCompanions} defaultValue={inv.guest.companions} className={`${input} mt-1 w-32`} />
-              </label>
-              <label className="block text-sm font-medium">
-                Lời nhắn (không bắt buộc)
-                <textarea name="message" rows={2} maxLength={500} className="mt-1 w-full rounded-lg border border-[#C5D0DE] p-3" />
-              </label>
-              <button type="submit" disabled={busy} className="h-12 w-full rounded-lg bg-[#27548A] font-semibold text-white disabled:opacity-60">Gửi xác nhận</button>
-              {rsvpMsg && <p role="status" className="text-sm text-[#1D5B35]">{rsvpMsg}</p>}
-            </form>
-          ) : (
-            <p className="mt-2 text-[#5B6B7F]">Bạn đã xác nhận: {inv.guest.status === "attending" ? "sẽ tham dự" : inv.guest.status === "declined" ? "không tham dự" : "chưa trả lời"}.</p>
+        <main className="mx-auto max-w-xl px-5 pb-28 text-center" style={{ fontFamily: "var(--ev-sans), system-ui, sans-serif" }}>
+          {inv.guest && (
+            <p className="mb-2" style={{ fontFamily: "var(--ev-serif), serif", fontSize: "1.25rem" }}>
+              Kính mời <strong style={{ fontWeight: 600 }}>{inv.guest.name}</strong>
+            </p>
           )}
-        </section>
-      )}
 
-      <section className="mt-12" aria-labelledby="wish-title">
-        <h2 id="wish-title" className="text-xl font-bold">Sổ lưu bút</h2>
-        {inv.settings.allowWishes ? (
-          <form onSubmit={onWish} className="mt-4 space-y-3">
-            <input name="name" required maxLength={80} defaultValue={inv.guest?.name ?? ""} placeholder="Tên của bạn" className={input} />
-            <textarea name="message" required maxLength={1000} rows={3} placeholder="Gửi lời chúc" className="w-full rounded-lg border border-[#C5D0DE] p-3" />
-            <button type="submit" disabled={busy} className="h-11 rounded-lg bg-[#27548A] px-6 font-semibold text-white disabled:opacity-60">Gửi lời chúc</button>
-            {wishMsg && <p role="status" className="text-sm text-[#1D5B35]">{wishMsg}</p>}
-          </form>
-        ) : (
-          <p className="mt-2 text-[#5B6B7F]">Chủ thiệp đã tắt sổ lưu bút.</p>
-        )}
-        <ul className="mt-6 space-y-4">
-          {wishes.map((w) => (
-            <li key={w._id} className="rounded-xl bg-white p-4">
-              <p className="font-semibold">{w.name}</p>
-              <p className="mt-1 whitespace-pre-wrap text-[#3D4C61]">{w.message}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </main>
+          {inv.guest && (
+            <section className="mt-16" aria-labelledby="rsvp-title">
+              <h2 id="rsvp-title" style={LABEL}>Xác nhận tham dự</h2>
+              <div className="mt-3" style={TITLE}>Bạn có đến được không?</div>
+
+              {!inv.settings.allowRsvp || deadlinePassed ? (
+                <p className="mt-6 opacity-70">Đã hết hạn xác nhận tham dự.</p>
+              ) : canRsvp ? (
+                <form onSubmit={onRsvp} className="mx-auto mt-8 max-w-sm space-y-6 text-left">
+                  <fieldset className="flex justify-center gap-6">
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name="status" value="attending" defaultChecked={inv.guest.status !== "declined"} style={{ accentColor: "var(--ev-accent)" }} />
+                      Tôi sẽ đến
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name="status" value="declined" defaultChecked={inv.guest.status === "declined"} style={{ accentColor: "var(--ev-accent)" }} />
+                      Không đến được
+                    </label>
+                  </fieldset>
+                  <label className="block text-sm">
+                    <span style={LABEL}>Số người đi cùng (tối đa {inv.settings.maxCompanions})</span>
+                    <input name="companions" type="number" min={0} max={inv.settings.maxCompanions} defaultValue={inv.guest.companions} className="mt-2 block w-32 bg-transparent py-2 outline-none" style={FIELD} />
+                  </label>
+                  <label className="block text-sm">
+                    <span style={LABEL}>Lời nhắn (không bắt buộc)</span>
+                    <textarea name="message" rows={2} maxLength={500} className="mt-2 w-full rounded-sm p-3 outline-none" style={BOX} />
+                  </label>
+                  <div className="text-center">
+                    <button type="submit" disabled={busy} className="rounded-full px-8 py-3 text-xs disabled:opacity-60" style={PILL}>
+                      Gửi xác nhận
+                    </button>
+                  </div>
+                  {rsvpMsg && <p role="status" className="text-center text-sm" style={{ color: "var(--ev-accent)" }}>{rsvpMsg}</p>}
+                </form>
+              ) : (
+                <p className="mt-6 opacity-75">
+                  Bạn đã xác nhận: {inv.guest.status === "attending" ? "sẽ tham dự" : inv.guest.status === "declined" ? "không tham dự" : "chưa trả lời"}.
+                </p>
+              )}
+            </section>
+          )}
+
+          <section className="mt-20" aria-labelledby="wish-title">
+            <h2 id="wish-title" style={LABEL}>Sổ lưu bút</h2>
+            <div className="mt-3" style={TITLE}>Gửi lời chúc tới hai bạn</div>
+
+            {inv.settings.allowWishes ? (
+              <form onSubmit={onWish} className="mx-auto mt-8 max-w-sm space-y-4 text-left">
+                <input name="name" required maxLength={80} defaultValue={inv.guest?.name ?? ""} placeholder="Tên của bạn" className="block w-full bg-transparent py-2 text-center outline-none placeholder:opacity-40" style={FIELD} />
+                <textarea name="message" required maxLength={1000} rows={3} placeholder="Gửi lời chúc" className="w-full rounded-sm p-3 outline-none placeholder:opacity-40" style={BOX} />
+                <div className="text-center">
+                  <button type="submit" disabled={busy} className="rounded-full px-8 py-3 text-xs disabled:opacity-60" style={PILL}>
+                    Gửi lời chúc
+                  </button>
+                </div>
+                {wishMsg && <p role="status" className="text-center text-sm" style={{ color: "var(--ev-accent)" }}>{wishMsg}</p>}
+              </form>
+            ) : (
+              <p className="mt-6 opacity-70">Chủ thiệp đã tắt sổ lưu bút.</p>
+            )}
+
+            <ul className="mt-10 space-y-6">
+              {wishes.map((w) => (
+                <li key={w._id} className="border-t border-dotted pt-5" style={{ borderColor: "var(--ev-accent)" }}>
+                  <p style={{ fontWeight: 600 }}>{w.name}</p>
+                  <p className="mt-1 whitespace-pre-wrap italic opacity-80" style={{ fontFamily: "var(--ev-serif), serif", fontSize: "1.1rem" }}>{w.message}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </main>
+      </div>
     </>
   );
 }
