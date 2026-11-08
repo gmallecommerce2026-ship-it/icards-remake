@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro, Cormorant_Garamond } from "@/lib/fonts";
 import { AuthProvider } from "@/providers/AuthProvider";
+import { UiThemeSwitcher } from "@/components/ui/UiThemeSwitcher";
 import "./globals.css";
 import "@/styles/local-fonts.css";
 
@@ -16,7 +17,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="vi" className={`${be.variable} ${display.variable}`} suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <AuthProvider>{children}</AuthProvider>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "try{var t=localStorage.getItem('icards:ui-theme');if(t&&/^[1-5]$/.test(t))document.documentElement.dataset.theme=t;}catch(e){}",
+          }}
+        />
+        <AuthProvider>
+          {children}
+          <UiThemeSwitcher />
+        </AuthProvider>
       </body>
     </html>
   );

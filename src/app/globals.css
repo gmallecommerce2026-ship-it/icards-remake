@@ -1,35 +1,95 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans: var(--font-be), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-display-raw), "Cormorant Garamond", Georgia, serif;
-  --color-paper: #fbf8f2;
-  --color-paper-deep: #f1ebdf;
+@theme {
+  /* Mọi màu, font, bo góc, bóng đều đọc từ biến --c-* / --f-* / --r-* / --s-* của theme đang bật */
+  --font-sans: var(--f-sans);
+  --font-display: var(--f-display);
 
-  /* Bo góc: nhỏ, vuông vắn. Mọi rounded-lg/xl/2xl/3xl đều theo thang này */
-  --radius-xs: 1px;
-  --radius-sm: 2px;
-  --radius-md: 2px;
-  --radius-lg: 3px;
-  --radius-xl: 4px;
-  --radius-2xl: 4px;
-  --radius-3xl: 6px;
+  --color-porcelain: var(--c-bg);
+  --color-ink: var(--c-ink);
+  --color-muted: var(--c-muted);
+  --color-line: var(--c-line);
+  --color-lacquer: var(--c-accent);
+  --color-lacquer-dark: var(--c-accent-dark);
+  --color-lacquer-soft: var(--c-accent-soft);
+  --color-gold: var(--c-gold);
+  --color-paper: var(--c-paper);
+  --color-paper-deep: var(--c-paper-deep);
 
-  /* Bóng đổ: mảnh, tinh tế (minimalism) */
-  --shadow-sm: 0 1px 2px rgba(28, 26, 36, 0.05);
-  --shadow-md: 0 2px 6px -2px rgba(28, 26, 36, 0.08);
-  --shadow-lg: 0 6px 16px -6px rgba(28, 26, 36, 0.10);
-  --shadow-xl: 0 12px 28px -10px rgba(28, 26, 36, 0.14);
-  --shadow-2xl: 0 20px 40px -16px rgba(28, 26, 36, 0.18);
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+  --radius-2xl: var(--r-2xl);
+  --radius-3xl: var(--r-3xl);
 
-  --color-porcelain: #f7f8fb;
-  --color-ink: #1c1a24;
-  --color-muted: #5f5b6b;
-  --color-line: #e6e4ec;
-  --color-lacquer: #a3152f;
-  --color-lacquer-dark: #6f0d20;
-  --color-lacquer-soft: #fbeaed;
-  --color-gold: #b8893b;
+  --shadow-sm: var(--s-sm);
+  --shadow-md: var(--s-md);
+  --shadow-lg: var(--s-lg);
+  --shadow-xl: var(--s-xl);
+  --shadow-2xl: var(--s-2xl);
+}
+
+/* ---------- 5 giao diện: bấm phím 1–5 để chuyển ---------- */
+
+/* 1 · Thiệp giấy (mặc định): giấy ấm, serif, bo góc rất nhỏ */
+:root, :root[data-theme="1"] {
+  --c-bg: #f7f8fb; --c-paper: #fbf8f2; --c-paper-deep: #f1ebdf;
+  --c-ink: #1c1a24; --c-muted: #5f5b6b; --c-line: #e6e4ec;
+  --c-accent: #a3152f; --c-accent-dark: #6f0d20; --c-accent-soft: #fbeaed; --c-gold: #b8893b;
+  --f-display: var(--font-display-raw), "Cormorant Garamond", Georgia, serif;
+  --f-sans: var(--font-be), ui-sans-serif, system-ui, sans-serif;
+  --r-xs: 1px; --r-sm: 2px; --r-md: 2px; --r-lg: 3px; --r-xl: 4px; --r-2xl: 4px; --r-3xl: 6px;
+  --s-sm: 0 1px 2px rgba(28,26,36,.05); --s-md: 0 2px 6px -2px rgba(28,26,36,.08);
+  --s-lg: 0 6px 16px -6px rgba(28,26,36,.10); --s-xl: 0 12px 28px -10px rgba(28,26,36,.14); --s-2xl: 0 20px 40px -16px rgba(28,26,36,.18);
+}
+
+/* 2 · Tối giản: trắng đen, sans, không bo góc, không bóng */
+:root[data-theme="2"] {
+  --c-bg: #ffffff; --c-paper: #ffffff; --c-paper-deep: #f4f4f4;
+  --c-ink: #111111; --c-muted: #6b6b6b; --c-line: #e4e4e4;
+  --c-accent: #111111; --c-accent-dark: #000000; --c-accent-soft: #f1f1f1; --c-gold: #111111;
+  --f-display: var(--font-be), ui-sans-serif, system-ui, sans-serif;
+  --f-sans: var(--font-be), ui-sans-serif, system-ui, sans-serif;
+  --r-xs: 0; --r-sm: 0; --r-md: 0; --r-lg: 0; --r-xl: 0; --r-2xl: 0; --r-3xl: 0;
+  --s-sm: none; --s-md: none; --s-lg: none; --s-xl: none; --s-2xl: none;
+}
+
+/* 3 · Hiện đại: xanh chàm, sans, bo góc vừa, bóng rõ hơn */
+:root[data-theme="3"] {
+  --c-bg: #f5f7ff; --c-paper: #eef2ff; --c-paper-deep: #e0e7ff;
+  --c-ink: #0f172a; --c-muted: #5b6b82; --c-line: #e2e8f0;
+  --c-accent: #4f46e5; --c-accent-dark: #4338ca; --c-accent-soft: #eef2ff; --c-gold: #f59e0b;
+  --f-display: var(--font-be), ui-sans-serif, system-ui, sans-serif;
+  --f-sans: var(--font-be), ui-sans-serif, system-ui, sans-serif;
+  --r-xs: 2px; --r-sm: 8px; --r-md: 8px; --r-lg: 10px; --r-xl: 14px; --r-2xl: 16px; --r-3xl: 20px;
+  --s-sm: 0 1px 2px rgba(15,23,42,.06); --s-md: 0 4px 12px -4px rgba(15,23,42,.10);
+  --s-lg: 0 10px 24px -10px rgba(15,23,42,.14); --s-xl: 0 18px 36px -14px rgba(15,23,42,.18); --s-2xl: 0 28px 60px -20px rgba(15,23,42,.25);
+}
+
+/* 4 · Boho ấm: đất nung, serif, nút bo tròn kiểu viên thuốc */
+:root[data-theme="4"] {
+  --c-bg: #fbf6ee; --c-paper: #f7efe3; --c-paper-deep: #efe3d1;
+  --c-ink: #3b2f2a; --c-muted: #7a6a5e; --c-line: #e8dccb;
+  --c-accent: #b5654a; --c-accent-dark: #8e4b33; --c-accent-soft: #f6e7dc; --c-gold: #a8875a;
+  --f-display: var(--font-display-raw), "Cormorant Garamond", Georgia, serif;
+  --f-sans: var(--font-be), ui-sans-serif, system-ui, sans-serif;
+  --r-xs: 4px; --r-sm: 999px; --r-md: 999px; --r-lg: 16px; --r-xl: 20px; --r-2xl: 24px; --r-3xl: 28px;
+  --s-sm: 0 1px 2px rgba(88,60,40,.06); --s-md: 0 4px 14px -6px rgba(88,60,40,.14);
+  --s-lg: 0 10px 26px -12px rgba(88,60,40,.18); --s-xl: 0 18px 40px -16px rgba(88,60,40,.22); --s-2xl: 0 28px 56px -20px rgba(88,60,40,.26);
+}
+
+/* 5 · Cổ điển: xanh đêm và vàng, serif, góc gần như vuông, đường kẻ mảnh */
+:root[data-theme="5"] {
+  --c-bg: #f6f4ef; --c-paper: #efebe3; --c-paper-deep: #e4dfd3;
+  --c-ink: #14233f; --c-muted: #5c6b82; --c-line: #d9d3c6;
+  --c-accent: #14233f; --c-accent-dark: #0b1528; --c-accent-soft: #e6eaf2; --c-gold: #b8893b;
+  --f-display: var(--font-display-raw), "Cormorant Garamond", Georgia, serif;
+  --f-sans: var(--font-be), ui-sans-serif, system-ui, sans-serif;
+  --r-xs: 0; --r-sm: 0; --r-md: 0; --r-lg: 1px; --r-xl: 1px; --r-2xl: 2px; --r-3xl: 2px;
+  --s-sm: 0 0 0 1px rgba(20,35,63,.06); --s-md: 0 1px 0 rgba(20,35,63,.08), 0 0 0 1px rgba(20,35,63,.06);
+  --s-lg: 0 4px 12px -6px rgba(20,35,63,.14); --s-xl: 0 10px 24px -12px rgba(20,35,63,.18); --s-2xl: 0 20px 40px -18px rgba(20,35,63,.22);
 }
 
 html { scroll-behavior: smooth; }
