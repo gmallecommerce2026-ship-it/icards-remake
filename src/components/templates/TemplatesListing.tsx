@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Option } from "@/lib/catalog";
 import { type InvitationTemplate } from "@/lib/templates";
 import { InvitationPreview } from "./InvitationPreview";
+import { collectSlugs, findPath, type TreeNode } from "@/lib/templates-tree";
 
 /* Giá trị lấy từ InvitationContent.css của bản src. */
 
@@ -18,12 +19,23 @@ const SORTS: { value: Sort; label: string }[] = [
 const normalize = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d");
 
-type Props = { templates: InvitationTemplate[]; categories: Option[] };
+type Props = {
+  templates: InvitationTemplate[];
+  categories: Option[];
+  /** Cây danh mục nhiều cấp; rỗng thì dùng danh mục phẳng `categories` */
+  tree?: TreeNode[];
+  /** Lấy từ URL: ?category=<gốc>&group=<nhóm>&sort=<...> */
+  category?: string;
+  group?: string;
+  initialSort?: string;
+};
 
-export function TemplatesListing({ templates, categories }: Props) {
-  const [category, setCategory] = useState<string>("all");
+const chip =
+  "inline-flex h-10 shrink-0 items-center rounded-[2px] border-[0.5px] border-black px-6 text-base font-medium uppercase no-underline transition-all duration-300";
+
+export function TemplatesListing({ templates, categories, tree = [], category = "all", group, initialSort }: Props) {
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<Sort>("popular");
+  const [sort, setSort] = useState<Sort>(SORTS.some((o) => o.value === initialSort) ? (initialSort as Sort) : "popular");
   const filtersRef = useRef<HTMLDivElement>(null);
 
   // Cuộn ngang dải lọc bằng con lăn chuột (như bản src)
@@ -43,29 +55,42 @@ export function TemplatesListing({ templates, categories }: Props) {
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
+  // Nút đang chọn trong cây (gốc hoặc nhóm). Đường đi dùng cho breadcrumb và dải nhóm con.
+  const trail = useMemo(() => {
+    if (!tree.length || category === "all") return [] as TreeNode[];
+    const t = findPath(tree, group ?? category);
+    return t.length ? t : findPath(tree, category);
+  }, [tree, category, group]);
+  const node = trail[trail.length - 1];
+  const slugSet = useMemo(() => (node ? collectSlugs(node) : null), [node]);
+
   const list = useMemo(() => {
     const q = normalize(query.trim());
-    const filtered = templates.filter(
-      (t) =>
-        (category === "all" || t.category === category) &&
-        (!q || normalize(`${t.name} ${t.tagline} ${t.description}`).includes(q)),
-    );
+    const filtered = templates.filter((t) => {
+      let inCategory = true;
+      if (category !== "all") inCategory = slugSet ? slugSet.has(t.slug) : t.category === category; // danh mục không có trong cây: lọc theo enum
+      return inCategory && (!q || normalize(`${t.name} ${t.tagline} ${t.description}`).includes(q));
+    });
     return [...filtered].sort((a, b) => {
       if (sort === "newest") return b.createdAt.localeCompare(a.createdAt);
       if (sort === "price-asc") return a.price - b.price;
       return b.popularity - a.popularity;
     });
-  }, [templates, category, query, sort]);
+  }, [templates, category, slugSet, query, sort]);
 
-  const tabs: Option[] = [{ id: "all", label: "Tất cả" }, ...categories];
-  const current = categories.find((c) => c.id === category);
+  const tabs: Option[] = [{ id: "all", label: "Tất cả" }, ...(tree.length ? tree.map((r) => ({ id: r.id, label: r.label })) : categories)];
+  const currentLabel = node?.label ?? categories.find((c) => c.id === category)?.label;
+  // Dải nhóm con: con của nút đang chọn; nếu nút là lá thì hiện các nhóm cùng cấp để chuyển qua lại
+  const parent = trail.length > 1 ? trail[trail.length - 2] : undefined;
+  const chips = node ? (node.children.length ? node.children : (parent?.children ?? [])) : [];
+  const chipsParent = node?.children.length ? node : parent;
 
   return (
     <div className="bg-[#FEFDFD] font-inter text-[#333]">
       {/* Tiêu đề trang (UniversalBanner của bản src chưa có mã nguồn, dùng tiêu đề thay thế) */}
       <section className="flex flex-col items-center gap-2 px-5 pb-10 pt-10 text-center">
         <h1 className="font-playfair text-[42px] font-bold leading-[1.2] text-[#1a1a1a] max-[769px]:text-[28px]">
-          {current?.label ?? "Khám Phá Các Mẫu Thiệp"}
+          {currentLabel ?? "Khám Phá Các Mẫu Thiệp"}
         </h1>
         <p className="text-base text-[#555]">Thiết kế ấn tượng, thao tác dễ dàng chỉ trong vài phút</p>
       </section>
@@ -78,18 +103,46 @@ export function TemplatesListing({ templates, categories }: Props) {
           aria-label="Danh mục"
           className="mt-[25px] flex w-full justify-start gap-5 overflow-x-auto whitespace-nowrap pb-2.5 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb:hover]:bg-[#27548A] [&::-webkit-scrollbar-thumb]:rounded-[10px] [&::-webkit-scrollbar-thumb]:bg-[#CDD7E5] [&::-webkit-scrollbar-track]:rounded-[10px] [&::-webkit-scrollbar-track]:bg-[#f1f1f1]"
         >
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              role="tab"
-              aria-selected={category === t.id}
-              onClick={() => setCategory(t.id)}
-              className="h-10 shrink-0 cursor-pointer rounded-[2px] border-[0.5px] border-black bg-[#27548A] px-6 text-base font-medium uppercase text-white transition-all duration-300 hover:border-[#27548A] hover:bg-[#27548A]"
-            >
-              {t.label}
-            </button>
-          ))}
+          {tabs.map((t) => {
+            const active = category === t.id;
+            return (
+              <Link
+                key={t.id}
+                href={t.id === "all" ? "/templates" : `/templates?category=${t.id}`}
+                role="tab"
+                aria-selected={active}
+                scroll={false}
+                className={`${chip} ${active ? "bg-[#1a3a63] text-white" : "bg-[#27548A] text-white hover:border-[#27548A]"}`}
+              >
+                {t.label}
+              </Link>
+            );
+          })}
         </div>
+
+        {trail.length > 0 && (
+          <nav aria-label="Vị trí danh mục" className="mt-4 flex flex-wrap items-center gap-2 text-sm text-[#666]">
+            <Link href="/templates" className="hover:text-[#27548A]">Tất cả</Link>
+            {trail.map((n, i) => (
+              <span key={n.id} className="flex items-center gap-2">
+                <span aria-hidden>›</span>
+                {i === trail.length - 1 ? <span className="font-medium text-[#1a1a1a]">{n.label}</span> : <Link href={n.path} className="hover:text-[#27548A]">{n.label}</Link>}
+              </span>
+            ))}
+          </nav>
+        )}
+        {chips.length > 0 && chipsParent && (
+          <div className="mt-4 flex flex-wrap gap-2" aria-label="Nhóm mẫu">
+            <Link href={chipsParent.path} className={`rounded-full border px-4 py-1.5 text-sm no-underline ${node?.id === chipsParent.id ? "border-[#27548A] bg-[#27548A] text-white" : "border-[#ddd] bg-white text-[#27548A] hover:border-[#27548A]"}`}>
+              Tất cả {chipsParent.label.toLowerCase()} ({chipsParent.count})
+            </Link>
+            {chips.map((c) => (
+              <Link key={c.id} href={c.path} className={`rounded-full border px-4 py-1.5 text-sm no-underline ${node?.id === c.id ? "border-[#27548A] bg-[#27548A] text-white" : "border-[#ddd] bg-white text-[#27548A] hover:border-[#27548A]"}`}>
+                {c.label} ({c.count})
+              </Link>
+            ))}
+          </div>
+        )}
 
         {/* Tìm kiếm & sắp xếp (không có trong bản src, giữ lại từ bản cũ) */}
         <div className="mt-6 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">

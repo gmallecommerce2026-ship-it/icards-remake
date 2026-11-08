@@ -9,3 +9,6 @@ export const getTemplateBlockBySlug = (slug: string) => api.get(`/template-block
 export const getFonts = () => api.get("/fonts");
 export const getDesignAssets = (type: "icon" | "component" | "tag") =>
   api.get("/design-assets", { params: { type } });
+
+/** Cây danh mục nhiều cấp (danh mục → nhóm → mẫu thiệp). */
+export const getTemplateCategoryTree = () => api.get("/template-categories");

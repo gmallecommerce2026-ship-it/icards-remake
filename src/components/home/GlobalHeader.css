@@ -204,12 +204,16 @@ button {
 /* ----- HEADER BOTTOM NAVIGATION (DESKTOP) ----- */
 .header-bottom {
     display: flex;
-    justify-content: flex-start;
-    gap: 40px;
+    justify-content: space-between; /* dàn đều, lấp đầy chiều ngang thanh menu */
+    gap: clamp(16px, 2vw, 40px);
+    overflow-x: auto;
+    scrollbar-width: none;
     height: 51px;
     align-items: center;
 }
 .nav-item-bottom {
+    white-space: nowrap;
+    flex: 0 0 auto;
     font-size: 16px;
     font-weight: 600;
     text-transform: uppercase;

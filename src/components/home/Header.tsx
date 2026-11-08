@@ -5,7 +5,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Menu, X, ChevronRight, Search } from "lucide-react";
-import { settingsApi } from "@/lib/api";
+import { settingsApi, templatesApi } from "@/lib/api";
+import { FALLBACK_ROOTS, rootOf, type TreeNode } from "@/lib/templates-tree";
 import { useAuth } from "@/providers/AuthProvider";
 import "./GlobalHeader.css";
 
@@ -22,6 +23,10 @@ const titleToSlug = (title: string) =>
 const TEMPLATES = "/templates";
 const SHOP = "/shop";
 const BLOG = "/blog";
+/* Số danh mục hiện thẳng trên thanh menu (còn lại gom vào "Thiệp khác"); số link tối đa mỗi cột */
+const MAIN_SLOTS = 5;
+const MAX_LINKS = 6;
+const OTHER_TITLE = "Thiệp khác";
 
 const UserMenu = ({ name, email, initial, onLogout }: { name: string; email: string; initial: string; onLogout: () => void }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -300,72 +305,106 @@ export function Header({ className }: { className?: string }) {
       .catch(() => setSettings(null));
   }, []);
 
-  /* Menu lấy từ settings.headerNav, cùng logic với bản src */
-  const { mainNavItems, menuData } = useMemo(() => {
-    const navSrc: NavItem[] = settings?.headerNav ?? [];
-    const visible = navSrc.filter((i) => i.isVisible).sort((a, b) => (a.order || 0) - (b.order || 0));
-    const data: Record<string, MenuNode> = {};
-    const mainCategories = visible.slice(0, 3);
-    const otherCategories = visible.slice(3);
-    const items: NavItem[] = [...mainCategories];
+  /* Cây danh mục nhiều cấp (danh mục → nhóm → mẫu thiệp). Lỗi/backend cũ thì để rỗng, menu dùng headerNav hoặc danh mục dự phòng. */
+  const [tree, setTree] = useState<TreeNode[]>([]);
+  useEffect(() => {
+    templatesApi
+      .getTemplateCategoryTree()
+      .then((res) => {
+        const d = res.data?.data ?? res.data;
+        setTree(Array.isArray(d) ? d : []);
+      })
+      .catch(() => setTree([]));
+  }, []);
 
-    mainCategories.forEach((nav) => {
-      data[nav.title] = {
-        path: TEMPLATES,
-        columns: (nav.children || [])
-          .filter((c) => c.isVisible)
-          .sort((a, b) => (a.order || 0) - (b.order || 0))
-          .map((col) => ({
-            title: col.title,
-            path: TEMPLATES,
-            links: (col.children || [])
-              .filter((l: any) => l.isVisible)
-              .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
-              .map((l: any) => ({ text: l.title, href: l.path ?? TEMPLATES })),
-          })),
-      };
+  const { mainNavItems, menuData } = useMemo(() => {
+    const data: Record<string, MenuNode> = {};
+    const items: NavItem[] = [];
+
+    /* 1) Nguồn danh mục: cây API > headerNav cũ > danh mục dự phòng */
+    let roots: TreeNode[] = tree;
+    if (!roots.length) {
+      const legacy: NavItem[] = (settings?.headerNav ?? []).filter((i: NavItem) => i.isVisible).sort((a: NavItem, b: NavItem) => (a.order || 0) - (b.order || 0));
+      roots = legacy.map((n) => ({
+        ...rootOf(n.id || titleToSlug(n.title), n.title),
+        path: n.path || TEMPLATES,
+        children: (n.children || []).filter((c) => c.isVisible).map((c) => ({
+          ...rootOf(c.id || titleToSlug(c.title), c.title),
+          path: n.path || TEMPLATES,
+          templates: (c.children || []).filter((l: any) => l.isVisible).map((l: any) => ({ _id: l.id, slug: String(l.path ?? "").split("/").pop() || "", name: l.title })),
+        })),
+      }));
+    }
+
+    /* 2) Thanh menu luôn đủ MAIN_SLOTS danh mục: thiếu thì bù từ danh mục dự phòng */
+    const main = roots.slice(0, MAIN_SLOTS);
+    for (const f of FALLBACK_ROOTS) {
+      if (main.length >= MAIN_SLOTS) break;
+      if (!main.some((m) => m.id === f.id)) main.push(rootOf(f.id, f.label));
+    }
+    const overflow = roots.slice(MAIN_SLOTS);
+
+    /* 3) Một cột = một nhóm: liệt kê mẫu thiệp (bấm vào ra trang chi tiết), nhóm con và nút "Xem tất cả" */
+    const columnOf = (n: TreeNode): Column => {
+      const links: Link[] = n.templates.slice(0, MAX_LINKS).map((t) => ({ text: t.name, href: `${TEMPLATES}/${t.slug}` }));
+      for (const c of n.children) links.push({ text: `${c.label} ›`, href: c.path });
+      if (n.count > n.templates.slice(0, MAX_LINKS).length && n.templates.length) links.push({ text: `Xem tất cả (${n.count})`, href: n.path });
+      return { title: n.label, path: n.path, links };
+    };
+    const columnsOf = (root: TreeNode): Column[] => {
+      const cols = root.children.map(columnOf);
+      if (root.templates.length) cols.unshift(columnOf({ ...root, children: [] }));
+      return cols;
+    };
+
+    main.forEach((root, i) => {
+      items.push({ id: root.id, title: root.label, path: root.path, order: i + 1, isVisible: true });
+      data[root.label] = { path: root.path, columns: columnsOf(root) };
     });
 
-    if (otherCategories.length) {
-      items.push({ id: "other-invitations", title: "Thiệp khác", path: TEMPLATES, order: 97 });
-      data["Thiệp khác"] = {
-        path: TEMPLATES,
-        columns: otherCategories.map((nav) => ({
-          title: nav.title,
-          path: TEMPLATES,
-          links: (nav.children || []).filter((l: any) => l.isVisible).map((l: any) => ({ text: l.title, href: l.path ?? TEMPLATES })),
-        })),
-      };
-    }
+    /* 4) "Thiệp khác" luôn có mặt. Gom các danh mục còn lại; nếu không còn thì hiện lối tắt khám phá */
+    items.push({ id: "other-invitations", title: OTHER_TITLE, path: TEMPLATES, order: 90, isVisible: true });
+    data[OTHER_TITLE] = {
+      path: TEMPLATES,
+      columns: overflow.length
+        ? overflow.map((r) => ({ title: r.label, path: r.path, links: columnsOf(r).flatMap((c) => c.links).slice(0, MAX_LINKS) }))
+        : [
+            {
+              title: "Khám phá thêm",
+              path: TEMPLATES,
+              links: [
+                { text: "Tất cả mẫu thiệp", href: TEMPLATES },
+                { text: "Mới nhất", href: `${TEMPLATES}?sort=newest` },
+                { text: "Dùng nhiều nhất", href: `${TEMPLATES}?sort=popular` },
+                { text: "Giá thấp đến cao", href: `${TEMPLATES}?sort=price-asc` },
+              ],
+            },
+          ],
+    };
 
     /* Gộp Cửa hàng và Dịch vụ thành một mục */
-    if (!items.some((i) => i.title === "Cửa hàng - Dịch vụ")) {
-      items.push({ id: "static-shop", title: "Cửa hàng - Dịch vụ", path: SHOP, order: 98, isVisible: true });
-      data["Cửa hàng - Dịch vụ"] = {
-        path: SHOP,
-        columns: [
-          {
-            title: "Sản phẩm & Dịch vụ",
-            path: SHOP,
-            links: [
-              { text: "In ấn", href: `${SHOP}?category=print` },
-              { text: "Tại sự kiện", href: `${SHOP}?category=onsite` },
-              { text: "Kỹ thuật số", href: `${SHOP}?category=digital` },
-              { text: "Dịch vụ", href: `${SHOP}#dich-vu` },
-            ],
-          },
-        ],
-      };
-    }
+    items.push({ id: "static-shop", title: "Cửa hàng - Dịch vụ", path: SHOP, order: 98, isVisible: true });
+    data["Cửa hàng - Dịch vụ"] = {
+      path: SHOP,
+      columns: [
+        {
+          title: "Sản phẩm & Dịch vụ",
+          path: SHOP,
+          links: [
+            { text: "In ấn", href: `${SHOP}?category=print` },
+            { text: "Tại sự kiện", href: `${SHOP}?category=onsite` },
+            { text: "Kỹ thuật số", href: `${SHOP}?category=digital` },
+            { text: "Dịch vụ", href: `${SHOP}#dich-vu` },
+          ],
+        },
+      ],
+    };
 
-    if (!items.some((i) => i.title === "Tin tức")) {
-      items.push({ id: "static-blogs", title: "Tin tức", path: BLOG, order: 99, isVisible: true });
-      data["Tin tức"] = { path: BLOG, columns: [] };
-    }
+    items.push({ id: "static-blogs", title: "Tin tức", path: BLOG, order: 99, isVisible: true });
+    data["Tin tức"] = { path: BLOG, columns: [] };
 
-    items.sort((a, b) => (a.order || 0) - (b.order || 0));
     return { mainNavItems: items, menuData: data };
-  }, [settings]);
+  }, [settings, tree]);
 
   useEffect(() => {
     if (mainHeaderRef.current) setHeaderHeight(mainHeaderRef.current.offsetHeight);

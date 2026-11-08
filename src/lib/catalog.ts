@@ -3,6 +3,7 @@
 import { serverGet } from "./api/server";
 import type { PublicContentKey } from "./api/content-keys";
 import type { InvitationTemplate } from "./templates";
+import type { TreeNode } from "./templates-tree";
 import type { Product } from "./shop";
 import type { Service, ProcessStep } from "./services";
 import type { Post } from "./blog";
@@ -20,6 +21,14 @@ async function content<T>(key: PublicContentKey, fallback: T): Promise<T> {
 export const getTemplates = async (query?: { category?: string; sort?: string; limit?: number }) =>
   (await serverGet<InvitationTemplate[]>("/invitation-templates", query)) ?? [];
 export const getTemplate = (slug: string) => serverGet<InvitationTemplate>(`/invitation-templates/${slug}`);
+/** Cây danh mục nhiều cấp. Lỗi hoặc backend cũ chưa có endpoint thì trả về [] để trang vẫn chạy bằng danh mục phẳng. */
+export const getTemplateTree = async (): Promise<TreeNode[]> => {
+  try {
+    return (await serverGet<TreeNode[]>("/template-categories")) ?? [];
+  } catch {
+    return [];
+  }
+};
 export const getTemplateCategories = () => content<Option[]>("templates.categories", []);
 
 // ---- Cửa hàng
