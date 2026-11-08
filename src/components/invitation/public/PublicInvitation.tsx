@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { invitationsApi, wishesApi } from "@/lib/api";
 import { errorText, formatEventDate } from "@/lib/invitation-flow";
 import { EVENT_FONT_VARS, EventDetailsEditor } from "@/components/invitation-send/EventDetailsEditor";
-import { PublicEnvelopeIntro } from "./PublicEnvelopeIntro";
+import { PublicEnvelopeIntro, type PublicDesign } from "./PublicEnvelopeIntro";
 
 type Guest = { name: string; status: "pending" | "attending" | "declined"; companions: number } | null;
 type Settings = { allowRsvp: boolean; allowWishes: boolean; moderateWishes?: boolean; maxCompanions: number; rsvpDeadline?: string | null };
@@ -18,6 +18,7 @@ type PublicInv = {
   info?: { title?: string; description?: string; host?: string; date?: string; time?: string; venue?: string; address?: string };
   settings: Settings;
   guest: Guest;
+  design?: PublicDesign;
 };
 type Wish = { _id: string; name: string; message: string };
 
@@ -133,7 +134,7 @@ export function PublicInvitation() {
 
   return (
     <>
-      <PublicEnvelopeIntro info={eventInfo} />
+      <PublicEnvelopeIntro info={eventInfo} design={inv.design} guestName={inv.guest?.name} />
 
       {/* Toàn bộ phần dưới dùng CHUNG một nền + một bộ font/màu, nên nội dung thiệp và phần xác nhận liền mạch */}
       <div className={`${EVENT_FONT_VARS} min-h-dvh`} style={{ ...THEME, background: "var(--ev-bg)", color: "var(--ev-ink)" }}>
