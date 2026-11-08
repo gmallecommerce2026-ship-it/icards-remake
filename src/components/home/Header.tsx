@@ -4,9 +4,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { HiOutlineMenuAlt3 } from "react-icons/hi";
-import { AiOutlineClose, AiOutlineRight } from "react-icons/ai";
-import { FiSearch } from "react-icons/fi";
+import { Menu, X, ChevronRight, Search } from "lucide-react";
 import { settingsApi } from "@/lib/api";
 import { useAuth } from "@/providers/AuthProvider";
 import "./GlobalHeader.css";
@@ -118,7 +116,7 @@ const MobileNav = ({ isOpen, onMenuToggle, menuData, mainNavItems }: { isOpen: b
       <div className="mobile-nav-content" onClick={(e) => e.stopPropagation()}>
         <div className="mobile-nav-header">
           <button onClick={onMenuToggle} className="mobile-nav-close-btn">
-            <AiOutlineClose size={24} />
+            <X size={24} />
           </button>
         </div>
         <div className="mobile-nav-scroll-area">
@@ -130,7 +128,7 @@ const MobileNav = ({ isOpen, onMenuToggle, menuData, mainNavItems }: { isOpen: b
               <div key={item.id || item.title} className="mobile-nav-group">
                 <button className="mobile-nav-item" onClick={() => handleItemClick(item)}>
                   <span>{item.title}</span>
-                  {hasSubMenu && <AiOutlineRight className={`arrow-icon ${isSubMenuOpen ? "open" : ""}`} />}
+                  {hasSubMenu && <ChevronRight className={`arrow-icon ${isSubMenuOpen ? "open" : ""}`} />}
                 </button>
                 {hasSubMenu && isSubMenuOpen && (
                   <div className="mobile-submenu">
@@ -237,7 +235,7 @@ const MainHeader = ({
             </div>
             <div className="header-section right">
               <form className="search-bar-wrapper" onSubmit={handleSearchSubmit}>
-                <FiSearch className="search-icon" />
+                <Search className="search-icon" />
                 <input
                   type="text"
                   className="search-input"
@@ -257,7 +255,7 @@ const MainHeader = ({
               )}
             </div>
             <button className="hamburger-menu mobile-only" onClick={onMenuToggle} aria-label="Mở menu">
-              <HiOutlineMenuAlt3 size={28} />
+              <Menu size={28} />
             </button>
           </div>
           <nav className="header-bottom desktop-only">
