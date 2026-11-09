@@ -170,10 +170,10 @@ function BottomBanners() {
     <section className="flex w-full flex-col gap-6">
       <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-2">
         {[first, second].map((b) => (
-          <BannerLink key={b.id} b={b} className="h-[38vh] min-h-[280px]" />
+          <BannerLink key={b.id} b={b} className="h-[48vh] min-h-[320px]" />
         ))}
       </div>
-      {wide && <BannerLink b={wide} className="h-[36vh] min-h-[260px] w-full" />}
+      {wide && <BannerLink b={wide} className="h-[44vh] min-h-[300px] w-full" />}
     </section>
   );
 }
