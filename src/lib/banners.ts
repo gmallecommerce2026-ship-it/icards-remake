@@ -9,10 +9,12 @@ export const HOME_BANNERS: Slide[] = [
 ];
 
 /* 2 banner cuối trang chủ, nằm phía trên khối "Về chúng tôi". */
-/* ảnh nền: thêm image: "https://..." cho từng banner nếu có. Không có thì dùng nền tối. */
+/* 3 banner cuối trang: 2 banner đầu xếp cạnh nhau, banner thứ 3 rộng toàn chiều ngang.
+   Ảnh nền: thêm image: "https://..." cho từng banner nếu có. Không có thì dùng nền tối. */
 export const HOME_BOTTOM_BANNERS: Slide[] = [
   { id: "home-bottom-1", eyebrow: "Thiệp cưới", title: "Trọn bộ thiệp cưới từ mẫu đến in ấn", text: "Chọn mẫu, cá nhân hoá nội dung và đặt in thiệp cùng phong bì đồng bộ.", href: "/templates", cta: "Chọn mẫu cưới", tone: "from-lacquer-soft via-white to-porcelain" },
   { id: "home-bottom-2", eyebrow: "Sự kiện", title: "Quản lý khách mời gọn gàng cho mọi buổi tiệc", text: "Theo dõi xác nhận tham dự, lời chúc và chi phí trong một nơi duy nhất.", href: "/sign-up", cta: "Dùng thử miễn phí", tone: "from-porcelain via-white to-lacquer-soft" },
+  { id: "home-bottom-3", eyebrow: "Dịch vụ", title: "Đội ngũ iCards hỗ trợ bạn từ A đến Z", text: "Từ tư vấn ý tưởng đến in ấn và giao hàng tận nơi.", href: "/services", cta: "Xem dịch vụ", tone: "from-white via-porcelain to-lacquer-soft" },
 ];
 
 export const SHOP_BANNERS: Slide[] = [

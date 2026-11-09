@@ -138,38 +138,42 @@ function FeaturedCard({ t }: { t: Template }) {
   );
 }
 
-/* 2 banner cuối trang, đặt ngay phía trên khối "Về chúng tôi".
-   Cùng kiểu với banner Cửa hàng / Dịch vụ: ảnh (hoặc nền tối) phủ kín, chữ trắng nằm trên lớp phủ tối. */
-function BottomBanners() {
+/* 3 banner cuối trang, đặt ngay phía trên khối "Về chúng tôi".
+   2 banner đầu xếp cạnh nhau, banner thứ 3 rộng toàn chiều ngang. Chiều cao rút gọn để cả 3 vừa một màn hình. */
+function BannerLink({ b, className }: { b: (typeof HOME_BOTTOM_BANNERS)[number]; className: string }) {
   return (
-    <section className="grid w-full grid-cols-1 gap-6 md:grid-cols-2">
-      {HOME_BOTTOM_BANNERS.map((b) => (
-        <Link
-          key={b.id}
-          href={b.href}
-          className="group relative flex h-[60vh] min-h-[420px] overflow-hidden rounded-sm bg-[#0E1B2C]"
-        >
-          {b.image ? (
-            <img src={b.image} alt="" className="absolute inset-0 size-full object-cover transition-transform duration-700 group-hover:scale-105" />
-          ) : (
-            <div className="absolute inset-0 bg-[#0E1B2C]" />
-          )}
-          <div className="absolute inset-0 bg-black/40" />
+    <Link href={b.href} className={`group relative flex overflow-hidden rounded-sm bg-[#0E1B2C] ${className}`}>
+      {b.image ? (
+        <img src={b.image} alt="" className="absolute inset-0 size-full object-cover transition-transform duration-700 group-hover:scale-105" />
+      ) : (
+        <div className="absolute inset-0 bg-[#0E1B2C]" />
+      )}
+      <div className="absolute inset-0 bg-black/40" />
 
-          <div className="relative flex w-full flex-col justify-end p-8 text-white [text-shadow:0_1px_12px_rgba(0,0,0,0.35)] md:p-12">
-            {b.eyebrow && (
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/85">{b.eyebrow}</p>
-            )}
-            <h3 className="mt-3 text-3xl font-bold leading-[1.2] tracking-tight md:text-4xl">{b.title}</h3>
-            {b.text && <p className="mt-4 max-w-md text-base leading-relaxed text-white/90">{b.text}</p>}
-            {b.cta && (
-              <span className="mt-7 inline-flex h-12 w-fit items-center rounded-sm bg-white px-7 text-sm font-semibold text-[#0E1B2C] transition group-hover:bg-white/90">
-                {b.cta}
-              </span>
-            )}
-          </div>
-        </Link>
-      ))}
+      <div className="relative flex w-full flex-col justify-end p-8 text-white [text-shadow:0_1px_12px_rgba(0,0,0,0.35)] md:p-12">
+        {b.eyebrow && <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/85">{b.eyebrow}</p>}
+        <h3 className="mt-3 text-3xl font-bold leading-[1.2] tracking-tight md:text-4xl">{b.title}</h3>
+        {b.text && <p className="mt-4 max-w-md text-base leading-relaxed text-white/90">{b.text}</p>}
+        {b.cta && (
+          <span className="mt-7 inline-flex h-12 w-fit items-center rounded-sm bg-white px-7 text-sm font-semibold text-[#0E1B2C] transition group-hover:bg-white/90">
+            {b.cta}
+          </span>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+function BottomBanners() {
+  const [first, second, wide] = HOME_BOTTOM_BANNERS;
+  return (
+    <section className="flex w-full flex-col gap-6">
+      <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-2">
+        {[first, second].map((b) => (
+          <BannerLink key={b.id} b={b} className="h-[38vh] min-h-[280px]" />
+        ))}
+      </div>
+      {wide && <BannerLink b={wide} className="h-[36vh] min-h-[260px] w-full" />}
     </section>
   );
 }
