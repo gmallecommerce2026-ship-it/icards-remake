@@ -1,4 +1,5 @@
 // src/components/invitation/envelope/envelope.data.ts
+import { ORIENTATION_SIZE, type TemplateFormat, type TemplateOrientation } from '@/lib/templates';
 export type Tone = 'yellow' | 'purple' | 'red' | 'blue' | 'pink' | 'green' | 'neutral' | 'dark';
 
 export const TONES: { id: Tone; color: string }[] = [
@@ -43,3 +44,9 @@ export const LINERS: LinerOption[] = [
 ];
 
 export const PAGE = { w: 500, h: 700 };
+
+/** Kích thước trang thiết kế (px) theo kiểu thiệp. Mẫu folding (hoặc chưa có format) giữ 500×700 như cũ. */
+export function pageSizeFor(format?: TemplateFormat | null, orientation?: TemplateOrientation | null): { w: number; h: number } {
+  if (format !== 'card') return PAGE;
+  return ORIENTATION_SIZE[orientation ?? 'portrait'];
+}
