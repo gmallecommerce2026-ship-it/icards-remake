@@ -55,3 +55,25 @@ export function slugify(text: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 }
+
+/** Bỏ dấu + hạ chữ thường để tìm kiếm tiếng Việt không phân biệt dấu. */
+export function normalizeText(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase();
+}
+
+export function searchPosts(list: Post[], query?: string) {
+  const q = normalizeText(query ?? "").trim();
+  if (!q) return list;
+  return list.filter((p) => normalizeText(`${p.title} ${p.excerpt}`).includes(q));
+}
+
+export function countByCategory(list: Post[]) {
+  const counts: Record<string, number> = {};
+  for (const p of list) counts[p.category] = (counts[p.category] ?? 0) + 1;
+  return counts;
+}

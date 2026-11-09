@@ -9,7 +9,15 @@ export function Section({ children, className = "" }: { children: React.ReactNod
 }
 
 /** Đầu trang cho mọi trang con: cùng cỡ chữ, cùng khoảng cách */
-export function PageHero({ title, description, crumbs }: { title: string; description?: string; crumbs?: { label: string; href?: string }[] }) {
+export function PageHero({ title, description, crumbs, eyebrow, children }: {
+  title: string;
+  description?: string;
+  crumbs?: { label: string; href?: string }[];
+  /** Nhãn nhỏ phía trên tiêu đề */
+  eyebrow?: string;
+  /** Khu vực tuỳ chọn dưới mô tả (ô tìm kiếm, nút...) */
+  children?: React.ReactNode;
+}) {
   return (
     <div className="border-b border-line bg-white pt-[72px]">
       <Container className="py-14 lg:py-20">
@@ -24,8 +32,15 @@ export function PageHero({ title, description, crumbs }: { title: string; descri
             ))}
           </nav>
         )}
+        {eyebrow && (
+          <p className="mb-5 inline-flex items-center gap-2 rounded-sm bg-lacquer-soft px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-lacquer">
+            <span aria-hidden className="size-1.5 rounded-full bg-lacquer" />
+            {eyebrow}
+          </p>
+        )}
         <h1 className="max-w-3xl text-4xl font-semibold leading-[1.15] tracking-tight sm:text-5xl">{title}</h1>
         {description && <p className="mt-4 max-w-2xl text-lg leading-relaxed text-muted">{description}</p>}
+        {children && <div className="mt-8">{children}</div>}
       </Container>
     </div>
   );

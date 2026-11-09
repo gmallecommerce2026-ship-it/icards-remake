@@ -2,7 +2,7 @@ import Link from "next/link";
 
 const cols = [
   { t: "Sản phẩm", l: [["Mẫu thiệp", "/invitations"], ["Thiết kế thiệp", "/canvas"], ["Cửa hàng", "/shop"]] },
-  { t: "Hỗ trợ", l: [["Hỏi đáp", "/faq"], ["Blog", "/page"], ["Dịch vụ chuyên nghiệp", "/professional"]] },
+  { t: "Hỗ trợ", l: [["Hỏi đáp", "/faq"], ["Blog", "/blog"], ["Dịch vụ chuyên nghiệp", "/professional"]] },
   { t: "Tài khoản", l: [["Đăng nhập", "/sign-in"], ["Đăng ký", "/sign-up"], ["Quản lý thiệp", "/invitation-management"]] },
 ];
 
