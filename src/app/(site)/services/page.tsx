@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { getServices } from "@/lib/catalog";
 import ServiceCover from "@/components/services/ServiceCover";
 import { PageHero, Container } from "@/components/ui/Primitives";
+import { AdBanner } from "@/components/ads/AdBanner";
 
 export const metadata: Metadata = {
   title: "Dịch vụ hệ sinh thái | iCards",
@@ -20,8 +21,8 @@ export default async function ServicesPage() {
         description="Hệ sinh thái công cụ hỗ trợ xuyên suốt từ bước mời khách đến khâu đón tiếp, giúp bạn tổ chức sự kiện thảnh thơi và trọn vẹn nhất."
       />
 
-      <Container className="py-12 lg:py-16">
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 mb-24">
+      <Container className="py-20 lg:py-24">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 mb-20 lg:mb-24">
           {services.map((service) => (
             <Link 
               key={service.slug} 
@@ -43,6 +44,14 @@ export default async function ServicesPage() {
             </Link>
           ))}
         </div>
+
+        <AdBanner
+          className="mb-20 lg:mb-24"
+          title="Tư vấn dịch vụ theo yêu cầu"
+          text="Cần một giải pháp riêng cho sự kiện? Gửi yêu cầu để đội ngũ iCards tư vấn."
+          cta="Liên hệ tư vấn"
+          href="/contact"
+        />
 
         {/* CTA Box */}
         <section className="rounded-3xl bg-lacquer-soft px-6 py-12 text-center border border-lacquer/10 max-w-4xl mx-auto">

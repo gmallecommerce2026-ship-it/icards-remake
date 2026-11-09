@@ -12,6 +12,7 @@ import { TemplateShowcase } from "@/components/templates/TemplateShowcase";
 import type { InvitationTemplate } from "@/lib/templates";
 import type { TemplateTitleStyle } from "@/lib/title-style";
 import { HOME_BOTTOM_BANNERS } from "@/lib/banners";
+import { AdBanner } from "@/components/ads/AdBanner";
 
 type Block = { _id: string; title: string; slug: string; isActive?: boolean; templates?: { _id: string; imgSrc?: string }[] };
 type Template = InvitationTemplate & { _id: string; title: string; imgSrc?: string; titleStyle?: TemplateTitleStyle };
@@ -313,6 +314,14 @@ export function HomepageContent() {
             XEM TẤT CẢ
           </Link>
         </section>
+
+        <AdBanner
+          className="w-full"
+          title="Bộ sưu tập thiệp cưới mới"
+          text="Khám phá các mẫu thiệp được cập nhật thường xuyên cho đám cưới, sinh nhật và đầy tháng."
+          cta="Xem mẫu thiệp"
+          href="/templates"
+        />
 
         {secondary.length > 0 && (
           <section className="flex w-full flex-col gap-10">

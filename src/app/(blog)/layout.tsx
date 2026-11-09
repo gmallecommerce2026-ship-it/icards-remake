@@ -3,6 +3,8 @@ import { Suspense } from "react";
 import { getBlogCategories } from "@/lib/catalog";
 import { BlogHeader } from "@/components/blog/BlogHeader";
 import { BlogFooter } from "@/components/blog/BlogFooter";
+import { PersonalizePanel } from "@/components/personalize/PersonalizePanel";
+import { WelcomePopup } from "@/components/onboarding/WelcomePopup";
 
 /** Layout riêng của blog: không dùng header/footer của site chính. */
 export default async function BlogLayout({ children }: { children: ReactNode }) {
@@ -14,6 +16,8 @@ export default async function BlogLayout({ children }: { children: ReactNode }) 
       </Suspense>
       <main className="flex-1">{children}</main>
       <BlogFooter categories={categories} />
+      <PersonalizePanel />
+      <WelcomePopup />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { TemplateShowcase } from "@/components/templates/TemplateShowcase";
 import { HeroCarousel } from "@/components/ui/HeroCarousel";
 import { BannerCard } from "@/components/ui/BannerCard";
 import { Container } from "@/components/ui/Primitives";
+import { AdBanner } from "@/components/ads/AdBanner";
 import type { Slide } from "@/components/ui/Carousel";
 import { PROFESSIONAL_BANNERS, PROFESSIONAL_BOTTOM_BANNERS } from "@/lib/banners";
 
@@ -202,6 +203,15 @@ export default function TutorialPage() {
         <div className={`mt-16 ${TEMPLATE_GRID}`}>
           {showcaseTemplates.map((t) => <ProTemplateCard key={t._id} template={t} />)}
         </div>
+      </Section>
+
+      <Section label="Quảng cáo">
+        <AdBanner
+          title="Gói in thiệp và giao tận nơi"
+          text="Đặt in thiệp chất lượng cao, nhận hàng trong khoảng 7–10 ngày."
+          cta="Xem dịch vụ in"
+          href="/shop"
+        />
       </Section>
 
       {/* In ấn: tiêu đề chuẩn như các mục khác, khối màu bên dưới đúng chiều rộng container */}

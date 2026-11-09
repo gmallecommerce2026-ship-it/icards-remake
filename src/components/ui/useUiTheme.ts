@@ -14,3 +14,13 @@ const server = () => "1";
 export function useUiTheme() {
   return useSyncExternalStore(subscribe, current, server);
 }
+
+/** Đổi giao diện toàn web và lưu lại trên trình duyệt (cùng khoá với UiThemeSwitcher). */
+export function setUiTheme(id: string) {
+  document.documentElement.dataset.theme = id;
+  try {
+    localStorage.setItem("icards:ui-theme", id);
+  } catch {
+    /* bộ nhớ bị chặn: vẫn đổi trong phiên này */
+  }
+}

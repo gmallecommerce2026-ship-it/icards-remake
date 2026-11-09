@@ -5,6 +5,7 @@ import ShopClient from "./ShopClient";
 import ServiceCover from "@/components/services/ServiceCover";
 import { getProducts, getServices, getShopCategories } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
+import { AdBanner } from "@/components/ads/AdBanner";
 
 export const metadata: Metadata = {
   title: "Cửa hàng & Dịch vụ | iCards",
@@ -20,9 +21,18 @@ export default async function Page() {
         <ShopClient products={products} categories={categories} />
       </Suspense>
 
+      <div className="mx-auto w-full max-w-[1520px] px-5 pt-20 lg:px-8 lg:pt-24">
+        <AdBanner
+          title="Phong bì và hộp quà đồng bộ thiệp"
+          text="Chọn bộ sản phẩm đồng bộ cho ngày trọng đại của bạn."
+          cta="Xem sản phẩm"
+          href="/shop"
+        />
+      </div>
+
       {/* Dịch vụ: lưới ảnh giống lưới sản phẩm, chỉ có tên và giá */}
       {services.length > 0 && (
-        <section id="dich-vu" className="mx-auto w-full max-w-[1520px] scroll-mt-24 px-5 pb-24 lg:px-8">
+        <section id="dich-vu" className="mx-auto w-full max-w-[1520px] scroll-mt-24 px-5 py-20 lg:px-8 lg:py-24">
           <h2 className="mb-12 text-center text-base font-semibold uppercase tracking-[0.02em] text-[#27548A]">
             Dịch vụ
           </h2>
