@@ -18,8 +18,8 @@ function Cover({ inv }: { inv: Inv }) {
   return (
     <div
       aria-hidden
-      className="h-full w-full bg-paper-deep"
-      style={{ backgroundImage: "radial-gradient(var(--color-lacquer) 1.5px, transparent 1.5px)", backgroundSize: "22px 22px", opacity: 0.9 }}
+      className="h-full w-full bg-[#E8EEF6]"
+      style={{ backgroundImage: "radial-gradient(var(--color-lacquer) 1.5px, transparent 1.5px)", backgroundSize: "22px 22px", opacity: 0.35 }}
     />
   );
 }

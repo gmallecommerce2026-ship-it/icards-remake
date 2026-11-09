@@ -77,3 +77,10 @@ export function countByCategory(list: Post[]) {
   for (const p of list) counts[p.category] = (counts[p.category] ?? 0) + 1;
   return counts;
 }
+
+/** Nhóm từ khoá thường gặp ở cuối trang blog. Bấm một từ khoá sẽ tìm bài viết theo từ đó. */
+export const BLOG_KEYWORD_GROUPS: { title: string; keywords: string[] }[] = [
+  { title: "Thiệp mời", keywords: ["lời mời", "mẫu thiệp", "thiệp điện tử", "thiệp đám cưới"] },
+  { title: "Chuẩn bị sự kiện", keywords: ["ngân sách", "danh sách khách mời", "lời chúc", "xác nhận tham dự"] },
+  { title: "Chia sẻ", keywords: ["gửi thiệp online", "link thiệp", "phong bì", "QR code"] },
+];

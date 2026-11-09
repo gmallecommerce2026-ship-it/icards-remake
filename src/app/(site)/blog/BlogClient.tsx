@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Search, X } from "lucide-react";
 import PostCard, { AuthorAvatar, PostCover, PostMeta } from "@/components/blog/PostCard";
-import { countByCategory, filterPosts, getCategory, searchPosts, type BlogCategory, type Post } from "@/lib/blog";
+import { BLOG_KEYWORD_GROUPS, countByCategory, filterPosts, getCategory, searchPosts, type BlogCategory, type Post } from "@/lib/blog";
 import { PageHero, Container, btn } from "@/components/ui/Primitives";
 import { Reveal } from "@/components/home/Reveal";
 
@@ -28,7 +28,7 @@ export default function BlogClient({ posts: allPosts, categories }: { posts: Pos
   const gridPosts = showFeatured ? posts.slice(1 + side.length) : posts;
 
   return (
-    <div className="min-h-screen bg-porcelain">
+    <div className="tone-blue min-h-screen bg-porcelain">
       <PageHero
         eyebrow="Blog iCards"
         title="Cẩm nang thiệp mời & ngày cưới"
@@ -59,7 +59,7 @@ export default function BlogClient({ posts: allPosts, categories }: { posts: Pos
       </PageHero>
 
       <Container className="py-12 lg:py-16">
-        <nav aria-label="Chuyên mục" className="-mx-5 mb-10 flex gap-2 overflow-x-auto px-5 pb-2 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0 lg:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <nav id="blog-list" aria-label="Chuyên mục" className="-mx-5 mb-10 flex gap-2 overflow-x-auto px-5 pb-2 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0 lg:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <FilterLink href="/blog" label="Tất cả" count={allPosts.length} current={!active} />
           {categories.map((c) => (
             <FilterLink
@@ -130,11 +130,38 @@ export default function BlogClient({ posts: allPosts, categories }: { posts: Pos
             )}
           </>
         )}
+
+        {/* Nhóm từ khoá thường gặp */}
+        <section aria-labelledby="blog-keywords" className="mt-16 border-t border-line pt-12 lg:mt-20">
+          <h2 id="blog-keywords" className="text-xl font-semibold tracking-tight">Từ khoá thường gặp</h2>
+          <div className="mt-6 grid gap-8 md:grid-cols-3">
+            {BLOG_KEYWORD_GROUPS.map((g) => (
+              <div key={g.title}>
+                <p className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">{g.title}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {g.keywords.map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => {
+                        setQuery(k);
+                        document.getElementById("blog-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }}
+                      className="rounded-sm border border-line bg-white px-3.5 py-2 text-sm text-ink transition-colors hover:border-lacquer hover:text-lacquer"
+                    >
+                      {k}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       </Container>
 
-      <section className="px-5 pb-20 lg:px-8 lg:pb-28">
+      <Container className="pb-20 lg:pb-28">
         <Reveal>
-          <div className="relative mx-auto max-w-5xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-lacquer to-lacquer-dark px-8 py-14 text-center text-white sm:px-16">
+          <div className="relative w-full overflow-hidden bg-lacquer px-8 py-14 text-center text-white sm:px-16">
             <div aria-hidden className="absolute -bottom-16 -right-16 size-64 rounded-full border border-white/15" />
             <div aria-hidden className="absolute -bottom-28 -right-28 size-96 rounded-full border border-white/10" />
             <h2 className="relative mx-auto max-w-2xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
@@ -148,7 +175,7 @@ export default function BlogClient({ posts: allPosts, categories }: { posts: Pos
             </Link>
           </div>
         </Reveal>
-      </section>
+      </Container>
     </div>
   );
 }

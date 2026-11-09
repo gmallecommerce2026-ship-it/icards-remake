@@ -40,7 +40,21 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
   const wrapRef = useRef<HTMLDivElement>(null);
   // Nút cha đang hover: dropdown hiện nhóm con của nút đó, căn theo vị trí nút
   const [hover, setHover] = useState<{ id: string; left: number } | null>(null);
+  // Trễ nhỏ trước khi đóng để chuột kịp đi từ nút xuống dropdown
+  const closeTimer = useRef<number | null>(null);
+  const cancelClose = () => {
+    if (closeTimer.current !== null) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimer.current = window.setTimeout(() => setHover(null), 180);
+  };
+  useEffect(() => cancelClose, []);
   const openFor = (id: string, el: HTMLElement) => {
+    cancelClose();
     const r = el.getBoundingClientRect();
     const w = wrapRef.current?.getBoundingClientRect();
     setHover({ id, left: r.left - (w?.left ?? 0) });
@@ -104,7 +118,7 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
 
       <div className="mx-auto w-full max-w-[1520px] px-5 py-[20px]">
         {/* Bộ lọc danh mục: nền xanh, chữ trắng như bản src */}
-        <div ref={wrapRef} className="relative" onMouseLeave={() => setHover(null)}>
+        <div ref={wrapRef} className="relative" onMouseLeave={scheduleClose}>
         <div
           ref={filtersRef}
           role="tablist"
@@ -132,11 +146,16 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
 
         {/* Dropdown nhóm con (vuông), hiện khi hover nút cha ngay phía trên */}
         {hoverRoot && hoverRoot.children.length > 0 && (
+          // Phần đệm trong suốt phía trên (pt-2) nằm trong cùng vùng hover, không còn khe hở
+          <div
+            className="absolute z-20 pt-2"
+            style={{ left: hover?.left ?? 0, top: "100%" }}
+            onMouseEnter={cancelClose}
+          >
           <div
             role="menu"
             aria-label={`Nhóm trong ${hoverRoot.label}`}
-            className="absolute z-20 mt-1 flex max-w-[min(90vw,720px)] flex-wrap gap-2 border border-black/10 bg-white p-3 shadow-[0_12px_28px_-12px_rgba(14,27,44,0.35)]"
-            style={{ left: hover?.left ?? 0, top: "100%" }}
+            className="flex max-w-[min(90vw,720px)] flex-wrap gap-2 border border-black/10 bg-white p-3 shadow-[0_12px_28px_-12px_rgba(14,27,44,0.35)]"
           >
             <Link
               href={hoverRoot.path}
@@ -155,6 +174,7 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
                 {c.label} ({c.count})
               </Link>
             ))}
+          </div>
           </div>
         )}
         </div>

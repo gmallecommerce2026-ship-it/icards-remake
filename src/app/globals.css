@@ -95,6 +95,9 @@
   --s-lg: 0 4px 12px -6px rgba(20,35,63,.14); --s-xl: 0 10px 24px -12px rgba(20,35,63,.18); --s-2xl: 0 20px 40px -18px rgba(20,35,63,.22);
 }
 
+/* Trang dùng tông xanh thương hiệu (#27548A) dù theme đang bật: blog, dashboard */
+.tone-blue { --color-lacquer: #27548a; --color-lacquer-dark: #1b3d66; --color-lacquer-soft: #e8eef6; }
+
 html { scroll-behavior: smooth; }
 body { background: var(--color-porcelain); color: var(--color-ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
 :focus-visible { outline: 1px solid var(--color-lacquer); outline-offset: 3px; border-radius: 2px; }

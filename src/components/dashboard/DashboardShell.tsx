@@ -25,7 +25,7 @@ function isActive(pathname: string, href: string) {
 /* ================================================================== */
 function Shell1({ user, pathname, onLogout, children }: Props) {
   return (
-    <div className="min-h-screen bg-paper text-ink">
+    <div className="tone-blue min-h-screen bg-white text-ink">
       <header className="border-b border-line bg-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-6 px-5 py-5 lg:px-8">
           <Link href="/" className="font-display text-2xl font-medium">iCards</Link>
