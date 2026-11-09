@@ -159,6 +159,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
   const canEdit = editable && mode === 'edit' && cardFront && focus === 'card' && settled && !swapping && !cm.busy;
   const tplName = useEditorStore((s) => s.tplName);
   const isCard = useEditorStore((s) => s.format) === 'card';   // thiệp 2 mặt phẳng: không có phong bì
+  const orientation = useEditorStore((s) => s.orientation);
   const canUndo = useEditorStore((s) => s.past.length > 0);
   const canRedo = useEditorStore((s) => s.future.length > 0);
   const editing = useEditorStore((s) => s.editingId !== null);
@@ -408,7 +409,14 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
     if (a instanceof HTMLElement) a.blur();          // chốt ô chữ đang gõ vào store trước khi lưu
     useEditorStore.getState().select(null);
     saveNow();
-    if (isCard) { setSendOpen(true); return; }
+    if (isCard) {
+      // Thiệp 2 mặt: chỉ cần về mặt bìa (lật ~0.9s) rồi mở lớp phủ từ đúng khung thiệp
+      if (view === 'cover') { setSendOpen(true); return; }
+      setView('cover');
+      setSendPending(true);
+      later(950, () => { setSendPending(false); setSendOpen(true); });
+      return;
+    }
 
     // Lớp phủ nối tiếp NGAY từ cảnh đang đứng trong canvas, nên cảnh phải ở tư thế chuẩn trước:
     // thiệp khép bìa, đã rút ra đứng trước, nắp mở, phong bì quay mặt nắp. Nếu chưa thì tự đưa về
@@ -568,7 +576,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
         )}
 
         {isCard ? (
-          <CardFlatEditor view={view} editable={canEdit} onFlip={() => setView(view === 'back' ? 'cover' : 'back')} />
+          <CardFlatEditor view={view} editable={canEdit} onFlip={() => setView(view === 'back' ? 'cover' : 'back')} rootRef={sceneBoxRef} />
         ) : (
         <motion.div ref={sceneBoxRef} className={d.scene} style={{ rotateX: tiltOn ? rx : 0, rotateY: tiltOn ? ry : 0, transformPerspective: 1600, visibility: sceneHidden ? 'hidden' : 'visible' }}>
           {ready && <EnvelopeScene
@@ -617,6 +625,8 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
       {editable && (
         <InvitationSendFlow
           open={sendOpen}
+          format={isCard ? 'card' : 'folding'}
+          orientation={orientation}
           card={<CardFaceStatic pageId="cover" />}
           getSceneRect={() => sceneBoxRef.current?.getBoundingClientRect() ?? null}
           getStageRect={() => stageRef.current?.getBoundingClientRect() ?? null}

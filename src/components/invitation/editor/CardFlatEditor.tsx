@@ -1,7 +1,7 @@
 // src/components/invitation/editor/CardFlatEditor.tsx
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type Ref } from 'react';
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react';
 import { PageEditor } from './PageEditor';
 import { useEditorStore, type PageId } from './useEditorStore';
@@ -10,13 +10,14 @@ type Props = {
   view: PageId;            // 'back' = mặt sau, còn lại = mặt trước
   editable: boolean;
   onFlip: () => void;      // đổi sang mặt còn lại (do EnvelopeDesigner giữ trạng thái trang)
+  rootRef?: Ref<HTMLDivElement>;   // để EnvelopeDesigner đo khung thiệp
 };
 
 /**
  * Thiệp 2 mặt phẳng (format = card): hai mặt, lật quanh trục giữa như cầm tấm thiệp trên tay.
  * Khổ lấy từ store (ngang / vuông / dọc), không dùng khung gập 5:7 và không có phong bì.
  */
-export function CardFlatEditor({ view, editable, onFlip }: Props) {
+export function CardFlatEditor({ view, editable, onFlip, rootRef }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const [k, setK] = useState(1);
   const dims = useEditorStore((s) => s.dims);
@@ -48,6 +49,7 @@ export function CardFlatEditor({ view, editable, onFlip }: Props) {
   const isBack = view === 'back';
   return (
     <div
+      ref={rootRef}
       style={{
         position: 'relative',
         width: `min(100%, calc(min(100dvh - 210px, 900px) * ${dims.w} / ${dims.h}))`,

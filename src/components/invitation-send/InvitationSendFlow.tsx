@@ -13,6 +13,8 @@ import {
 } from "motion/react";
 import { ArrowDown, ChevronLeft } from "lucide-react";
 import { EnvelopeScene } from "@/components/invitation/envelope/EnvelopeScene";
+import { CardEnvelopeScene } from "@/components/invitation/envelope/CardEnvelopeScene";
+import type { TemplateOrientation } from "@/lib/templates";
 import { EVENT_FONT_VARS, EventDetailsEditor, type EventDetailsEditorProps } from "./EventDetailsEditor";
 
 /* ------------------------------------------------------------------ */
@@ -87,6 +89,9 @@ export type InvitationSendFlowProps = Pick<EventDetailsEditorProps, "initial" | 
   onSceneReady?: () => void;
   /** đã cuộn ngược về vị trí chỉnh sửa → trả lại editor */
   onClose: () => void;
+  /** card: thiệp 2 mặt (phong bì cùng hướng thiệp); folding: thiệp gập 5:7 */
+  format?: "card" | "folding";
+  orientation?: TemplateOrientation;
 };
 
 export function InvitationSendFlow({ open, ...rest }: InvitationSendFlowProps) {
@@ -95,7 +100,7 @@ export function InvitationSendFlow({ open, ...rest }: InvitationSendFlowProps) {
 
 function FlowBody({
   card, getSceneRect, getStageRect, envelopeColor, liner, stampId, recipientName, onSceneReady,
-  initial, guests, onSave, onAddGuests, onClose,
+  initial, guests, onSave, onAddGuests, onClose, format = "folding", orientation = "portrait",
 }: Omit<InvitationSendFlowProps, "open">) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLElement>(null);
@@ -369,19 +374,29 @@ function FlowBody({
           <motion.div aria-hidden className="absolute" style={{ left: bgL, top: bgT, right: bgR, bottom: bgB, opacity: stage ? (shown ? 1 : 0) : settle, background: STAGE_BG }} />
 
           <motion.div ref={sceneWrapRef} className="absolute inset-0" style={{ x: wx, y: wy, scale: wScale, transformOrigin: "50% 50%", opacity: shown ? 1 : 0 }}>
-            <EnvelopeScene
-              card={card}
-              envelopeColor={envelopeColor}
-              liner={liner}
-              stampId={stampId}
-              recipientName={recipientName}
-              side="back"
-              flapOpen
-              cardFront
-              focus="card"
-              send={p}
-              onReady={() => setReady(true)}
-            />
+            {format === "card" ? (
+              <CardEnvelopeScene
+                card={card}
+                orientation={orientation}
+                envelopeColor={envelopeColor}
+                liner={liner}
+                send={p}
+              />
+            ) : (
+              <EnvelopeScene
+                card={card}
+                envelopeColor={envelopeColor}
+                liner={liner}
+                stampId={stampId}
+                recipientName={recipientName}
+                side="back"
+                flapOpen
+                cardFront
+                focus="card"
+                send={p}
+                onReady={() => setReady(true)}
+              />
+            )}
           </motion.div>
 
           {/* viền tối (vignette) phủ lên cảnh, dưới các nút */}
