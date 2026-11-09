@@ -8,7 +8,7 @@ const TONES = [
   { bg: "#FFF1DF", ink: "#9A5A12" },
   { bg: "#EEEAFB", ink: "#5B43B8" },
 ];
-const toneOf = (slug: string) => TONES[[...slug].reduce((a, c) => a + c.charCodeAt(0), 0) % TONES.length];
+export const toneOf = (slug: string) => TONES[[...slug].reduce((a, c) => a + c.charCodeAt(0), 0) % TONES.length];
 
 export default function ServiceCover({ service, className = "" }: { service: Service; className?: string }) {
   const tone = toneOf(service.slug);
