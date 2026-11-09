@@ -40,6 +40,7 @@ type State = Snap & {
   past: Snap[];
   future: Snap[];
   tplName: string | null;       // tên mẫu đang dùng (đổi được ngay trong editor)
+  envPreset: { envId?: string; linerId?: string } | null;   // phong bì mặc định của mẫu đang dùng
   uploads: string[];            // ảnh người dùng đã tải lên trong phiên này
   draw: DrawCfg;
   showSafe: boolean;            // hiện lề an toàn + đường chia ba trên trang đang chỉnh
@@ -185,6 +186,7 @@ export const useEditorStore = create<State>((set, get) => {
     past: [],
     future: [],
     tplName: null,
+    envPreset: null,
     format: 'folding',
     orientation: 'portrait',
     dims: PAGE,
@@ -361,7 +363,7 @@ export const useEditorStore = create<State>((set, get) => {
       return {
         ...(record ? push(s) : { past: [], future: [] }),
         ...content, format, orientation, dims,
-        tplName: t.name, page: 'cover', selectedId: null, editingId: null,
+        tplName: t.name, envPreset: t.envelope ?? {}, page: 'cover', selectedId: null, editingId: null,
       };
     }),
     // bản nháp lưu từ trước khi có trang trái không có khoá insideLeft: bù khoá thiếu để PageEditor không bị crash

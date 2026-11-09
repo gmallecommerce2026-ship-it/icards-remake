@@ -8,6 +8,12 @@ export const HOME_BANNERS: Slide[] = [
   { id: "home-3", eyebrow: "Dịch vụ", title: "In ấn và quà tặng cho ngày trọng đại", text: "Chọn thêm thiệp in, bảng đón khách hay quà lưu niệm từ cửa hàng iCards.", href: "/shop", cta: "Xem cửa hàng", tone: "from-white via-porcelain to-lacquer-soft" },
 ];
 
+/* 2 banner cuối trang chủ, nằm phía trên khối "Về chúng tôi". */
+export const HOME_BOTTOM_BANNERS: Slide[] = [
+  { id: "home-bottom-1", eyebrow: "Thiệp cưới", title: "Trọn bộ thiệp cưới từ mẫu đến in ấn", text: "Chọn mẫu, cá nhân hoá nội dung và đặt in thiệp cùng phong bì đồng bộ.", href: "/templates", cta: "Chọn mẫu cưới", tone: "from-lacquer-soft via-white to-porcelain" },
+  { id: "home-bottom-2", eyebrow: "Sự kiện", title: "Quản lý khách mời gọn gàng cho mọi buổi tiệc", text: "Theo dõi xác nhận tham dự, lời chúc và chi phí trong một nơi duy nhất.", href: "/sign-up", cta: "Dùng thử miễn phí", tone: "from-porcelain via-white to-lacquer-soft" },
+];
+
 export const SHOP_BANNERS: Slide[] = [
   { id: "shop-1", eyebrow: "Ưu đãi", title: "Bộ in thiệp cưới trọn gói", text: "Thiệp in, phong bì và tem đồng bộ với mẫu bạn đã chọn.", href: "/shop", cta: "Khám phá", tone: "from-lacquer-soft via-white to-porcelain" },
   { id: "shop-2", eyebrow: "Mới", title: "Bảng đón khách và quà lưu niệm", text: "Thiết kế theo màu thiệp để không gian tiệc thống nhất từ đầu đến cuối.", href: "/shop", cta: "Xem sản phẩm", tone: "from-porcelain via-white to-lacquer-soft" },

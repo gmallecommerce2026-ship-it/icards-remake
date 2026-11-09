@@ -11,6 +11,7 @@ import { InvitationPreview } from "@/components/templates/InvitationPreview";
 import { TemplateShowcase } from "@/components/templates/TemplateShowcase";
 import type { InvitationTemplate } from "@/lib/templates";
 import type { TemplateTitleStyle } from "@/lib/title-style";
+import { HOME_BOTTOM_BANNERS } from "@/lib/banners";
 
 type Block = { _id: string; title: string; slug: string; isActive?: boolean; templates?: { _id: string; imgSrc?: string }[] };
 type Template = InvitationTemplate & { _id: string; title: string; imgSrc?: string; titleStyle?: TemplateTitleStyle };
@@ -134,6 +135,37 @@ function FeaturedCard({ t }: { t: Template }) {
         {t.title}
       </h3>
     </Link>
+  );
+}
+
+/* 2 banner cuối trang, đặt ngay phía trên khối "Về chúng tôi" */
+function BottomBanners() {
+  return (
+    <section className="grid w-full grid-cols-1 gap-6 md:grid-cols-2">
+      {HOME_BOTTOM_BANNERS.map((b) => (
+        <Link
+          key={b.id}
+          href={b.href}
+          className={`group relative flex min-h-[260px] flex-col justify-center overflow-hidden rounded-lg bg-gradient-to-br ${b.tone} p-8 ring-1 ring-[#0E1B2C]/10 transition-shadow duration-300 hover:shadow-[0_12px_28px_-12px_rgba(14,27,44,0.35)] md:p-12`}
+        >
+          {b.eyebrow && (
+            <p className="m-0 text-xs font-semibold uppercase tracking-[0.18em] text-[#6b6b6b]">{b.eyebrow}</p>
+          )}
+          <h3
+            style={{ fontFamily: "var(--font-tpl-display), Georgia, serif" }}
+            className="mt-3 m-0 text-2xl font-semibold leading-[1.25] text-[#1a1a1a] md:text-3xl"
+          >
+            {b.title}
+          </h3>
+          {b.text && <p className="mt-4 m-0 max-w-md text-base leading-[1.7] text-[#444]">{b.text}</p>}
+          {b.cta && (
+            <span className="mt-6 inline-block w-fit border-b border-[#222] pb-0.5 text-sm font-semibold uppercase tracking-[0.08em] text-[#222] transition-colors group-hover:border-[#0E1B2C]">
+              {b.cta}
+            </span>
+          )}
+        </Link>
+      ))}
+    </section>
   );
 }
 
@@ -282,6 +314,8 @@ export function HomepageContent() {
             ))}
           </section>
         )}
+
+        <BottomBanners />
 
         <Intro html={introHtml} />
       </main>

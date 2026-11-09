@@ -13,6 +13,8 @@ export type Slide = {
   cta?: string;
   /** lớp nền gradient Tailwind, ví dụ "from-lacquer-soft via-white to-porcelain" */
   tone: string;
+  /** ảnh nền (URL), dùng cho banner toàn chiều rộng. Không có thì dùng lớp gradient tone. */
+  image?: string;
 };
 
 /** Banner dạng carousel: tự chạy, dừng khi rê chuột / lấy tiêu điểm, có mũi tên và chấm chuyển trang */

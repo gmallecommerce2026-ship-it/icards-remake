@@ -160,6 +160,15 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
   const tplName = useEditorStore((s) => s.tplName);
   const isCard = useEditorStore((s) => s.format) === 'card';   // thiệp 2 mặt phẳng: không có phong bì
   const orientation = useEditorStore((s) => s.orientation);
+  const envPreset = useEditorStore((s) => s.envPreset);
+  // Mỗi mẫu có phong bì + lớp lót riêng (giống trang mẫu). Áp dụng mỗi lần mẫu được nạp, kể cả khi đổi mẫu trong sidebar.
+  useEffect(() => {
+    if (!envPreset) return;
+    const e = catalog.envelopes.find((x) => x.id === (envPreset.envId ?? 'burgundy')) ?? catalog.envelopes[0];
+    const l = catalog.liners.find((x) => x.id === (envPreset.linerId ?? 'ink')) ?? catalog.liners[0];
+    if (e) setEnvId(e.id);
+    if (l) setLinerId(l.id);
+  }, [envPreset, catalog]);
   const canUndo = useEditorStore((s) => s.past.length > 0);
   const canRedo = useEditorStore((s) => s.future.length > 0);
   const editing = useEditorStore((s) => s.editingId !== null);

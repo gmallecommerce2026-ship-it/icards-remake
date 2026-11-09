@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type Ref } from 'react';
-import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react';
+import { animate, motion, useMotionValue, useTransform } from 'motion/react';
 import { PageEditor } from './PageEditor';
 import { useEditorStore, type PageId } from './useEditorStore';
 
@@ -23,7 +23,7 @@ export function CardFlatEditor({ view, editable, onFlip, rootRef }: Props) {
   const dims = useEditorStore((s) => s.dims);
   const frontBg = useEditorStore((s) => s.backdrops.cover);
   const backBg = useEditorStore((s) => s.backdrops.back);
-  const reduce = useReducedMotion();
+  const reduce = false;   // luôn lật 3D, giống EnvelopeScene (không tắt theo cài đặt giảm chuyển động của hệ điều hành)
 
   // góc xoay (độ): 0 = mặt trước, 180 = mặt sau
   const turn = useMotionValue(view === 'back' ? 180 : 0);

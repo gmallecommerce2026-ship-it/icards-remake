@@ -1,0 +1,6 @@
+Xóa các file/thư mục sau khỏi project (zip không thể xóa file thay bạn):
+src/components/shop/AddToCart.tsx
+src/components/shop/CartView.tsx
+src/components/shop/CartProvider.tsx
+src/components/shop/ShopBar.tsx
+src/app/(site)/shop/cart/   (cả thư mục)

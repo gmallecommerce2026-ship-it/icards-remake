@@ -80,6 +80,11 @@ export function CardEnvelopeScene({ card, orientation, envelopeColor, liner, sen
   const sealOpacity = useTransform(p, (v) => seg(v, R.seal));
   const sealScale = useTransform(p, (v) => 1.5 - 0.5 * seg(v, R.seal));
 
+  // Máy quay: xoay nhẹ quanh hai trục + áp sát khi thiệp khoe và khi đóng dấu, như cảnh 4 mặt
+  const camRX = useTransform(p, [0, 0.2, 0.5, 0.75, 0.92, 1], [-4, 4, 0, 7, 0, 0]);
+  const camRY = useTransform(p, [0, 0.2, 0.5, 0.75, 0.92, 1], [-12, 9, 0, -6, 0, 0]);
+  const camS = useTransform(p, [0, 0.2, 0.5, 0.75, 0.92, 1], [0.96, 1.08, 1, 1.12, 1, 1]);
+
   const sealSize = g.envW * 0.26;
   const seal = sealColor(envelopeColor);
 
@@ -97,6 +102,13 @@ export function CardEnvelopeScene({ card, orientation, envelopeColor, liner, sen
             width: SQUARE, height: SQUARE, perspective: 1400,
           }}
         >
+          {/* Máy quay 3D: mọi lớp bên trong là phẳng và sắp theo z-index như cũ, chỉ cả khung được xoay / phóng */}
+          <motion.div
+            style={{
+              position: 'absolute', inset: 0, perspective: 1400, transformOrigin: '50% 50%',
+              rotateX: camRX, rotateY: camRY, scale: camS,
+            }}
+          >
           {/* 1. Thân phong bì (mặt sau) */}
           <div
             style={{
@@ -166,6 +178,7 @@ export function CardEnvelopeScene({ card, orientation, envelopeColor, liner, sen
               boxShadow: '0 4px 10px rgba(0,0,0,0.35)',
             }}
           />
+          </motion.div>
         </div>
       </div>
     </div>

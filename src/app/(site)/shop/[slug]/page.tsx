@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { ProductThumb } from "@/components/shop/ProductThumb";
-import { AddToCart } from "@/components/shop/AddToCart";
 import { getRelatedProducts, priceFrom } from "@/lib/shop";
 import { getProduct, getProducts, getShopCategories } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
@@ -70,8 +69,23 @@ export default async function ProductPage({ params }: { params: Params }) {
             ))}
           </dl>
 
-          <div className="mt-8">
-            <AddToCart product={product} />
+          <div className="mt-8 rounded-xl border border-[#DDE4EE] bg-white p-5 sm:p-6">
+            <h2 className="text-sm font-semibold">Bảng giá các gói</h2>
+            <ul className="mt-3 divide-y divide-[#EEF2F7]">
+              {product.variants.map((v) => (
+                <li key={v.id} className="flex items-center justify-between py-3 text-sm">
+                  <span className="font-medium">{v.label}</span>
+                  <span className="text-[#3D4C61]">{formatPrice(v.price)}</span>
+                </li>
+              ))}
+            </ul>
+            <Link
+              href="/contact"
+              className="mt-5 flex h-12 w-full items-center justify-center rounded-lg bg-[#27548A] text-base font-semibold text-white transition-colors hover:bg-[#1F4573] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#27548A]"
+            >
+              Liên hệ để đặt sản phẩm
+            </Link>
+            <p className="mt-3 text-center text-sm text-[#5B6B7F]">Đội ngũ iCards sẽ báo giá và xác nhận đơn cho bạn.</p>
           </div>
         </div>
       </div>
