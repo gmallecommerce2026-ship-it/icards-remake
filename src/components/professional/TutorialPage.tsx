@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { ArrowRight, Calendar, FileText, Heart, Link2, Mail, Share2, Users, ChevronDown } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { ArrowRight, Calendar, ChevronDown, FileText, Heart, Link2, Mail, Share2, Users } from "lucide-react";
 import { settingsApi, templatesApi } from "@/lib/api";
 import { templatesOf } from "@/lib/api/list";
 import type { InvitationTemplate } from "@/lib/templates";
 import { TemplateShowcase } from "@/components/templates/TemplateShowcase";
 import { HeroCarousel } from "@/components/ui/HeroCarousel";
 import { BannerCard } from "@/components/ui/BannerCard";
+import { Container } from "@/components/ui/Primitives";
 import type { Slide } from "@/components/ui/Carousel";
 import { PROFESSIONAL_BANNERS, PROFESSIONAL_BOTTOM_BANNERS } from "@/lib/banners";
 
@@ -35,12 +36,27 @@ const FEATURES_RIGHT = [
 ];
 
 const PROCESS = ["Chọn mẫu thiệp", "Chỉnh sửa", "Đặt in", "Nhận thiệp"];
+const BENEFITS: [string, string][] = [
+  ["Mẫu thiệp", "Đa dạng phong cách"],
+  ["Quản lý khách", "Xác nhận tham dự"],
+  ["In ấn tận nơi", "Đúng cam kết chất lượng"],
+  ["Tải bản thiết kế", "In ở bất kỳ đâu"],
+];
 
 const TEMPLATE_GRID = "grid grid-cols-2 gap-x-5 gap-y-10 lg:grid-cols-4";
 
-/* Tiêu đề mục dùng chung: nhãn nhỏ, tiêu đề lớn, mô tả */
+/* Khối dùng chung: mọi mục đều có cùng padding ngang (Container) và cùng khoảng cách dọc. */
+function Section({ children, id, className = "", label }: { children: ReactNode; id?: string; className?: string; label?: string }) {
+  return (
+    <section id={id} aria-label={label} className={`py-20 lg:py-24 ${className}`}>
+      <Container>{children}</Container>
+    </section>
+  );
+}
+
+/* Tiêu đề mục: nhãn nhỏ, tiêu đề lớn, mô tả */
 function SectionHeader({ eyebrow, title, subtitle, align = "center" }: { eyebrow?: string; title: string; subtitle?: string; align?: "center" | "left" }) {
-  const alignCls = align === "center" ? "mx-auto text-center items-center" : "text-left items-start";
+  const alignCls = align === "center" ? "mx-auto items-center text-center" : "items-start text-left";
   return (
     <div className={`flex max-w-3xl flex-col gap-4 ${alignCls}`}>
       {eyebrow && <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lacquer">{eyebrow}</p>}
@@ -146,28 +162,24 @@ export default function TutorialPage() {
   const heroSlides = heroSlidesFrom(banners);
 
   return (
-    <div className="bg-[#FEFDFD] text-ink">
+    // tone-blue: ép màu thương hiệu #27548A cho toàn trang, không theo theme 1–5
+    <div className="tone-blue bg-[#FEFDFD] text-ink">
       <HeroCarousel slides={heroSlides} />
 
       {/* Dải lợi ích nhanh */}
       <section aria-label="Lợi ích" className="border-b border-line bg-white">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-line px-5 lg:grid-cols-4 lg:px-8">
-          {[
-            ["Mẫu thiệp", "Đa dạng phong cách"],
-            ["Quản lý khách", "Xác nhận tham dự"],
-            ["In ấn tận nơi", "Đúng cam kết chất lượng"],
-            ["Tải bản thiết kế", "In ở bất kỳ đâu"],
-          ].map(([a, b]) => (
-            <div key={a} className="py-6 px-4 first:pl-0 last:pr-0 sm:px-6">
+        <Container className="grid grid-cols-2 lg:grid-cols-4">
+          {BENEFITS.map(([a, b]) => (
+            <div key={a} className="border-b border-line px-5 py-6 lg:border-b-0 lg:border-l lg:px-8 lg:first:border-l-0 lg:first:pl-0">
               <p className="text-sm font-bold text-ink">{a}</p>
               <p className="mt-1 text-sm text-muted">{b}</p>
             </div>
           ))}
-        </div>
+        </Container>
       </section>
 
       {/* Tính năng: ba cột, ảnh ở giữa */}
-      <section className="mx-auto max-w-7xl px-5 py-24 lg:px-8 lg:py-28">
+      <Section label="Tính năng">
         <SectionHeader eyebrow="Tính năng" title="Các tính năng thiệp mời Pro" subtitle="Mọi thứ cần cho ngày trọng đại, gom trong một nơi." />
         <div className="mt-16 grid gap-8 lg:grid-cols-[1fr_minmax(0,1.1fr)_1fr] lg:items-center lg:gap-10">
           <div className="space-y-6">
@@ -182,20 +194,18 @@ export default function TutorialPage() {
             {FEATURES_RIGHT.map((f) => <FeatureCard key={f.title} icon={f.icon} title={f.title} description={f.description} />)}
           </div>
         </div>
-      </section>
+      </Section>
 
       {/* Mẫu thiệp nổi bật theo danh mục */}
-      <section className="bg-white py-24 lg:py-28">
-        <div className="mx-auto max-w-7xl px-5 lg:px-8">
-          <SectionHeader eyebrow="Mẫu thiệp" title="Dễ dàng tạo thiệp từ vô vàn mẫu có sẵn" subtitle="Những mẫu thiệp đẹp, chuyên nghiệp và cá nhân hoá, cho ngày trọng đại thêm nhiều ý nghĩa." />
-          <div className={`mt-16 ${TEMPLATE_GRID}`}>
-            {showcaseTemplates.map((t) => <ProTemplateCard key={t._id} template={t} />)}
-          </div>
+      <Section className="border-y border-line bg-white" label="Mẫu thiệp nổi bật">
+        <SectionHeader eyebrow="Mẫu thiệp" title="Dễ dàng tạo thiệp từ vô vàn mẫu có sẵn" subtitle="Những mẫu thiệp đẹp, chuyên nghiệp và cá nhân hoá, cho ngày trọng đại thêm nhiều ý nghĩa." />
+        <div className={`mt-16 ${TEMPLATE_GRID}`}>
+          {showcaseTemplates.map((t) => <ProTemplateCard key={t._id} template={t} />)}
         </div>
-      </section>
+      </Section>
 
-      {/* In ấn: khối lớn màu thương hiệu */}
-      <section className="mx-auto max-w-7xl px-5 py-24 lg:px-8 lg:py-28">
+      {/* In ấn: khối màu thương hiệu, nằm trong cùng container */}
+      <Section label="In ấn">
         <div className="grid overflow-hidden bg-lacquer text-white lg:grid-cols-2">
           <div className="flex flex-col justify-center gap-8 p-8 sm:p-12 lg:p-16">
             <div>
@@ -225,24 +235,22 @@ export default function TutorialPage() {
             <img src="https://pub-f720e3221ef5464a93d19bbdae2cfb86.r2.dev/f2.png" alt="Quy trình in ấn" className="absolute inset-0 size-full object-cover" />
           </div>
         </div>
-      </section>
+      </Section>
 
       {/* Tải bản thiết kế */}
-      <section className="border-y border-line bg-white py-24 lg:py-28">
-        <div className="mx-auto max-w-7xl px-5 lg:px-8">
-          <SectionHeader eyebrow="Tự do đặt in" title="Tải xuống bản thiết kế của bạn" subtitle="Tải bản thiết kế về và đặt in ở bất kỳ nơi nào bạn muốn." />
-          <div className="mx-auto mt-14 max-w-4xl border border-line bg-porcelain p-6 sm:p-10">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={bannerSecondary} alt="Mẫu thiết kế thiệp" className="mx-auto max-h-[460px] w-auto object-contain" />
-          </div>
-          <p className="mx-auto mt-8 max-w-2xl border-l-2 border-lacquer bg-lacquer-soft/60 p-4 text-center text-sm leading-relaxed text-muted sm:text-left">
-            Lưu ý: Chúng tôi không giải quyết các vấn đề in ấn ở địa điểm khác ngoài nhà cung cấp mà chúng tôi gợi ý.
-          </p>
+      <Section className="border-t border-line bg-white" label="Tải bản thiết kế">
+        <SectionHeader eyebrow="Tự do đặt in" title="Tải xuống bản thiết kế của bạn" subtitle="Tải bản thiết kế về và đặt in ở bất kỳ nơi nào bạn muốn." />
+        <div className="mx-auto mt-14 max-w-4xl border border-line bg-porcelain p-6 sm:p-10">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={bannerSecondary} alt="Mẫu thiết kế thiệp" className="mx-auto max-h-[460px] w-auto object-contain" />
         </div>
-      </section>
+        <p className="mx-auto mt-8 max-w-2xl border-l-2 border-lacquer bg-lacquer-soft/60 p-4 text-center text-sm leading-relaxed text-muted sm:text-left">
+          Lưu ý: Chúng tôi không giải quyết các vấn đề in ấn ở địa điểm khác ngoài nhà cung cấp mà chúng tôi gợi ý.
+        </p>
+      </Section>
 
       {/* Khám phá mẫu theo danh mục */}
-      <section className="mx-auto max-w-7xl px-5 py-24 lg:px-8 lg:py-28">
+      <Section label="Khám phá mẫu">
         <SectionHeader eyebrow="Khám phá" title="Chọn mẫu theo phong cách của bạn" />
         <div role="tablist" aria-label="Danh mục mẫu thiệp" className="mt-12 flex flex-wrap justify-center gap-2">
           {allCategories.map((item) => {
@@ -276,11 +284,11 @@ export default function TutorialPage() {
             <ArrowRight className="size-4" aria-hidden />
           </Link>
         </div>
-      </section>
+      </Section>
 
-      {/* Câu hỏi thường gặp: hai cột */}
-      <section className="border-t border-line bg-white py-24 lg:py-28">
-        <div className="mx-auto grid max-w-7xl gap-12 px-5 lg:grid-cols-[1fr_1.6fr] lg:gap-20 lg:px-8">
+      {/* Hỏi đáp: hai cột */}
+      <Section className="border-t border-line bg-white" label="Hỏi đáp">
+        <div className="grid gap-12 lg:grid-cols-[1fr_1.6fr] lg:gap-20">
           <div className="lg:sticky lg:top-28 lg:self-start">
             <SectionHeader align="left" eyebrow="Hỏi đáp" title="Có thể bạn chưa biết" subtitle="Những câu hỏi thường gặp về thiệp mời online và dịch vụ in ấn." />
             <a href="mailto:hello@icards.vn" className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-lacquer hover:underline">
@@ -311,16 +319,16 @@ export default function TutorialPage() {
             })}
           </div>
         </div>
-      </section>
+      </Section>
 
       {/* Banner cuối trang */}
-      <section className="mx-auto max-w-7xl px-5 py-24 lg:px-8 lg:py-28">
+      <Section label="Banner">
         <div className="grid gap-6 md:grid-cols-2">
           {PROFESSIONAL_BOTTOM_BANNERS.map((b) => (
             <BannerCard key={b.id} b={b} className="aspect-[16/9] md:aspect-[4/3] lg:aspect-[16/10]" />
           ))}
         </div>
-      </section>
+      </Section>
     </div>
   );
 }

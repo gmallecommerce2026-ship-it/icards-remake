@@ -24,11 +24,12 @@ export function LegalPage({
   sections: LegalSection[];
 }) {
   return (
-    <div className="bg-[#FEFDFD]">
+    // tone-blue: ép màu thương hiệu #27548A, không theo theme 1–5
+    <div className="tone-blue bg-[#FEFDFD]">
       {/* Đầu trang */}
       <section className="relative overflow-hidden border-b border-line bg-white">
         <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-lacquer" />
-        <Container className="py-12 lg:py-16">
+        <Container className="py-16 lg:py-20">
           <nav aria-label="Đường dẫn" className="flex flex-wrap items-center gap-2 text-sm text-muted">
             <Link href="/" className="transition-colors hover:text-lacquer">Trang chủ</Link>
             <span aria-hidden>/</span>
@@ -48,7 +49,7 @@ export function LegalPage({
         </Container>
       </section>
 
-      <Container className="py-12 lg:py-16">
+      <Container className="py-16 lg:py-20">
         <div className="grid gap-12 lg:grid-cols-[250px_minmax(0,1fr)] lg:gap-16">
           {/* Mục lục: sticky trên máy tính */}
           <aside className="hidden lg:block">
