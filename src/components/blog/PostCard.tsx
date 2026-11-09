@@ -84,12 +84,12 @@ export default function PostCard({ post, categories = [], compact = false }: { p
     <article className="group h-full">
       <Link
         href={`/blog/${post.slug}`}
-        className="flex h-full flex-col rounded-3xl border border-line bg-white p-3 transition duration-300 hover:-translate-y-1 hover:border-lacquer/30 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-lacquer"
+        className="flex h-full flex-col border border-line bg-white p-3 transition-shadow duration-300 hover:border-lacquer/40 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-lacquer"
       >
-        <PostCover post={post} className={`rounded-2xl ${compact ? "aspect-[16/9]" : "aspect-[16/10]"}`} />
+        <PostCover post={post} className={`rounded-[2px] ${compact ? "aspect-[16/9]" : "aspect-[16/10]"}`} />
         <div className={`flex flex-1 flex-col px-3 pb-3 ${compact ? "pt-4" : "pt-5"}`}>
           <PostMeta post={post} categories={categories} />
-          <h3 className={`mt-3 font-semibold leading-snug tracking-tight transition-colors group-hover:text-lacquer ${compact ? "text-lg" : "text-xl"}`}>
+          <h3 className={`mt-3 font-bold leading-snug tracking-tight transition-colors group-hover:text-lacquer ${compact ? "text-lg" : "text-xl"}`}>
             {post.title}
           </h3>
           {!compact && <p className="mt-2 line-clamp-2 leading-relaxed text-muted">{post.excerpt}</p>}

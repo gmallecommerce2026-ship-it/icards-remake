@@ -13,12 +13,12 @@ export const ROUTES = {
 
 // Các tab trong trang chi tiết một thiệp mời (/invitation-management/[id]/...)
 export const INVITATION_TABS = [
-  { path: "", label: "TỔNG QUAN" },
-  { path: "guests", label: "QUẢN LÝ KHÁCH MỜI" },
-  { path: "wishes", label: "QUẢN LÝ LỜI CHÚC" },
-  { path: "events", label: "QUẢN LÍ SỰ KIỆN" },
-  { path: "planner", label: "KẾ HOẠCH CƯỚI" },
-  { path: "budget", label: "NGÂN SÁCH" },
-  { path: "settings", label: "CÀI ĐẶT THIỆP MỜI" },
-  { path: "delete", label: "XÓA THIỆP MỜI" },
+  { path: "", label: "Tổng quan" },
+  { path: "guests", label: "Khách mời" },
+  { path: "wishes", label: "Lời chúc" },
+  { path: "events", label: "Sự kiện" },
+  { path: "planner", label: "Kế hoạch cưới" },
+  { path: "budget", label: "Ngân sách" },
+  { path: "settings", label: "Cài đặt" },
+  { path: "delete", label: "Xóa thiệp" },
 ] as const;

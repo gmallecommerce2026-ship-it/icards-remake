@@ -49,7 +49,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
   };
 
   return (
-    <div className="tone-blue min-h-screen bg-white pt-[72px]">
+    <div className="tone-blue min-h-screen bg-white">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <ReadingProgress targetId="post-body" />
 
@@ -57,9 +57,9 @@ export default async function BlogPostPage({ params }: { params: Params }) {
       <header className="border-b border-line bg-white">
         <Container className="py-10 lg:py-16">
           <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm text-muted">
-            <Link href="/blog" className="inline-flex items-center gap-1.5 transition-colors hover:text-lacquer">
-              <ArrowLeft className="size-4" /> Blog
-            </Link>
+            <Link href="/" className="transition-colors hover:text-lacquer">Trang chủ</Link>
+            <span aria-hidden>/</span>
+            <Link href="/blog" className="transition-colors hover:text-lacquer">Blog</Link>
             {cat && (
               <>
                 <span aria-hidden>/</span>
@@ -88,14 +88,14 @@ export default async function BlogPostPage({ params }: { params: Params }) {
 
       <Container className="py-10 lg:py-14">
         <Reveal>
-          <PostCover post={post} className="aspect-[16/9] w-full rounded-3xl sm:aspect-[21/9]" />
+          <PostCover post={post} className="aspect-[16/9] w-full rounded-[2px] sm:aspect-[21/9]" />
         </Reveal>
 
         <div className="mt-12 grid gap-12 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-16">
           <div>
             {/* Mục lục thu gọn trên điện thoại */}
             {toc.length > 1 && (
-              <details className="group mb-8 rounded-2xl border border-line bg-porcelain p-5 lg:hidden">
+              <details className="group mb-8 border border-line bg-porcelain p-5 lg:hidden">
                 <summary className="cursor-pointer list-none text-sm font-semibold uppercase tracking-[0.14em] text-muted marker:hidden">
                   Trong bài này
                   <span aria-hidden className="float-right text-lacquer transition-transform group-open:rotate-45">+</span>
@@ -151,25 +151,21 @@ export default async function BlogPostPage({ params }: { params: Params }) {
         </div>
 
         <Reveal>
-          <section className="relative mt-20 overflow-hidden rounded-none bg-lacquer p-8 text-white md:p-12">
-            <div aria-hidden className="absolute -bottom-16 -right-16 size-64 rounded-full border border-white/15" />
-            <div aria-hidden className="absolute -bottom-28 -right-28 size-96 rounded-full border border-white/10" />
-            <div className="relative flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
-              <div>
-                <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Tạo thiệp mời của bạn ngay hôm nay</h2>
-                <p className="mt-3 max-w-xl text-lg text-white/80">Chọn mẫu, điền thông tin và gửi link cho khách mời trong vài phút.</p>
-              </div>
-              <Link href="/templates" className="shrink-0 rounded-sm bg-white px-8 py-4 font-semibold text-lacquer transition hover:scale-105">
-                Xem mẫu thiệp
-              </Link>
+          <section className="mt-20 flex flex-col items-start justify-between gap-6 bg-lacquer-soft p-8 sm:flex-row sm:items-center md:p-12">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Tạo thiệp mời của bạn ngay hôm nay</h2>
+              <p className="mt-3 max-w-xl text-lg text-muted">Chọn mẫu, điền thông tin và gửi link cho khách mời trong vài phút.</p>
             </div>
+            <Link href="/templates" className={btn("primary", "lg", "shrink-0")}>
+              Xem mẫu thiệp
+            </Link>
           </section>
         </Reveal>
 
         {related.length > 0 && (
           <section aria-label="Bài viết liên quan" className="mt-20">
             <div className="flex flex-wrap items-end justify-between gap-4">
-              <h2 className="text-3xl font-semibold tracking-tight">Bài viết liên quan</h2>
+              <h2 className="text-3xl font-bold tracking-tight">Bài viết liên quan</h2>
               <Link href="/blog" className="font-semibold text-lacquer hover:underline">Xem tất cả bài viết</Link>
             </div>
             <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -221,7 +217,7 @@ function renderBlock(b: Block, i: number, isLead: boolean, ink: string) {
       return (
         <aside
           key={i}
-          className="my-10 flex gap-4 rounded-2xl border p-6"
+          className="my-10 flex gap-4 border p-6"
           style={{
             borderColor: `color-mix(in srgb, ${ink} 22%, transparent)`,
             backgroundColor: `color-mix(in srgb, ${ink} 7%, white)`,
@@ -229,7 +225,7 @@ function renderBlock(b: Block, i: number, isLead: boolean, ink: string) {
         >
           <span
             aria-hidden
-            className="grid size-10 shrink-0 place-items-center rounded-xl bg-white"
+            className="grid size-10 shrink-0 place-items-center bg-white"
             style={{ color: ink }}
           >
             <Lightbulb className="size-5" />
