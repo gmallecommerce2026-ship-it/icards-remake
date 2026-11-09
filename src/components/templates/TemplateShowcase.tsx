@@ -35,6 +35,17 @@ const DEFAULT_ENV = { envId: "burgundy", linerId: "ink" };
 
 export function TemplateShowcase({ template }: { template: InvitationTemplate }) {
   const catalog = useEnvelopeCatalog();
+
+  // Thiệp 2 mặt (ngang / vuông / dọc) không đi kèm phong bì 3:4 nên hiển thị thẳng theo đúng tỉ lệ, căn giữa khung vuông
+  if (template.format === "card" && template.layout) {
+    return (
+      <div className="relative flex aspect-square w-full items-center justify-center p-[8%]">
+        <div className="w-full overflow-hidden rounded-[3px] shadow-[0_8px_20px_-8px_rgba(14,27,44,0.4)] ring-1 ring-[#0E1B2C]/10 transition-transform duration-500 group-hover:scale-[1.04]">
+          <InvitationPreview template={template} />
+        </div>
+      </div>
+    );
+  }
   const env =
     catalog.envelopes.find((e) => e.id === (template.envelope?.envId ?? DEFAULT_ENV.envId)) ?? catalog.envelopes[0];
   const liner =

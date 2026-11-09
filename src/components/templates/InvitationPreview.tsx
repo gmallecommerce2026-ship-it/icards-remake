@@ -1,5 +1,10 @@
 import type { CSSProperties, ReactNode } from "react";
-import type { InvitationTemplate } from "@/lib/templates";
+import {
+  orientationRatio,
+  ORIENTATION_LABEL,
+  type FaceElement,
+  type InvitationTemplate,
+} from "@/lib/templates";
 
 type Props = {
   template: InvitationTemplate;
@@ -93,7 +98,122 @@ function Block({ title, children, template }: { title: string; children: ReactNo
   );
 }
 
+/* ---- Thiệp 2 mặt (format = card) ----
+ * Mỗi phần tử có toạ độ theo tỉ lệ (0..1) nên thiệp co giãn đúng theo khung và kiểu dáng (ngang / vuông / dọc).
+ * Cỡ chữ tính bằng cqw theo chiều rộng mặt thiệp, giống các mẫu khác. */
+const TEXT_FONT: Record<NonNullable<FaceElement["font"]>, string> = {
+  display: "var(--font-tpl-display), Georgia, serif",
+  body: "var(--font-tpl-ui), system-ui, sans-serif",
+  script: "'Dancing Script', 'Brush Script MT', cursive",
+};
+
+function roleColor(role: FaceElement["color"] | undefined, p: InvitationTemplate["palette"]): string {
+  switch (role) {
+    case "accent": return p.accent;
+    case "soft": return p.soft;
+    case "bg": return p.bg;
+    default: return p.ink;
+  }
+}
+
+function FaceElementView({ el, p }: { el: FaceElement; p: InvitationTemplate["palette"] }) {
+  const box: CSSProperties = {
+    position: "absolute",
+    left: `${el.x * 100}%`,
+    top: `${el.y * 100}%`,
+    width: `${el.w * 100}%`,
+    height: `${el.h * 100}%`,
+  };
+
+  if (el.kind === "shape") {
+    const c = roleColor(el.fill ?? "soft", p);
+    if (el.shape === "frame") return <div aria-hidden style={{ ...box, border: `0.4cqw solid ${c}` }} />;
+    if (el.shape === "arch") return <div aria-hidden style={{ ...box, background: c, borderRadius: "999px 999px 0 0" }} />;
+    if (el.shape === "circle") return <div aria-hidden style={{ ...box, background: c, borderRadius: "50%" }} />;
+    return <div aria-hidden style={{ ...box, background: c }} />;
+  }
+
+  return (
+    <div
+      style={{
+        ...box,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        textAlign: el.align ?? "center",
+        fontFamily: TEXT_FONT[el.font ?? "body"],
+        fontSize: `${(el.sz ?? 0.03) * 100}cqw`,
+        fontWeight: el.bold ? 700 : 400,
+        fontStyle: el.italic ? "italic" : "normal",
+        color: roleColor(el.color, p),
+        lineHeight: 1.25,
+        whiteSpace: "pre-line",
+      }}
+    >
+      {el.text}
+    </div>
+  );
+}
+
+function CardFace({ template, face }: { template: InvitationTemplate; face: "front" | "back" }) {
+  const p = template.palette;
+  const orientation = template.orientation ?? "portrait";
+  return (
+    <div
+      role="img"
+      aria-label={`${face === "front" ? "Mặt trước" : "Mặt sau"} thiệp ${template.name}`}
+      className="relative w-full overflow-hidden"
+      style={{
+        aspectRatio: orientationRatio(orientation),
+        background: face === "front" ? p.bg : p.soft,
+        color: p.ink,
+        containerType: "inline-size",
+      }}
+    >
+      {(template.layout?.[face] ?? []).map((el, i) => (
+        <FaceElementView key={i} el={el} p={p} />
+      ))}
+    </div>
+  );
+}
+
+function CardPreview({ template, variant, className }: { template: InvitationTemplate; variant: "card" | "full"; className: string }) {
+  const orientation = template.orientation ?? "portrait";
+  if (variant === "card") {
+    if (template.previewImage) {
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={template.previewImage}
+          alt={`Mẫu thiệp ${template.name}`}
+          className={`w-full object-cover ${className}`}
+          style={{ aspectRatio: orientationRatio(orientation) }}
+        />
+      );
+    }
+    return (
+      <div className={`w-full ${className}`}>
+        <CardFace template={template} face="front" />
+      </div>
+    );
+  }
+  // full: hiện cả hai mặt, mặt trước trên, mặt sau dưới
+  return (
+    <div className={`flex w-full flex-col gap-[4%] ${className}`} aria-label={`${ORIENTATION_LABEL[orientation]}, hai mặt`}>
+      <p className="text-xs text-[#5B6B7F]">Mặt trước · {ORIENTATION_LABEL[orientation]}</p>
+      <CardFace template={template} face="front" />
+      <p className="text-xs text-[#5B6B7F]">Mặt sau</p>
+      <CardFace template={template} face="back" />
+    </div>
+  );
+}
+
 export function InvitationPreview({ template, variant = "card", ratio = "portrait", className = "" }: Props) {
+  // Thiệp 2 mặt: kiểu dáng quyết định tỉ lệ, không dùng ratio của prop
+  if (template.format === "card" && template.layout) {
+    return <CardPreview template={template} variant={variant} className={className} />;
+  }
+
   const { palette: p, sample } = template;
   const ratioCls = ratio === "square" ? "aspect-square" : ratio === "tall" ? "aspect-[5/7]" : "aspect-[3/4]";
   const root: CSSProperties = { background: p.bg, color: p.ink, containerType: "inline-size" };

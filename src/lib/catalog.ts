@@ -18,7 +18,15 @@ async function content<T>(key: PublicContentKey, fallback: T): Promise<T> {
 }
 
 // ---- Mẫu thiệp
-export const getTemplates = async (query?: { category?: string; sort?: string; limit?: number }) =>
+export const getTemplates = async (query?: {
+  category?: string;
+  /** folding | card */
+  format?: string;
+  /** landscape | square | portrait */
+  orientation?: string;
+  sort?: string;
+  limit?: number;
+}) =>
   (await serverGet<InvitationTemplate[]>("/invitation-templates", query)) ?? [];
 export const getTemplate = (slug: string) => serverGet<InvitationTemplate>(`/invitation-templates/${slug}`);
 /** Cây danh mục nhiều cấp. Lỗi hoặc backend cũ chưa có endpoint thì trả về [] để trang vẫn chạy bằng danh mục phẳng. */
