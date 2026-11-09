@@ -2,7 +2,6 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type RefObject } from 'react';
-import { PAGE } from '../envelope/envelope.data';
 import { ArtSVG, frameOf } from './editor.data';
 import { fitInside, halfExtent } from './bounds';
 import { useEditorStore, type CardEl, type PageId } from './useEditorStore';
@@ -37,14 +36,15 @@ export function FrameView({ el }: { el: CardEl }) {
 /** Lớp phủ nhận nét vẽ tay khi đang ở tab Vẽ. Tọa độ quy về hệ thiết kế 500×700. */
 function DrawLayer({ rootRef, pageId }: { rootRef: RefObject<HTMLDivElement | null>; pageId: PageId }) {
   const cfg = useEditorStore((s) => s.draw);
+  const dims = useEditorStore((s) => s.dims);
   const [pts, setPts] = useState<[number, number][]>([]);
   const live = useRef<[number, number][]>([]);
 
   function at(ev: RPointerEvent): [number, number] {
     const r = rootRef.current!.getBoundingClientRect();
-    const k = r.width / PAGE.w;
+    const k = r.width / dims.w;
     // kẹp trong trang: nét vẽ không được lan ra ngoài viền / sang trang bên cạnh dù con trỏ đã ra ngoài (pointer capture)
-    return [Math.min(PAGE.w, Math.max(0, (ev.clientX - r.left) / k)), Math.min(PAGE.h, Math.max(0, (ev.clientY - r.top) / k))];
+    return [Math.min(dims.w, Math.max(0, (ev.clientX - r.left) / k)), Math.min(dims.h, Math.max(0, (ev.clientY - r.top) / k))];
   }
   function down(ev: RPointerEvent) {
     if (!rootRef.current) return;
@@ -74,7 +74,7 @@ function DrawLayer({ rootRef, pageId }: { rootRef: RefObject<HTMLDivElement | nu
   const marker = cfg.tool === 'marker';
   return (
     <div className={e.drawLayer} data-draw="" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} aria-label="Vùng vẽ tay">
-      <svg viewBox={`0 0 ${PAGE.w} ${PAGE.h}`} width="100%" height="100%" style={{ overflow: 'visible', pointerEvents: 'none' }} aria-hidden>
+      <svg viewBox={`0 0 ${dims.w} ${dims.h}`} width="100%" height="100%" style={{ overflow: 'visible', pointerEvents: 'none' }} aria-hidden>
         {d && <path d={d} fill="none" stroke={cfg.color} strokeWidth={marker ? cfg.size * 2.4 : cfg.size} strokeOpacity={marker ? 0.45 : 1} strokeLinecap="round" strokeLinejoin="round" />}
       </svg>
     </div>
@@ -87,6 +87,7 @@ function ElNode({ el, editable, selected, rootRef, setGuides }: {
   const ref = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const editing = useEditorStore((s) => s.editingId === el.id);
+  const dims = useEditorStore((s) => s.dims);
   const [hMeasured, setHMeasured] = useState<number | undefined>();
 
   // Luôn giữ phần tử trong trang: bắt mọi trường hợp ngoài kéo-thả (đổi cỡ chữ, đổi phông, gõ thêm dòng, nhân đôi, mẫu cũ…).
@@ -96,14 +97,14 @@ function ElNode({ el, editable, selected, rootRef, setGuides }: {
     const fix = () => {
       const h = n.offsetHeight;
       setHMeasured((p) => (p === h ? p : h));
-      const p = fitInside(el, el.kind === 'text' ? h : undefined);
+      const p = fitInside(el, el.kind === 'text' ? h : undefined, dims);
       if (p) useEditorStore.getState().patch(el.id, p);
     };
     fix();
     const ro = new ResizeObserver(fix);
     ro.observe(n);
     return () => ro.disconnect();
-  }, [el, editable, editing]);
+  }, [el, editable, editing, dims]);
 
   // vào chế độ gõ chữ: nạp nội dung, focus và bôi đen toàn bộ
   useEffect(() => {
@@ -126,7 +127,7 @@ function ElNode({ el, editable, selected, rootRef, setGuides }: {
     const st = useEditorStore.getState();
     st.select(el.id);
 
-    const sc = rootRef.current.getBoundingClientRect().width / PAGE.w; // px màn hình / đơn vị thiết kế
+    const sc = rootRef.current.getBoundingClientRect().width / st.dims.w; // px màn hình / đơn vị thiết kế
     const nr = ref.current.getBoundingClientRect();
     const cx = nr.left + nr.width / 2, cy = nr.top + nr.height / 2;
     const sx = ev.clientX, sy = ev.clientY;
@@ -146,12 +147,12 @@ function ElNode({ el, editable, selected, rootRef, setGuides }: {
       if (mode === 'move') {
         let x = o.x + (m.clientX - sx) / sc, y = o.y + (m.clientY - sy) / sc;
         // chặn ở viền trang (tính cả khi đã xoay)
-        const lim = fitInside({ ...o, x, y, kind: el.kind }, h0);
+        const lim = fitInside({ ...o, x, y, kind: el.kind }, h0, st.dims);
         if (lim?.x !== undefined) x = lim.x;
         if (lim?.y !== undefined) y = lim.y;
         const g = { v: false, h: false };
-        if (Math.abs(x + o.w / 2 - PAGE.w / 2) < SNAP) { x = PAGE.w / 2 - o.w / 2; g.v = true; }
-        if (Math.abs(y + h0 / 2 - PAGE.h / 2) < SNAP) { y = PAGE.h / 2 - h0 / 2; g.h = true; }
+        if (Math.abs(x + o.w / 2 - st.dims.w / 2) < SNAP) { x = st.dims.w / 2 - o.w / 2; g.v = true; }
+        if (Math.abs(y + h0 / 2 - st.dims.h / 2) < SNAP) { y = st.dims.h / 2 - h0 / 2; g.h = true; }
         setGuides(g);
         st.patch(el.id, { x, y });
       } else if (mode === 'scale') {
@@ -159,16 +160,16 @@ function ElNode({ el, editable, selected, rootRef, setGuides }: {
         const w = o.w * k;
         if (el.kind === 'text') {
           const next = { ...o, w, size: (o.size ?? 32) * k, x: midX - w / 2, y: midY - (h0 * k) / 2 };
-          st.patch(el.id, { ...next, ...fitInside(next, h0 * k) });
+          st.patch(el.id, { ...next, ...fitInside(next, h0 * k, st.dims) });
         } else {
           const next = { ...o, w, h: o.h * k, x: midX - w / 2, y: midY - (o.h * k) / 2 };
-          st.patch(el.id, { ...next, ...fitInside(next) });
+          st.patch(el.id, { ...next, ...fitInside(next, undefined, st.dims) });
         }
       } else {
         let r = o.rot + ((Math.atan2(m.clientY - cy, m.clientX - cx) - a0) * 180) / Math.PI;
         const near = Math.round(r / 45) * 45;
         if (Math.abs(r - near) < 3) r = near;
-        st.patch(el.id, { rot: r, ...fitInside({ ...o, rot: r }, h0) });
+        st.patch(el.id, { rot: r, ...fitInside({ ...o, rot: r }, h0, st.dims) });
       }
     };
     const up = () => {

@@ -15,6 +15,7 @@ import { Stamp, STAMPS } from './Stamp';
 import { ENVELOPES, LINERS, TONES, type Tone } from './envelope.data';
 import { useEnvelopeCatalog } from '@/lib/envelope-catalog';
 import { FoldingCard } from '../editor/FoldingCard';
+import { CardFlatEditor } from '../editor/CardFlatEditor';
 import { useCardMotion } from '../editor/useCardMotion';
 import { CardPanel, type CardTab } from '../editor/CardPanel';
 import { ActionBar, StyleBar, TextToolbar } from '../editor/Toolbars';
@@ -68,6 +69,7 @@ function EnvelopeThumb({ color }: { color: string }) {
 type Props = { recipientName?: string; editable?: boolean; templateSlug?: string | null; invitationId?: string | null };
 
 const DOTS: PageId[] = ['cover', 'inside', 'back'];
+const CARD_PAGES: PageId[] = ['cover', 'back'];
 const draftKey = (slug?: string | null) => `icards:draft:${slug ?? 'blank'}`;
 
 export function EnvelopeDesigner({ recipientName: recipientProp, editable = false, templateSlug, invitationId }: Props) {
@@ -115,6 +117,8 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
           useEditorStore.getState().hydrate({
             pages: design.pages as Snap['pages'],
             backdrops: design.backdrops as Snap['backdrops'],
+            format: design.format as Snap['format'],
+            orientation: design.orientation as Snap['orientation'],
           });
           serverDesignRef.current = true;
         }
@@ -154,6 +158,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
 
   const canEdit = editable && mode === 'edit' && cardFront && focus === 'card' && settled && !swapping && !cm.busy;
   const tplName = useEditorStore((s) => s.tplName);
+  const isCard = useEditorStore((s) => s.format) === 'card';   // thiệp 2 mặt phẳng: không có phong bì
   const canUndo = useEditorStore((s) => s.past.length > 0);
   const canRedo = useEditorStore((s) => s.future.length > 0);
   const editing = useEditorStore((s) => s.editingId !== null);
@@ -213,7 +218,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
 
   const env = catalog.envelopes.find((e) => e.id === envId) ?? catalog.envelopes[0];
   const liner = catalog.liners.find((l) => l.id === linerId) ?? catalog.liners[0];
-  const inCard = editable && isCardTab(tab);                       // đang chỉnh thiệp hay phong bì -> quyết định cả thanh tab
+  const inCard = editable && (isCard || isCardTab(tab));                       // đang chỉnh thiệp hay phong bì -> quyết định cả thanh tab
   const railTabs: TabDef<Tab>[] = inCard ? CARD_TABS : ENV_TABS;
   const cur = (inCard ? CARD_TABS : ENV_TABS).find((t) => t.id === tab) ?? ENV_TABS[0];
 
@@ -328,6 +333,8 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
     return () => clearTimeout(id);
   }, [cardFront]);
   useEffect(() => () => { timers.current.forEach(clearTimeout); clearTimeout(lockTimer.current); }, []);
+  // Thiệp 2 mặt: luôn ở tư thế đứng trước, không có phong bì để rút ra
+  useEffect(() => { if (!isCard) return; setCardFront(true); setFocus('card'); setSettled(true); }, [isCard]);
 
   // ---- Chặn bôi chọn chữ + ảnh ma khi kéo thiệp (trừ lúc đang gõ trong ô chữ)
   useEffect(() => {
@@ -376,8 +383,8 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
 
   // ---- Tự lưu nháp (debounce) khi nội dung đổi
   const saveNow = useCallback(() => {
-    const { pages, backdrops } = useEditorStore.getState();
-    try { localStorage.setItem(draftKey(templateSlug), JSON.stringify({ pages, backdrops })); setSaved('saved'); }
+    const { pages, backdrops, format, orientation } = useEditorStore.getState();
+    try { localStorage.setItem(draftKey(templateSlug), JSON.stringify({ pages, backdrops, format, orientation })); setSaved('saved'); }
     catch { setSaved('idle'); alert('Không lưu được bản nháp (bộ nhớ trình duyệt đầy). Hãy dùng ảnh nhỏ hơn.'); }
   }, [templateSlug]);
   useEffect(() => {
@@ -401,6 +408,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
     if (a instanceof HTMLElement) a.blur();          // chốt ô chữ đang gõ vào store trước khi lưu
     useEditorStore.getState().select(null);
     saveNow();
+    if (isCard) { setSendOpen(true); return; }
 
     // Lớp phủ nối tiếp NGAY từ cảnh đang đứng trong canvas, nên cảnh phải ở tư thế chuẩn trước:
     // thiệp khép bìa, đã rút ra đứng trước, nắp mở, phong bì quay mặt nắp. Nếu chưa thì tự đưa về
@@ -436,7 +444,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
   // Lưu thiệp lên server: tạo lần đầu, các lần sau cập nhật cùng một thiệp. Xếp hàng để không tạo trùng.
   const persistInvitation = (data: EventPageData): Promise<string> => {
     const run = async (): Promise<string> => {
-      const { pages, backdrops } = useEditorStore.getState();
+      const { pages, backdrops, format, orientation } = useEditorStore.getState();
       const info = data.info;
       const form = new FormData();
       form.append('title', (info.title || template?.name || 'Thiệp mời').trim().slice(0, 200));
@@ -447,7 +455,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
       form.append('info', JSON.stringify(info));
       form.append('page', JSON.stringify({ styleId: data.styleId, accent: data.accent, bg: data.bg, blocks: data.blocks }));
       form.append('design', JSON.stringify({
-        pages, backdrops,
+        pages, backdrops, format, orientation,
         envelope: { color: env.color, liner: liner.background, stampId, recipientName },
       }));
       if (invIdRef.current) {
@@ -503,7 +511,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
               <button type="button" disabled={!canRedo} onClick={() => useEditorStore.getState().redo()}>Làm lại</button>
             </div>
           )}
-          {editable && (
+          {editable && !isCard && (
             <div className={d.modeSwitch} role="group" aria-label="Đối tượng đang chỉnh">
               <button type="button" aria-pressed={inCard} onClick={() => { if (!inCard) selectTab(lastCard.current); }}>Thiệp</button>
               <button type="button" aria-pressed={!inCard} onClick={() => { if (inCard) selectTab(lastEnv.current); }}>Phong bì</button>
@@ -529,7 +537,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
 
       <aside className={d.panel}>
         {inCard && isCardTab(tab) ? (
-          <CardPanel tab={tab} onPage={onViewChange} />
+          <CardPanel tab={tab} onPage={onViewChange} pages={isCard ? CARD_PAGES : undefined} />
         ) : (
           <>
             <input className={d.search} type="search" placeholder={cur.search} value={query} onChange={(e) => setQuery(e.target.value)} aria-label={cur.search} />
@@ -551,7 +559,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
       </aside>
 
       <main ref={stageRef} className={d.stage} onPointerMove={onStageMove} onPointerLeave={onStageLeave}>
-        {!(canEdit && sel) && (
+        {!isCard && !(canEdit && sel) && (
           <button type="button" className={d.flip} aria-label="Lật phong bì" onClick={() => setSide((v) => (v === 'front' ? 'back' : 'front'))}>
             <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M4 11a8 6 0 0 1 14-3" /><path d="M18 4v4h-4" /><path d="M20 13a8 6 0 0 1-14 3" /><path d="M6 20v-4h4" />
@@ -559,6 +567,9 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
           </button>
         )}
 
+        {isCard ? (
+          <CardFlatEditor view={view} editable={canEdit} onFlip={() => setView(view === 'back' ? 'cover' : 'back')} />
+        ) : (
         <motion.div ref={sceneBoxRef} className={d.scene} style={{ rotateX: tiltOn ? rx : 0, rotateY: tiltOn ? ry : 0, transformPerspective: 1600, visibility: sceneHidden ? 'hidden' : 'visible' }}>
           {ready && <EnvelopeScene
             card={<FoldingCard cm={cm} view={view} editable={canEdit} gesture={cardFront && focus === 'card' && settled && !swapping} onViewChange={onViewChange} />}
@@ -577,6 +588,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
             onSwap={onSwap}
           />}
         </motion.div>
+        )}
 
         {canEdit && sel?.kind === 'text' && <TextToolbar el={sel} />}
         {canEdit && sel && sel.kind !== 'text' && !editing && <StyleBar el={sel} />}
@@ -584,7 +596,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
 
         {!(canEdit && sel) && (
           <p className={d.hint} aria-live="polite">
-            {cardFront && focus === 'envelope'
+            {isCard ? 'Chạm vào chữ hoặc hình để chỉnh sửa · dùng nút “Xem mặt sau” để chỉnh mặt còn lại' : cardFront && focus === 'envelope'
               ? 'Chạm vào tấm thiệp phía sau để chuyển sang chỉnh sửa thiệp'
               : cardFront
               ? (canEdit || (editable && mode === 'edit')
@@ -594,9 +606,9 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
           </p>
         )}
 
-        {cardFront && (
+        {(isCard || cardFront) && (
           <div className={d.dots} aria-hidden>
-            {DOTS.map((v) => <i key={v} data-on={view === v || (v === 'inside' && view === 'insideLeft')} />)}
+            {(isCard ? CARD_PAGES : DOTS).map((v) => <i key={v} data-on={view === v || (v === 'inside' && view === 'insideLeft')} />)}
           </div>
         )}
       </main>

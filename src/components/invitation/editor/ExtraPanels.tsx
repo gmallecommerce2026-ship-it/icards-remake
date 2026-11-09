@@ -4,7 +4,6 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import QRCode from 'qrcode';
-import { PAGE } from '../envelope/envelope.data';
 import { FONTS } from './editor.data';
 import { ColorGrid } from './Toolbars';
 import { readImage, imageRatio } from './readImage';
@@ -243,7 +242,7 @@ export function ToolsPanel() {
   function change(patch: Partial<CardEl>, record = true) {
     if (!sel) return;
     const hText = sel.kind === 'text' ? domEl(sel.id)?.offsetHeight : undefined;
-    const fix = fitInside({ ...sel, ...patch }, hText);
+    const fix = fitInside({ ...sel, ...patch }, hText, useEditorStore.getState().dims);
     const st = useEditorStore.getState();
     if (record) st.checkpoint();
     st.patch(sel.id, { ...patch, ...fix });
@@ -291,8 +290,8 @@ export function ToolsPanel() {
           <div className={p.numGrid}>
             <Num label="X" value={sel.x} onCommit={(x) => change({ x })} />
             <Num label="Y" value={sel.y} onCommit={(y) => change({ y })} />
-            <Num label="Rộng" value={sel.w} min={8} max={PAGE.w} onCommit={setW} />
-            <Num label="Cao" value={textH} min={8} max={PAGE.h} disabled={sel.kind === 'text'} onCommit={setH} />
+            <Num label="Rộng" value={sel.w} min={8} max={useEditorStore.getState().dims.w} onCommit={setW} />
+            <Num label="Cao" value={textH} min={8} max={useEditorStore.getState().dims.h} disabled={sel.kind === 'text'} onCommit={setH} />
             <Num label="Xoay °" value={sel.rot} min={-360} max={360} onCommit={(rot) => change({ rot })} />
           </div>
           <label className={p.switchRow} style={{ marginTop: 8 }}>

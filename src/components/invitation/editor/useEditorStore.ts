@@ -1,7 +1,7 @@
 // src/components/invitation/editor/useEditorStore.ts
 import { create } from 'zustand';
-import { PAGE } from '../envelope/envelope.data';
-import type { InvitationTemplate } from '@/lib/templates';
+import { PAGE, pageSizeFor } from '../envelope/envelope.data';
+import type { CardLayout, FaceElement, InvitationTemplate, TemplateFormat, TemplateOrientation } from '@/lib/templates';
 import { fitted, halfExtent } from './bounds';
 
 export type PageId = 'cover' | 'insideLeft' | 'inside' | 'back';
@@ -25,7 +25,13 @@ export type AlignTo = 'left' | 'hcenter' | 'right' | 'top' | 'vmiddle' | 'bottom
 export type DrawTool = 'pen' | 'marker';
 export type DrawCfg = { on: boolean; tool: DrawTool; color: string; size: number };
 
-export type Snap = { pages: Record<PageId, CardEl[]>; backdrops: Record<PageId, string> };
+export type Snap = {
+  pages: Record<PageId, CardEl[]>;
+  backdrops: Record<PageId, string>;
+  /** folding: thiệp gập 4 trang. card: thiệp 2 mặt (chỉ dùng cover = mặt trước, back = mặt sau). */
+  format?: TemplateFormat;
+  orientation?: TemplateOrientation;
+};
 
 type State = Snap & {
   page: PageId;                 // mặt đang chỉnh: bìa ngoài hoặc ruột thiệp
@@ -37,6 +43,9 @@ type State = Snap & {
   uploads: string[];            // ảnh người dùng đã tải lên trong phiên này
   draw: DrawCfg;
   showSafe: boolean;            // hiện lề an toàn + đường chia ba trên trang đang chỉnh
+  format: TemplateFormat;       // kiểu thiệp đang chỉnh
+  orientation: TemplateOrientation;
+  dims: { w: number; h: number }; // khổ thiết kế (px) của kiểu thiệp này
 
   select: (id: string | null) => void;
   edit: (id: string | null) => void;
@@ -74,7 +83,12 @@ type State = Snap & {
 const MAX_HISTORY = 60;
 const EMOJI_ONLY = new RegExp('^\\p{Extended_Pictographic}', 'u');   // ô chữ chỉ là emoji thì không đổi phông
 const uid = () => Math.random().toString(36).slice(2, 10);
-const snap = (s: Snap): Snap => ({ pages: s.pages, backdrops: s.backdrops });
+const snap = (s: State): Snap => ({ pages: s.pages, backdrops: s.backdrops, format: s.format, orientation: s.orientation });
+// Khổ và kiểu thiệp của một snapshot (snapshot cũ không có thì giữ kiểu hiện tại)
+const kindOf = (x: Snap, s: State) => {
+  const format = x.format ?? s.format, orientation = x.orientation ?? s.orientation;
+  return { format, orientation, dims: pageSizeFor(format, orientation) };
+};
 const push = (s: State) => ({ past: [...s.past.slice(-(MAX_HISTORY - 1)), snap(s)], future: [] as Snap[] });
 
 // id cố định để tránh lệch hydration giữa server và client
@@ -124,6 +138,31 @@ function fromTemplate(t: InvitationTemplate): Snap {
   };
 }
 
+/** Dựng nội dung 2 mặt của thiệp (format = card) từ layout.front / layout.back. Toạ độ 0..1 nhân với khổ thiết kế. */
+const CARD_FONT: Record<NonNullable<FaceElement['font']>, string> = { display: 'Playfair Display', body: 'Be Vietnam Pro', script: 'Dancing Script' };
+// Hình trong bố cục mẫu -> hình có sẵn trong studio (ARTS). Chưa có cung vòm nên dùng bo góc.
+const CARD_SHAPE: Record<NonNullable<FaceElement['shape']>, string> = { arch: 'rsq', circle: 'circle', rect: 'sq', frame: 'sq', line: 'sq' };
+function fromCard(t: InvitationTemplate, layout: CardLayout, dims: { w: number; h: number }): Snap {
+  const { palette: c } = t;
+  const colorOf = (k?: FaceElement['color']) => (k === 'accent' ? c.accent : k === 'soft' ? c.soft : k === 'bg' ? c.bg : c.ink);
+  const conv = (els: FaceElement[], side: string): CardEl[] =>
+    els.map((e, i): CardEl => {
+      const id = `card-${side}-${i}`;
+      const x = e.x * dims.w, y = e.y * dims.h, w = e.w * dims.w, h = e.h * dims.h;
+      if (e.kind === 'text') {
+        return {
+          id, kind: 'text', x, y, w, h, rot: 0, text: e.text ?? '', font: CARD_FONT[e.font ?? 'body'],
+          size: (e.sz ?? 0.05) * dims.w, bold: !!e.bold, color: colorOf(e.color), align: e.align ?? 'center',
+        };
+      }
+      return { id, kind: 'shape', x, y, w, h, rot: 0, art: CARD_SHAPE[e.shape ?? 'rect'], color: colorOf(e.fill) };
+    });
+  return {
+    backdrops: { cover: c.bg, insideLeft: c.bg, inside: c.bg, back: c.soft },
+    pages: { cover: conv(layout.front, 'f'), insideLeft: [], inside: [], back: conv(layout.back, 'b') },
+  };
+}
+
 export const PAGES: PageId[] = ['cover', 'insideLeft', 'inside', 'back'];
 
 const mapPages = (s: Snap, fn: (l: CardEl[]) => CardEl[]) =>
@@ -146,6 +185,9 @@ export const useEditorStore = create<State>((set, get) => {
     past: [],
     future: [],
     tplName: null,
+    format: 'folding',
+    orientation: 'portrait',
+    dims: PAGE,
     uploads: [],
     draw: { on: false, tool: 'pen', color: '#1a1a1a', size: 6 },
     showSafe: false,
@@ -158,12 +200,12 @@ export const useEditorStore = create<State>((set, get) => {
     undo: () => set((s) => {
       const prev = s.past[s.past.length - 1];
       if (!prev) return s;
-      return { ...prev, past: s.past.slice(0, -1), future: [snap(s), ...s.future], selectedId: null, editingId: null };
+      return { ...prev, ...kindOf(prev, s), past: s.past.slice(0, -1), future: [snap(s), ...s.future], selectedId: null, editingId: null };
     }),
     redo: () => set((s) => {
       const next = s.future[0];
       if (!next) return s;
-      return { ...next, future: s.future.slice(1), past: [...s.past, snap(s)], selectedId: null, editingId: null };
+      return { ...next, ...kindOf(next, s), future: s.future.slice(1), past: [...s.past, snap(s)], selectedId: null, editingId: null };
     }),
 
     patch: (id, p) => set((s) => ({ pages: mapPages(s, (l) => l.map((e) => (e.id === id ? { ...e, ...p } : e))) })),
@@ -179,7 +221,7 @@ export const useEditorStore = create<State>((set, get) => {
         const i = s.pages[pg].findIndex((e) => e.id === id);
         if (i < 0) continue;
         const src = s.pages[pg][i];
-        const copy = fitted({ ...src, id: uid(), x: src.x + 20, y: src.y + 20 });
+        const copy = fitted({ ...src, id: uid(), x: src.x + 20, y: src.y + 20 }, get().dims);
         const list = [...s.pages[pg]];
         list.splice(i + 1, 0, copy);
         return { ...push(s), pages: { ...s.pages, [pg]: list }, selectedId: copy.id };
@@ -201,28 +243,28 @@ export const useEditorStore = create<State>((set, get) => {
     }),
 
     addText: (p) => addEl({
-      kind: 'text', x: (PAGE.w - 360) / 2, y: 300, w: 360, h: 60, rot: 0,
+      kind: 'text', x: (get().dims.w - 360) / 2, y: 300, w: 360, h: 60, rot: 0,
       text: 'Nhấn đúp để sửa', font: 'Be Vietnam Pro', size: 40, bold: false, color: '#1a1a1a', align: 'center',
       ...p,
     }),
     addSticker: (art) => addEl({
-      kind: 'sticker', x: (PAGE.w - 120) / 2, y: (PAGE.h - 120) / 2, w: 120, h: 120, rot: 0, art, color: '#e8506b',
+      kind: 'sticker', x: (get().dims.w - 120) / 2, y: (get().dims.h - 120) / 2, w: 120, h: 120, rot: 0, art, color: '#e8506b',
     }),
     addImage: (src, ratio) => {
       const w = 300, h = w / (ratio || 1);
-      addEl({ kind: 'image', x: (PAGE.w - w) / 2, y: (PAGE.h - h) / 2, w, h, rot: 0, src });
+      addEl({ kind: 'image', x: (get().dims.w - w) / 2, y: (get().dims.h - h) / 2, w, h, rot: 0, src });
     },
 
     addShape: (kind, art, color, stroke) => addEl({
-      kind, art, color, x: (PAGE.w - 160) / 2, y: (PAGE.h - 160) / 2, w: 160, h: art === 'line' || art === 'wave' || art === 'dash' ? 40 : 160, rot: 0,
+      kind, art, color, x: (get().dims.w - 160) / 2, y: (get().dims.h - 160) / 2, w: 160, h: art === 'line' || art === 'wave' || art === 'dash' ? 40 : 160, rot: 0,
       sw: stroke ? 6 : undefined,
     }),
     addFrame: (art, ratio) => {
       const w = 260, h = Math.round(w / (ratio || 1));
-      addEl({ kind: 'frame', art, x: (PAGE.w - w) / 2, y: (PAGE.h - h) / 2, w, h, rot: 0 });
+      addEl({ kind: 'frame', art, x: (get().dims.w - w) / 2, y: (get().dims.h - h) / 2, w, h, rot: 0 });
     },
     addGrid: (cells) => set((s) => {
-      const M = 36, GAP = 10, W = PAGE.w - M * 2, H = PAGE.h - M * 2;
+      const M = 36, GAP = 10, W = get().dims.w - M * 2, H = get().dims.h - M * 2;
       const els: CardEl[] = cells.map(([cx, cy, cw, ch]) => ({
         id: uid(), kind: 'frame', art: 'f-sq', rot: 0,
         x: M + cx * W + (cx > 0.001 ? GAP / 2 : 0),
@@ -244,11 +286,11 @@ export const useEditorStore = create<State>((set, get) => {
         const { hx, hy } = halfExtent(el.w, h, el.rot);
         let cx = el.x + el.w / 2, cy = el.y + h / 2;
         if (to === 'left') cx = hx;
-        if (to === 'right') cx = PAGE.w - hx;
-        if (to === 'hcenter') cx = PAGE.w / 2;
+        if (to === 'right') cx = get().dims.w - hx;
+        if (to === 'hcenter') cx = get().dims.w / 2;
         if (to === 'top') cy = hy;
-        if (to === 'bottom') cy = PAGE.h - hy;
-        if (to === 'vmiddle') cy = PAGE.h / 2;
+        if (to === 'bottom') cy = get().dims.h - hy;
+        if (to === 'vmiddle') cy = get().dims.h / 2;
         const next = { ...el, x: cx - el.w / 2, y: cy - h / 2 };
         return { ...push(s), pages: { ...s.pages, [pg]: s.pages[pg].map((e) => (e.id === id ? next : e)) } };
       }
@@ -284,7 +326,7 @@ export const useEditorStore = create<State>((set, get) => {
       const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
       // hộp bao của nét vẽ luôn nằm trong trang (điểm đã được kẹp ở lớp vẽ)
       const x0 = Math.max(0, Math.min(...xs) - pad), y0 = Math.max(0, Math.min(...ys) - pad);
-      const w = Math.min(PAGE.w, Math.max(...xs) + pad) - x0, h = Math.min(PAGE.h, Math.max(...ys) + pad) - y0;
+      const w = Math.min(get().dims.w, Math.max(...xs) + pad) - x0, h = Math.min(get().dims.h, Math.max(...ys) + pad) - y0;
       const L = pts.map(([x, y]) => [x - x0, y - y0] as const);
       // làm mượt bằng đường cong bậc 2 qua trung điểm
       let d = `M${L[0][0].toFixed(1)} ${L[0][1].toFixed(1)}`;
@@ -312,16 +354,24 @@ export const useEditorStore = create<State>((set, get) => {
       backdrops: { ...s.backdrops, [get().page]: bg },
     })),
 
-    loadTemplate: (t, record = false) => set((s) => ({
-      ...(record ? push(s) : { past: [], future: [] }),
-      ...fromTemplate(t), tplName: t.name, page: 'cover', selectedId: null, editingId: null,
-    })),
+    loadTemplate: (t, record = false) => set((s) => {
+      const format = t.format ?? 'folding', orientation = t.orientation ?? 'portrait';
+      const dims = pageSizeFor(format, orientation);
+      const content = format === 'card' && t.layout ? fromCard(t, t.layout, dims) : fromTemplate(t);
+      return {
+        ...(record ? push(s) : { past: [], future: [] }),
+        ...content, format, orientation, dims,
+        tplName: t.name, page: 'cover', selectedId: null, editingId: null,
+      };
+    }),
     // bản nháp lưu từ trước khi có trang trái không có khoá insideLeft: bù khoá thiếu để PageEditor không bị crash
     hydrate: (d) => {
       const pg: Partial<Snap['pages']> = d.pages, bd: Partial<Snap['backdrops']> = d.backdrops;
+      const format = d.format ?? 'folding', orientation = d.orientation ?? 'portrait';
       set({
         pages: { cover: [], insideLeft: [], inside: [], back: [], ...pg },
         backdrops: { cover: '#fffaf0', insideLeft: bd.inside ?? '#ffffff', inside: '#ffffff', back: '#fffaf0', ...bd },
+        format, orientation, dims: pageSizeFor(format, orientation),
         selectedId: null, editingId: null, past: [], future: [],
       });
     },

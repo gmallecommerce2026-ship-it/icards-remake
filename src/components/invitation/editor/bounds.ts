@@ -22,7 +22,7 @@ const EPS = 0.01;
  * - `hText`: chiều cao thực đo được của ô chữ (chữ tự co giãn chiều cao).
  * - Phần tử lớn hơn trang thì thu nhỏ theo tỉ lệ (giữ tâm) rồi mới dịch vào.
  */
-export function fitInside(el: Box, hText?: number): Partial<CardEl> | null {
+export function fitInside(el: Box, hText?: number, dims: { w: number; h: number } = PAGE): Partial<CardEl> | null {
   const isText = el.kind === 'text';
   const h0 = isText ? (hText ?? el.h) : el.h;
   if (!(el.w > 0) || !(h0 > 0)) return null;
@@ -31,12 +31,12 @@ export function fitInside(el: Box, hText?: number): Partial<CardEl> | null {
   const { hx, hy } = halfExtent(el.w, h0, el.rot);
 
   // 1) quá to so với trang -> thu nhỏ
-  const k = Math.min(1, PAGE.w / (hx * 2), PAGE.h / (hy * 2));
+  const k = Math.min(1, dims.w / (hx * 2), dims.h / (hy * 2));
   const w = el.w * k, h = h0 * k;
   const ex = hx * k, ey = hy * k;
 
   // 2) dịch tâm để hộp bao nằm trong [0, PAGE]
-  const cx = clamp(cx0, ex, PAGE.w - ex), cy = clamp(cy0, ey, PAGE.h - ey);
+  const cx = clamp(cx0, ex, dims.w - ex), cy = clamp(cy0, ey, dims.h - ey);
 
   const out: Partial<CardEl> = {};
   const nx = cx - w / 2, ny = cy - h / 2;
@@ -51,7 +51,7 @@ export function fitInside(el: Box, hText?: number): Partial<CardEl> | null {
 }
 
 /** Áp dụng fitInside lên một phần tử và trả về bản đã chỉnh (dùng cho đường dẫn không có DOM, vd. nhân đôi / thêm lưới). */
-export function fitted<T extends CardEl>(el: T): T {
-  const p = fitInside(el);
+export function fitted<T extends CardEl>(el: T, dims: { w: number; h: number } = PAGE): T {
+  const p = fitInside(el, undefined, dims);
   return p ? { ...el, ...p } : el;
 }

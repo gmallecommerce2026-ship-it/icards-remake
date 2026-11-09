@@ -2,7 +2,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { PAGE } from '../envelope/envelope.data';
 import { PageEditor } from './PageEditor';
 import { useEditorStore, type PageId } from './useEditorStore';
 
@@ -15,16 +14,17 @@ export function CardFaceStatic({ pageId = 'cover' }: { pageId?: PageId }) {
   const box = useRef<HTMLDivElement>(null);
   const [k, setK] = useState(0);
   const bg = useEditorStore((s) => s.backdrops[pageId]);
+  const dims = useEditorStore((s) => s.dims);
 
   useEffect(() => {
     const el = box.current;
     if (!el) return;
-    const measure = () => setK(el.clientWidth / PAGE.w);
+    const measure = () => setK(el.clientWidth / dims.w);
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [dims.w]);
 
   return (
     <div ref={box} aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: bg }}>
@@ -33,8 +33,8 @@ export function CardFaceStatic({ pageId = 'cover' }: { pageId?: PageId }) {
           position: 'absolute',
           left: 0,
           top: 0,
-          width: PAGE.w,
-          height: PAGE.h,
+          width: dims.w,
+          height: dims.h,
           transformOrigin: '0 0',
           transform: `scale(${k || 1})`,
           visibility: k ? 'visible' : 'hidden',

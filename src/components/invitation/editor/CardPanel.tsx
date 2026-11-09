@@ -349,13 +349,13 @@ function DrawPanel() {
 }
 
 /* ------------------------------------------------------------------ */
-export function CardPanel({ tab, onPage }: { tab: CardTab; onPage?: (v: PageId) => void }) {
+export function CardPanel({ tab, onPage, pages }: { tab: CardTab; onPage?: (v: PageId) => void; pages?: PageId[] }) {
   const page = useEditorStore((s) => s.page);
   return (
     <div>
       {onPage && (
         <div className={p.pages} role="tablist" aria-label="Mặt thiệp đang chỉnh">
-          {PAGES.map((pg) => (
+          {(pages ?? PAGES).map((pg) => (
             <button key={pg} type="button" role="tab" aria-selected={page === pg} onClick={() => onPage(pg)}>{PAGE_LABEL[pg]}</button>
           ))}
         </div>

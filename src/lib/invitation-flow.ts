@@ -13,7 +13,14 @@ export type ApiInvitation = {
   status: "draft" | "published";
   info?: Partial<EventInfo>;
   page?: Record<string, unknown>;
-  design?: { pages?: unknown; backdrops?: unknown; envelope?: Record<string, unknown> };
+  design?: {
+    pages?: unknown;
+    backdrops?: unknown;
+    /** folding (mặc định) hoặc card (thiệp 2 mặt) */
+    format?: 'folding' | 'card';
+    orientation?: 'landscape' | 'square' | 'portrait';
+    envelope?: Record<string, unknown>;
+  };
   settings: {
     allowRsvp: boolean;
     allowWishes: boolean;
