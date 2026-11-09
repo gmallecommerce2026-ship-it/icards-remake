@@ -204,18 +204,11 @@ export default function TutorialPage() {
         </div>
       </Section>
 
-      {/* In ấn: khối màu thương hiệu, nằm trong cùng container */}
+      {/* In ấn: tiêu đề chuẩn như các mục khác, khối màu bên dưới đúng chiều rộng container */}
       <Section label="In ấn">
-        <div className="grid overflow-hidden bg-lacquer text-white lg:grid-cols-2">
+        <SectionHeader eyebrow="In ấn & giao tận nơi" title="In ấn chất lượng, chuyển thiệp tận nơi" subtitle="Chúng tôi giúp bạn biến những thiết kế thành tấm thiệp mời hoàn chỉnh. Nếu chất lượng bản in không đúng cam kết, liên hệ với chúng tôi để được khắc phục, in lại hoặc hoàn tiền." />
+        <div className="mt-16 grid overflow-hidden bg-lacquer text-white lg:grid-cols-2">
           <div className="flex flex-col justify-center gap-8 p-8 sm:p-12 lg:p-16">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">In ấn & giao tận nơi</p>
-              <h2 className="mt-4 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">In ấn chất lượng, chuyển thiệp tận nơi</h2>
-              <p className="mt-4 text-base leading-relaxed text-white/80">
-                Chúng tôi giúp bạn biến những thiết kế thành tấm thiệp mời hoàn chỉnh. Nếu chất lượng bản in không đúng cam kết, liên hệ với chúng tôi để được khắc phục, in lại hoặc hoàn tiền.
-              </p>
-            </div>
-
             <ol className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-2">
               {PROCESS.map((title, i) => (
                 <li key={title} className="border-t border-white/25 pt-4">
@@ -224,7 +217,6 @@ export default function TutorialPage() {
                 </li>
               ))}
             </ol>
-
             <p className="border-l-2 border-white/40 pl-4 text-sm leading-relaxed text-white/75">
               Thời gian nhận thiệp thường mất 7–10 ngày (bao gồm 2–3 ngày in), tuỳ địa điểm nhận hàng và không tính các phát sinh khác.
             </p>
@@ -237,19 +229,18 @@ export default function TutorialPage() {
         </div>
       </Section>
 
-      {/* Tải bản thiết kế */}
+      {/* Tải bản thiết kế: khung và ghi chú cùng chiều rộng container */}
       <Section className="border-t border-line bg-white" label="Tải bản thiết kế">
         <SectionHeader eyebrow="Tự do đặt in" title="Tải xuống bản thiết kế của bạn" subtitle="Tải bản thiết kế về và đặt in ở bất kỳ nơi nào bạn muốn." />
-        <div className="mx-auto mt-14 max-w-4xl border border-line bg-porcelain p-6 sm:p-10">
+        <div className="mt-16 border border-line bg-porcelain p-6 sm:p-10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={bannerSecondary} alt="Mẫu thiết kế thiệp" className="mx-auto max-h-[460px] w-auto object-contain" />
         </div>
-        <p className="mx-auto mt-8 max-w-2xl border-l-2 border-lacquer bg-lacquer-soft/60 p-4 text-center text-sm leading-relaxed text-muted sm:text-left">
+        <p className="mt-6 border-l-2 border-lacquer bg-lacquer-soft/60 p-4 text-sm leading-relaxed text-muted">
           Lưu ý: Chúng tôi không giải quyết các vấn đề in ấn ở địa điểm khác ngoài nhà cung cấp mà chúng tôi gợi ý.
         </p>
       </Section>
 
-      {/* Khám phá mẫu theo danh mục */}
       <Section label="Khám phá mẫu">
         <SectionHeader eyebrow="Khám phá" title="Chọn mẫu theo phong cách của bạn" />
         <div role="tablist" aria-label="Danh mục mẫu thiệp" className="mt-12 flex flex-wrap justify-center gap-2">
