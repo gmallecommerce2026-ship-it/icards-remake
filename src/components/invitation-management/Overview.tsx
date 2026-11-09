@@ -24,7 +24,7 @@ export function Overview({ id }: { id: string }) {
     setMsg("");
     try {
       const { data } = await invitationsApi.publishInvitation(id, !published);
-      setInv({ ...inv!, status: data.status, publishedAt: data.publishedAt });
+      setInv({ ...inv!, status: data.status });
       setMsg(published ? "Đã huỷ công khai thiệp." : "Thiệp đã được công khai.");
     } catch (err) {
       setMsg(errorText(err));

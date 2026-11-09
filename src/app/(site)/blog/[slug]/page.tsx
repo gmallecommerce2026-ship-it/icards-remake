@@ -8,7 +8,7 @@ import ShareButtons from "@/components/blog/ShareButtons";
 import TocNav from "@/components/blog/TocNav";
 import { Reveal } from "@/components/home/Reveal";
 import { Container, btn } from "@/components/ui/Primitives";
-import { getCategory, getRelated, slugify, type Block } from "@/lib/blog";
+import { BLOG_KEYWORD_GROUPS, getCategory, getRelated, slugify, type Block } from "@/lib/blog";
 import { getBlogCategories, getPost, getPosts } from "@/lib/catalog";
 
 type Params = Promise<{ slug: string }>;
@@ -49,12 +49,12 @@ export default async function BlogPostPage({ params }: { params: Params }) {
   };
 
   return (
-    <div className="min-h-screen bg-white pt-[72px]">
+    <div className="tone-blue min-h-screen bg-white pt-[72px]">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <ReadingProgress targetId="post-body" />
 
       {/* Đầu bài */}
-      <header className="border-b border-line bg-porcelain">
+      <header className="border-b border-line bg-white">
         <Container className="py-10 lg:py-16">
           <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm text-muted">
             <Link href="/blog" className="inline-flex items-center gap-1.5 transition-colors hover:text-lacquer">
@@ -128,17 +128,30 @@ export default async function BlogPostPage({ params }: { params: Params }) {
           <aside className="hidden lg:block">
             <div className="sticky top-28 space-y-8">
               {toc.length > 1 && <TocNav items={toc} />}
-              <div className="rounded-3xl bg-lacquer-soft p-6">
+              <div className="rounded-none bg-lacquer-soft p-6">
                 <p className="text-lg font-semibold leading-snug">Thiệp cưới online chỉ trong vài phút</p>
                 <p className="mt-2 text-sm leading-relaxed text-muted">Chọn mẫu, chỉnh sửa và gửi link cho khách mời.</p>
                 <Link href="/templates" className={btn("primary", "md", "mt-5 w-full")}>Xem mẫu thiệp</Link>
+              </div>
+              <div>
+                <p className="mb-2 border-l-4 border-lacquer pl-2.5 text-sm font-bold text-lacquer">Từ khoá thường gặp</p>
+                <ul className="divide-y divide-line border-y border-line">
+                  {BLOG_KEYWORD_GROUPS.flatMap((g) => g.items).slice(0, 10).map((k) => (
+                    <li key={k.keyword}>
+                      <Link href={`/blog?q=${encodeURIComponent(k.keyword)}#blog-list`} className="flex items-center justify-between gap-2 py-2.5 text-sm text-ink transition-colors hover:text-lacquer">
+                        <span>{k.keyword}</span>
+                        <span aria-hidden className="text-muted">→</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
           </aside>
         </div>
 
         <Reveal>
-          <section className="relative mt-20 overflow-hidden rounded-[2rem] bg-gradient-to-br from-lacquer to-lacquer-dark p-8 text-white md:p-12">
+          <section className="relative mt-20 overflow-hidden rounded-none bg-lacquer p-8 text-white md:p-12">
             <div aria-hidden className="absolute -bottom-16 -right-16 size-64 rounded-full border border-white/15" />
             <div aria-hidden className="absolute -bottom-28 -right-28 size-96 rounded-full border border-white/10" />
             <div className="relative flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">

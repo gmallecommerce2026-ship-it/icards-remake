@@ -78,9 +78,39 @@ export function countByCategory(list: Post[]) {
   return counts;
 }
 
-/** Nhóm từ khoá thường gặp ở cuối trang blog. Bấm một từ khoá sẽ tìm bài viết theo từ đó. */
-export const BLOG_KEYWORD_GROUPS: { title: string; keywords: string[] }[] = [
-  { title: "Thiệp mời", keywords: ["lời mời", "mẫu thiệp", "thiệp điện tử", "thiệp đám cưới"] },
-  { title: "Chuẩn bị sự kiện", keywords: ["ngân sách", "danh sách khách mời", "lời chúc", "xác nhận tham dự"] },
-  { title: "Chia sẻ", keywords: ["gửi thiệp online", "link thiệp", "phong bì", "QR code"] },
+export type BlogKeyword = { keyword: string; blurb: string };
+export type BlogKeywordGroup = { title: string; items: BlogKeyword[] };
+
+/** Từ khoá thường gặp ở cuối trang blog. Bấm một từ khoá sẽ tìm bài viết theo từ đó. */
+export const BLOG_KEYWORD_GROUPS: BlogKeywordGroup[] = [
+  {
+    title: "Thiệp mời",
+    items: [
+      { keyword: "lời mời", blurb: "Cách viết lời mời đám cưới, sinh nhật và sự kiện trang trọng hay thân mật." },
+      { keyword: "mẫu thiệp", blurb: "Gợi ý phong cách thiệp theo chủ đề, màu sắc và bố cục dễ đọc." },
+      { keyword: "thiệp điện tử", blurb: "Thiệp online có nhạc, ảnh và bản đồ, gửi qua link chỉ với một chạm." },
+      { keyword: "thiệp đám cưới", blurb: "Mẫu thiệp cưới theo phong cách truyền thống, hiện đại và tối giản." },
+      { keyword: "thiệp sinh nhật", blurb: "Thiệp mời sinh nhật trẻ em, người lớn và tiệc bất ngờ." },
+    ],
+  },
+  {
+    title: "Chuẩn bị sự kiện",
+    items: [
+      { keyword: "ngân sách", blurb: "Lập dự trù chi phí, phân bổ theo hạng mục và theo dõi chi thực tế." },
+      { keyword: "danh sách khách mời", blurb: "Cách chia nhóm khách, ưu tiên người thân và tránh bỏ sót." },
+      { keyword: "lời chúc", blurb: "Gợi ý câu chúc ngắn, ý nghĩa cho sổ lưu bút và thiệp cảm ơn." },
+      { keyword: "xác nhận tham dự", blurb: "Thiết lập hạn RSVP và cách nhắc khách trả lời đúng hạn." },
+      { keyword: "kế hoạch cưới", blurb: "Checklist từng mốc: đặt tiệc, chụp ảnh, trang trí và di chuyển." },
+    ],
+  },
+  {
+    title: "Gửi & chia sẻ",
+    items: [
+      { keyword: "gửi thiệp online", blurb: "Cách gửi thiệp qua email hoặc tin nhắn để khách mở được trên điện thoại." },
+      { keyword: "link thiệp", blurb: "Đặt link dễ nhớ, chia sẻ đúng kênh và theo dõi lượt xem." },
+      { keyword: "email nhắc nhở", blurb: "Lịch nhắc trước sự kiện giúp khách không quên đến dự." },
+      { keyword: "QR code", blurb: "In mã QR lên thiệp giấy, standee để khách quét vào thiệp online." },
+      { keyword: "phong bì", blurb: "Chọn phong bì, in tên và cách đóng gói thiệp in an toàn." },
+    ],
+  },
 ];

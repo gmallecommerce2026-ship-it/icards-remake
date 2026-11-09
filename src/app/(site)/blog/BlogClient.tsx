@@ -5,21 +5,27 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Search, X } from "lucide-react";
 import PostCard, { AuthorAvatar, PostCover, PostMeta } from "@/components/blog/PostCard";
-import { BLOG_KEYWORD_GROUPS, countByCategory, filterPosts, getCategory, searchPosts, type BlogCategory, type Post } from "@/lib/blog";
+import { BLOG_KEYWORD_GROUPS, countByCategory, filterPosts, formatDate, getCategory, searchPosts, type BlogCategory, type Post } from "@/lib/blog";
 import { PageHero, Container, btn } from "@/components/ui/Primitives";
 import { Reveal } from "@/components/home/Reveal";
 
 const PAGE_SIZE = 6; // mỗi lần bấm "Xem thêm" (giống trang cửa hàng)
 
 export default function BlogClient({ posts: allPosts, categories }: { posts: Post[]; categories: BlogCategory[] }) {
-  const category = useSearchParams().get("category") ?? undefined;
+  const sp = useSearchParams();
+  const category = sp.get("category") ?? undefined;
   const active = getCategory(categories, category);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(sp.get("q") ?? "");
 
   const counts = countByCategory(allPosts);
   const inCategory = filterPosts(allPosts, active?.slug);
   const posts = searchPosts(inCategory, query);
   const searching = query.trim().length > 0;
+
+  const pickKeyword = (k: string) => {
+    setQuery(k);
+    document.getElementById("blog-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // Chỉ dựng bố cục "nổi bật" khi không tìm kiếm; khi tìm thì hiện lưới phẳng cho dễ quét
   const showFeatured = !searching && posts.length > 0;
@@ -131,30 +137,57 @@ export default function BlogClient({ posts: allPosts, categories }: { posts: Pos
           </>
         )}
 
-        {/* Nhóm từ khoá thường gặp */}
-        <section aria-labelledby="blog-keywords" className="mt-16 border-t border-line pt-12 lg:mt-20">
-          <h2 id="blog-keywords" className="text-xl font-semibold tracking-tight">Từ khoá thường gặp</h2>
-          <div className="mt-6 grid gap-8 md:grid-cols-3">
-            {BLOG_KEYWORD_GROUPS.map((g) => (
-              <div key={g.title}>
-                <p className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">{g.title}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {g.keywords.map((k) => (
-                    <button
-                      key={k}
-                      type="button"
-                      onClick={() => {
-                        setQuery(k);
-                        document.getElementById("blog-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                      }}
-                      className="rounded-sm border border-line bg-white px-3.5 py-2 text-sm text-ink transition-colors hover:border-lacquer hover:text-lacquer"
-                    >
-                      {k}
-                    </button>
-                  ))}
+        {/* Từ khoá + tin mới: bố cục dày đặc kiểu trang tin tức */}
+        <section aria-labelledby="blog-keywords" className="mt-16 border-t-2 border-ink pt-8 lg:mt-20">
+          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-3 border-b border-line pb-3">
+            <h2 id="blog-keywords" className="text-xl font-bold tracking-tight">Từ khoá thường gặp</h2>
+            <p className="text-xs text-muted">Bấm từ khoá để xem các bài viết liên quan</p>
+          </div>
+
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-12">
+            <div className="grid gap-8 md:grid-cols-3">
+              {BLOG_KEYWORD_GROUPS.map((g) => (
+                <div key={g.title}>
+                  <h3 className="mb-2 border-l-4 border-lacquer pl-2.5 text-sm font-bold text-lacquer">{g.title}</h3>
+                  <ul className="divide-y divide-line border-y border-line">
+                    {g.items.map((k) => {
+                      const count = searchPosts(allPosts, k.keyword).length;
+                      return (
+                        <li key={k.keyword}>
+                          <button type="button" onClick={() => pickKeyword(k.keyword)} className="group block w-full py-3 text-left">
+                            <span className="flex items-baseline justify-between gap-2">
+                              <span className="text-sm font-semibold text-ink transition-colors group-hover:text-lacquer">{k.keyword}</span>
+                              <span className="shrink-0 text-xs tabular-nums text-muted">{count} bài</span>
+                            </span>
+                            <span className="mt-1 block text-xs leading-relaxed text-muted">{k.blurb}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            <aside aria-label="Mới cập nhật">
+              <h3 className="mb-2 border-l-4 border-lacquer pl-2.5 text-sm font-bold text-lacquer">Mới cập nhật</h3>
+              <ol className="divide-y divide-line border-y border-line">
+                {[...allPosts].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8).map((p, i) => (
+                  <li key={p.slug} className="flex gap-3 py-3">
+                    <span className="w-5 shrink-0 text-right text-sm font-bold tabular-nums text-lacquer">{i + 1}</span>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted">
+                        <time dateTime={p.date}>{formatDate(p.date)}</time>
+                        {getCategory(categories, p.category) && <> · {getCategory(categories, p.category)?.label}</>}
+                      </p>
+                      <Link href={`/blog/${p.slug}`} className="mt-0.5 line-clamp-2 block text-sm font-medium leading-snug text-ink transition-colors hover:text-lacquer">
+                        {p.title}
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </aside>
           </div>
         </section>
       </Container>

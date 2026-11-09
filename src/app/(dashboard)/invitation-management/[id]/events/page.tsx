@@ -1,10 +1,9 @@
-export default function EventsPage() {
-  return (
-    <div>
-      <h2 className="mb-2 text-xl font-bold text-ink">Quản lý sự kiện</h2>
-      <p className="text-sm text-muted">
-        Mục này chưa có API trên backend (lịch trình nhiều sự kiện trong một thiệp). Thông tin sự kiện hiện được nhập trong trình thiết kế.
-      </p>
-    </div>
-  );
+import type { Metadata } from "next";
+import { EventsPanel } from "@/components/invitation-management/EventsPanel";
+
+export const metadata: Metadata = { title: "Quản lý sự kiện | iCards" };
+
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <EventsPanel id={id} />;
 }
