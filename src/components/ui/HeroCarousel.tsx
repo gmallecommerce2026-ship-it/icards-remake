@@ -75,7 +75,7 @@ export function HeroCarousel({ slides, interval = 6000 }: { slides: Slide[]; int
             type="button"
             onClick={() => go(i - 1)}
             aria-label="Banner trước"
-            className="absolute left-4 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/20 text-white backdrop-blur transition hover:bg-white/35"
+            className="absolute left-4 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-sm bg-white/20 text-white backdrop-blur transition hover:bg-white/35"
           >
             <ChevronLeft className="size-5" />
           </button>
@@ -83,7 +83,7 @@ export function HeroCarousel({ slides, interval = 6000 }: { slides: Slide[]; int
             type="button"
             onClick={() => go(i + 1)}
             aria-label="Banner tiếp"
-            className="absolute right-4 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/20 text-white backdrop-blur transition hover:bg-white/35"
+            className="absolute right-4 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-sm bg-white/20 text-white backdrop-blur transition hover:bg-white/35"
           >
             <ChevronRight className="size-5" />
           </button>
@@ -95,7 +95,7 @@ export function HeroCarousel({ slides, interval = 6000 }: { slides: Slide[]; int
                 onClick={() => go(k)}
                 aria-label={`Chuyển đến banner ${k + 1}`}
                 aria-current={k === i ? "true" : undefined}
-                className={`h-2 rounded-full transition-all ${k === i ? "w-8 bg-white" : "w-2 bg-white/50 hover:bg-white/75"}`}
+                className={`h-2 rounded-sm transition-all ${k === i ? "w-8 bg-white" : "w-2 bg-white/50 hover:bg-white/75"}`}
               />
             ))}
           </div>

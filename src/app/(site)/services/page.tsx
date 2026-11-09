@@ -52,7 +52,7 @@ export default async function ServicesPage() {
           </p>
           <Link
             href="/contact"
-            className="inline-flex h-11 items-center justify-center rounded-full bg-white px-6 font-medium text-lacquer border border-line transition-colors hover:bg-porcelain focus-visible:outline-none"
+            className="inline-flex h-11 items-center justify-center rounded-sm bg-white px-6 font-medium text-lacquer border border-line transition-colors hover:bg-porcelain focus-visible:outline-none"
           >
             Yêu cầu dịch vụ riêng
           </Link>
