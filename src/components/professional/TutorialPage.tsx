@@ -235,10 +235,12 @@ export default function TutorialPage() {
             ))}
           </div>
         </section>
-        <section className="mx-auto mb-20 grid w-full max-w-[1520px] grid-cols-1 gap-6 px-5 md:grid-cols-2 lg:px-8">
-          {PROFESSIONAL_BOTTOM_BANNERS.map((b) => (
-            <BannerCard key={b.id} b={b} className="h-[56vh] min-h-[360px]" />
-          ))}
+        <section className="pro-banners-section">
+          <div className="pro-banners-grid">
+            {PROFESSIONAL_BOTTOM_BANNERS.map((b) => (
+              <BannerCard key={b.id} b={b} className="pro-banner-card" />
+            ))}
+          </div>
         </section>
       </main>
     </div>

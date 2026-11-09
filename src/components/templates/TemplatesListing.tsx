@@ -37,6 +37,14 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>(SORTS.some((o) => o.value === initialSort) ? (initialSort as Sort) : "popular");
   const filtersRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  // Nút cha đang hover: dropdown hiện nhóm con của nút đó, căn theo vị trí nút
+  const [hover, setHover] = useState<{ id: string; left: number } | null>(null);
+  const openFor = (id: string, el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    const w = wrapRef.current?.getBoundingClientRect();
+    setHover({ id, left: r.left - (w?.left ?? 0) });
+  };
 
   // Cuộn ngang dải lọc bằng con lăn chuột (như bản src)
   useEffect(() => {
@@ -81,9 +89,8 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
   const tabs: Option[] = [{ id: "all", label: "Tất cả" }, ...(tree.length ? tree.map((r) => ({ id: r.id, label: r.label })) : categories)];
   const currentLabel = node?.label ?? categories.find((c) => c.id === category)?.label;
   // Dải nhóm con: con của nút đang chọn; nếu nút là lá thì hiện các nhóm cùng cấp để chuyển qua lại
-  const parent = trail.length > 1 ? trail[trail.length - 2] : undefined;
-  const chips = node ? (node.children.length ? node.children : (parent?.children ?? [])) : [];
-  const chipsParent = node?.children.length ? node : parent;
+  const rootOfId = (id: string) => tree.find((r) => r.id === id);
+  const hoverRoot = hover ? rootOfId(hover.id) : undefined;
 
   return (
     <div className="bg-[#FEFDFD] font-inter text-[#333]">
@@ -97,6 +104,7 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
 
       <div className="mx-auto w-full max-w-[1520px] px-5 py-[20px]">
         {/* Bộ lọc danh mục: nền xanh, chữ trắng như bản src */}
+        <div ref={wrapRef} className="relative" onMouseLeave={() => setHover(null)}>
         <div
           ref={filtersRef}
           role="tablist"
@@ -112,12 +120,43 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
                 role="tab"
                 aria-selected={active}
                 scroll={false}
+                onMouseEnter={(e) => openFor(t.id, e.currentTarget)}
+                onFocus={(e) => openFor(t.id, e.currentTarget)}
                 className={`${chip} ${active ? "bg-[#1a3a63] text-white" : "bg-[#27548A] text-white hover:border-[#27548A]"}`}
               >
                 {t.label}
               </Link>
             );
           })}
+        </div>
+
+        {/* Dropdown nhóm con (vuông), hiện khi hover nút cha ngay phía trên */}
+        {hoverRoot && hoverRoot.children.length > 0 && (
+          <div
+            role="menu"
+            aria-label={`Nhóm trong ${hoverRoot.label}`}
+            className="absolute z-20 mt-1 flex max-w-[min(90vw,720px)] flex-wrap gap-2 border border-black/10 bg-white p-3 shadow-[0_12px_28px_-12px_rgba(14,27,44,0.35)]"
+            style={{ left: hover?.left ?? 0, top: "100%" }}
+          >
+            <Link
+              href={hoverRoot.path}
+              scroll={false}
+              className={`rounded-sm border px-4 py-2 text-sm no-underline ${node?.id === hoverRoot.id ? "border-[#27548A] bg-[#27548A] text-white" : "border-[#ddd] bg-white text-[#27548A] hover:border-[#27548A]"}`}
+            >
+              Tất cả {hoverRoot.label.toLowerCase()} ({hoverRoot.count})
+            </Link>
+            {hoverRoot.children.map((c) => (
+              <Link
+                key={c.id}
+                href={c.path}
+                scroll={false}
+                className={`rounded-sm border px-4 py-2 text-sm no-underline ${node?.id === c.id ? "border-[#27548A] bg-[#27548A] text-white" : "border-[#ddd] bg-white text-[#27548A] hover:border-[#27548A]"}`}
+              >
+                {c.label} ({c.count})
+              </Link>
+            ))}
+          </div>
+        )}
         </div>
 
         {trail.length > 0 && (
@@ -131,19 +170,6 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
             ))}
           </nav>
         )}
-        {chips.length > 0 && chipsParent && (
-          <div className="mt-4 flex flex-wrap gap-2" aria-label="Nhóm mẫu">
-            <Link href={chipsParent.path} className={`rounded-full border px-4 py-1.5 text-sm no-underline ${node?.id === chipsParent.id ? "border-[#27548A] bg-[#27548A] text-white" : "border-[#ddd] bg-white text-[#27548A] hover:border-[#27548A]"}`}>
-              Tất cả {chipsParent.label.toLowerCase()} ({chipsParent.count})
-            </Link>
-            {chips.map((c) => (
-              <Link key={c.id} href={c.path} className={`rounded-full border px-4 py-1.5 text-sm no-underline ${node?.id === c.id ? "border-[#27548A] bg-[#27548A] text-white" : "border-[#ddd] bg-white text-[#27548A] hover:border-[#27548A]"}`}>
-                {c.label} ({c.count})
-              </Link>
-            ))}
-          </div>
-        )}
-
         {/* Tìm kiếm & sắp xếp (không có trong bản src, giữ lại từ bản cũ) */}
         <div className="mt-6 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
           <input

@@ -549,3 +549,22 @@
 .hero-subtitle {
     font-size: 1.2rem;
 }
+/* Banner cuối trang: 2 cột ngang, cùng khung 1520px với các mục khác (padding lấy từ .pro-page-content) */
+.pro-banners-section {
+    width: 100%;
+}
+.pro-banners-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    width: 100%;
+}
+.pro-banner-card {
+    height: 56vh;
+    min-height: 360px;
+}
+@media (max-width: 769px) {
+    .pro-banners-grid {
+        grid-template-columns: 1fr;
+    }
+}
