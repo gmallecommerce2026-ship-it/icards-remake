@@ -27,6 +27,12 @@ export const SERVICES_BANNERS: Slide[] = [
   { id: "svc-2", eyebrow: "Tư vấn", title: "Đặt lịch trao đổi về thiệp riêng của bạn", text: "Chúng tôi lắng nghe câu chuyện của hai bạn để phác thảo thiệp độc bản.", href: "/contact", cta: "Liên hệ", tone: "from-white via-porcelain to-lacquer-soft" },
 ];
 
+/* 2 banner cuối trang chuyên nghiệp, cạnh nhau. Ảnh nền: thêm image: "https://..." nếu có. */
+export const PROFESSIONAL_BOTTOM_BANNERS: Slide[] = [
+  { id: "pro-bottom-1", eyebrow: "Thiệp cưới", title: "Thiệp mời online đồng bộ với bộ thiệp in", text: "Thiết kế một lần, dùng cho cả thiệp online lẫn thiệp in tận nơi.", href: "/templates", cta: "Chọn mẫu thiệp", tone: "" },
+  { id: "pro-bottom-2", eyebrow: "Tư vấn", title: "Thiết kế riêng cho sự kiện của bạn", text: "Đội ngũ iCards lắng nghe câu chuyện và phác thảo thiệp độc bản cho bạn.", href: "/contact", cta: "Liên hệ tư vấn", tone: "" },
+];
+
 export const PROFESSIONAL_BANNERS: Slide[] = [
   { id: "pro-1", eyebrow: "Chuyên nghiệp", title: "Thiết kế bản sắc riêng cho sự kiện của bạn", text: "Đồng hành cùng cá nhân cao cấp, doanh nghiệp và agency sự kiện.", href: "/contact", cta: "Liên hệ tư vấn", tone: "from-lacquer-soft via-white to-porcelain" },
   { id: "pro-2", eyebrow: "Danh mục", title: "Những dự án đã được kiến tạo", text: "Xem các bộ thiệp và trải nghiệm sự kiện từ đội ngũ iCards.", href: "#portfolio", cta: "Xem dự án", tone: "from-porcelain via-white to-lacquer-soft" },

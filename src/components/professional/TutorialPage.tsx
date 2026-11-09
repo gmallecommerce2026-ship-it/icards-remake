@@ -3,13 +3,18 @@
 /* Mã nguồn giữ theo TutorialPage.js của bản src; CSS ở TutorialPage.css (cùng tên class). */
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { settingsApi, templatesApi } from "@/lib/api";
 import { templatesOf } from "@/lib/api/list";
+import type { InvitationTemplate } from "@/lib/templates";
+import { TemplateShowcase } from "@/components/templates/TemplateShowcase";
+import { HeroCarousel } from "@/components/ui/HeroCarousel";
+import { BannerCard } from "@/components/ui/BannerCard";
+import type { Slide } from "@/components/ui/Carousel";
+import { PROFESSIONAL_BANNERS, PROFESSIONAL_BOTTOM_BANNERS } from "@/lib/banners";
 import "./TutorialPage.css";
 
-type Template = { _id: string; title: string; slug?: string; category: string; description?: string; imgSrc?: string };
+type Template = InvitationTemplate & { _id: string; title: string; imgSrc?: string };
 type Banner = { displayPage?: string; isEnabled?: boolean; imageUrl?: string; title?: string; subtitle?: string; link?: string; mediaType?: string; videoUrl?: string; htmlContent?: string };
 
 
@@ -63,92 +68,41 @@ const FaqItem = ({ question, answer, isOpen, onClick }: { question: string; answ
   </div>
 );
 
-const TemplateCard = ({ slug, title, imgSrc }: { slug: string; title: string; imgSrc?: string }) => {
-  const router = useRouter();
-  const [isLiked, setIsLiked] = useState(false);
-  return (
-    <div className="template-card-pro" onClick={() => router.push(`/templates/${slug}`)}>
-      <div className="card-image-wrapper-pro">
-        <img src={imgSrc || "https://placehold.co/365x365/F5F5F5/333?text=Thiệp+Mẫu"} alt={title} />
-      </div>
-      <div className="card-info-pro">
-        <h5>{title}</h5>
-        <div
-          className={`heart-icon-pro ${isLiked ? "liked" : ""}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsLiked(!isLiked);
-          }}
-        >
-          <svg width="20" height="17" viewBox="0 0 20 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16.3158 0.482422C13.8842 0.482422 12.0211 2.21053 11.0526 3.47368H10.9474C9.97895 2.21053 8.11579 0.482422 5.68421 0.482422C2.52632 0.482422 0 3.01895 0 6.16632C0 11.7558 11 17 11 17C11 17 22 11.7558 22 6.16632C22 3.01895 19.4737 0.482422 16.3158 0.482422Z" />
-          </svg>
-        </div>
-      </div>
-    </div>
-  );
-};
+/* Thẻ mẫu thiệp: cùng kiểu với trang chủ và trang mẫu thiệp (xem trước thiệp + tên mẫu) */
+const TEMPLATE_NAME_STYLE = {
+  fontFamily: "var(--font-tpl-display), Georgia, serif",
+  fontSize: 20,
+  fontWeight: 600,
+  lineHeight: 1.25,
+  color: "#0E1B2C",
+} as const;
 
-const CategoryShowcaseCard = ({ template }: { template: Template }) => {
-  const router = useRouter();
-  return (
-    <div className="category-showcase-card">
-      <div className="category-showcase-text">
-        <h3>{template.category}</h3>
-        <p>{template.description || "Những mẫu thiệp đẹp, chuyên nghiệp và cá nhân hóa."}</p>
-        <button onClick={() => router.push("/templates")}>{`Tạo ${template.category} online`}</button>
-      </div>
-      <div className="category-showcase-image">
-        <img src={template.imgSrc || "https://placehold.co/160x160/e6e6e6/333?text=Image"} alt={template.category} />
-      </div>
-    </div>
-  );
-};
-
-const CarouselArrow = ({ direction, onClick, disabled }: { direction: "left" | "right"; onClick: () => void; disabled: boolean }) => (
-  <button className={`carousel-arrow ${direction}`} onClick={onClick} disabled={disabled}>
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d={direction === "left" ? "M15 18L9 12L15 6" : "M9 18L15 12L9 6"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  </button>
+const ProTemplateCard = ({ template }: { template: Template }) => (
+  <Link
+    href={`/templates/${template.slug}`}
+    className="group block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#27548A]"
+  >
+    <TemplateShowcase template={template} />
+    <h3 style={TEMPLATE_NAME_STYLE} className="mt-3 truncate text-center group-hover:underline group-hover:underline-offset-4">
+      {template.title}
+    </h3>
+  </Link>
 );
 
-/* Banner: giữ logic của bản src; khi chưa có banner từ settings sẽ dùng tiêu đề mặc định */
-function ProBanner({ banner }: { banner?: Banner }) {
-  if (!banner) {
-    return (
-      <div style={{ position: "relative", width: "100%", display: "flex" }}>
-        <img src="https://pub-f720e3221ef5464a93d19bbdae2cfb86.r2.dev/default-banner.png" alt="Hero Banner" style={{ width: "100%", height: "100%", minHeight: "400px", objectFit: "cover", display: "block" }} />
-        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.3)", zIndex: 1 }} />
-        <div className="hero-content" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "white", textShadow: "2px 2px 10px rgba(0,0,0,0.8)", textAlign: "center", padding: "20px", zIndex: 2 }}>
-          <h1 className="hero-title" style={{ fontSize: "clamp(2rem, 5vw, 4rem)", fontWeight: "bold", margin: "0 0 16px 0", lineHeight: "1.2", maxWidth: "90%" }}>Chuyên nghiệp</h1>
-          <p className="hero-subtitle" style={{ fontSize: "clamp(1.2rem, 3vw, 1.8rem)", margin: 0, fontWeight: "500", maxWidth: "90%" }}>Hướng dẫn chi tiết và các mẹo hữu ích</p>
-        </div>
-      </div>
-    );
-  }
-  if (banner.mediaType === "html") return <div dangerouslySetInnerHTML={{ __html: banner.htmlContent ?? "" }} style={{ width: "100%", height: "100%" }} />;
-
-  const content = (
-    <div style={{ position: "relative", width: "100%", display: "flex" }}>
-      {banner.mediaType === "video" && banner.videoUrl ? (
-        <video src={banner.videoUrl} autoPlay loop muted playsInline style={{ width: "100%", height: "100%", minHeight: "400px", objectFit: "cover", display: "block" }} />
-      ) : (
-        <img src={banner.imageUrl || "https://pub-f720e3221ef5464a93d19bbdae2cfb86.r2.dev/default-banner.png"} alt={banner.title || "Banner"} style={{ width: "100%", height: "100%", minHeight: "400px", objectFit: "cover", display: "block" }} />
-      )}
-      <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.3)", zIndex: 1 }} />
-      <div className="hero-content" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "white", textShadow: "2px 2px 10px rgba(0,0,0,0.8)", textAlign: "center", padding: "20px", zIndex: 2 }}>
-        {banner.title && <h1 className="hero-title" style={{ fontSize: "clamp(2rem, 5vw, 4rem)", fontWeight: "bold", margin: "0 0 16px 0", lineHeight: "1.2", maxWidth: "90%" }}>{banner.title}</h1>}
-        {banner.subtitle && <p className="hero-subtitle" style={{ fontSize: "clamp(1.2rem, 3vw, 1.8rem)", margin: 0, fontWeight: "500", maxWidth: "90%" }}>{banner.subtitle}</p>}
-      </div>
-    </div>
-  );
-  if (!banner.link) return content;
-  return banner.link.startsWith("http") ? (
-    <a href={banner.link} target="_blank" rel="noopener noreferrer" className="hero-link-wrapper" style={{ display: "block", width: "100%" }}>{content}</a>
-  ) : (
-    <Link href={banner.link} className="hero-link-wrapper" style={{ display: "block", width: "100%" }}>{content}</Link>
-  );
+/* Banner đầu trang: lấy từ CMS (displayPage professional / all) nếu có, không thì dùng bộ mặc định */
+function heroSlidesFrom(banners: Banner[]): Slide[] {
+  const cms = banners
+    .filter((b) => b.isEnabled && (b.displayPage === "professional" || b.displayPage === "all") && b.title)
+    .map((b, i) => ({
+      id: `cms-${i}`,
+      title: b.title ?? "",
+      text: b.subtitle,
+      image: b.imageUrl,
+      href: b.link,
+      cta: b.link ? "Khám phá" : undefined,
+      tone: "",
+    }));
+  return cms.length ? cms : PROFESSIONAL_BANNERS;
 }
 
 export default function TutorialPage() {
@@ -158,7 +112,6 @@ export default function TutorialPage() {
   const [loading, setLoading] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showcaseTemplates, setShowcaseTemplates] = useState<Template[]>([]);
-  const [carouselIndex, setCarouselIndex] = useState(0);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [bannerSecondary, setBannerSecondary] = useState("https://pub-f720e3221ef5464a93d19bbdae2cfb86.r2.dev/herotutorial.png");
 
@@ -179,11 +132,11 @@ export default function TutorialPage() {
       try {
         setLoading(true);
         const [showcaseRes, allRes] = await Promise.all([templatesApi.getTemplates({ limit: 10 }), templatesApi.getTemplates({ limit: 50 })]);
-        const showcaseAll = templatesOf(showcaseRes.data) as Template[];
+        const showcaseAll = templatesOf(showcaseRes.data) as unknown as Template[];
         const uniq = [...new Set(showcaseAll.map((t) => t.category))];
-        setShowcaseTemplates(uniq.map((c) => showcaseAll.find((t) => t.category === c)).filter(Boolean) as Template[]);
+        setShowcaseTemplates(uniq.map((c) => showcaseAll.find((t) => t.category === c)).filter(Boolean) as unknown as Template[]);
 
-        const allData = templatesOf(allRes.data) as Template[];
+        const allData = templatesOf(allRes.data) as unknown as Template[];
         const cats = [...new Set(allData.map((t) => t.category).filter(Boolean))];
         setAllCategories(cats);
         if (cats.length) setActiveCategory(cats[0]);
@@ -199,23 +152,15 @@ export default function TutorialPage() {
     if (!activeCategory) return;
     templatesApi
       .getTemplates({ category: activeCategory, limit: 8 })
-      .then((res) => setTemplates(templatesOf(res.data) as Template[]))
+      .then((res) => setTemplates(templatesOf(res.data) as unknown as Template[]))
       .catch(() => setTemplates([]))
       .finally(() => setLoading(false));
   }, [activeCategory]);
-
-  const ITEMS_PER_PAGE = 3;
-  const totalPages = Math.ceil(showcaseTemplates.length / ITEMS_PER_PAGE);
-  const handleCarouselScroll = (dir: "left" | "right") =>
-    setCarouselIndex((prev) => (dir === "left" ? Math.max(0, prev - 1) : Math.min(totalPages - 1, prev + 1)));
-
-  const professionalBanner = banners.find((b) => b.displayPage === "professional" && b.isEnabled) || banners.find((b) => b.displayPage === "all" && b.isEnabled);
+  const heroSlides = heroSlidesFrom(banners);
 
   return (
     <div className="pro-page-wrapper">
-      <section className="page-hero-wrapper" style={{ width: "100%", overflow: "hidden" }}>
-        <ProBanner banner={professionalBanner} />
-      </section>
+      <HeroCarousel slides={heroSlides} />
 
       <main className="pro-page-content">
         <section className="features-pro-section">
@@ -235,16 +180,10 @@ export default function TutorialPage() {
           </div>
         </section>
 
-        <section className="category-showcase-section">
+        <section className="category-showcase-section mx-auto w-full max-w-[1520px] px-5 lg:px-8">
           <SectionHeader title="Dễ dàng tạo thiệp mời từ vô vàn mẫu thiệp có sẵn" subtitle="Những mẫu thiệp đẹp, chuyên nghiệp và cá nhân hoá, cho ngày trọng đại thêm nhiều ý nghĩa." />
-          <div className="category-showcase-carousel-wrapper">
-            <CarouselArrow direction="left" onClick={() => handleCarouselScroll("left")} disabled={carouselIndex === 0} />
-            <div className="carousel-viewport">
-              <div className="category-showcase-grid-transform" style={{ transform: `translateX(-${carouselIndex * 100}%)` }}>
-                {showcaseTemplates.map((t) => <CategoryShowcaseCard key={t._id} template={t} />)}
-              </div>
-            </div>
-            <CarouselArrow direction="right" onClick={() => handleCarouselScroll("right")} disabled={carouselIndex >= totalPages - 1} />
+          <div className="grid w-full grid-cols-4 gap-x-6 gap-y-10 max-[1200px]:grid-cols-3 max-[993px]:grid-cols-2 max-[769px]:gap-x-4 max-[769px]:gap-y-8 max-[577px]:grid-cols-1">
+            {showcaseTemplates.map((t) => <ProTemplateCard key={t._id} template={t} />)}
           </div>
         </section>
 
@@ -278,11 +217,11 @@ export default function TutorialPage() {
               </button>
             ))}
           </div>
-          <div className="template-showcase-grid-pro">
+          <div className="mx-auto grid w-full max-w-[1520px] grid-cols-4 gap-x-6 gap-y-10 px-5 max-[1200px]:grid-cols-3 max-[993px]:grid-cols-2 max-[769px]:gap-x-4 max-[769px]:gap-y-8 max-[577px]:grid-cols-1 lg:px-8">
             {loading && !templates.length ? (
-              <p>Đang tải...</p>
+              <p className="col-span-full text-center text-[#666]">Đang tải...</p>
             ) : (
-              templates.map((t) => <TemplateCard key={t._id} slug={t.slug ?? t._id} title={t.title} imgSrc={t.imgSrc} />)
+              templates.map((t) => <ProTemplateCard key={t._id} template={t} />)
             )}
           </div>
           <button className="view-more-btn-pro">XEM THÊM</button>
@@ -295,6 +234,11 @@ export default function TutorialPage() {
               <FaqItem key={i} question={f.q} answer={f.a} isOpen={openFaq === i} onClick={() => setOpenFaq(openFaq === i ? null : i)} />
             ))}
           </div>
+        </section>
+        <section className="mx-auto mb-20 grid w-full max-w-[1520px] grid-cols-1 gap-6 px-5 md:grid-cols-2 lg:px-8">
+          {PROFESSIONAL_BOTTOM_BANNERS.map((b) => (
+            <BannerCard key={b.id} b={b} className="h-[56vh] min-h-[360px]" />
+          ))}
         </section>
       </main>
     </div>
