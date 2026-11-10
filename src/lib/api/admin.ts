@@ -44,3 +44,44 @@ export const updateAdminUser = (id: string, body: { role?: "user" | "admin"; isA
 
 export const getAdminInvitations = (params: { page?: number; limit?: number; search?: string; status?: string }) =>
   api.get<Page<AdminInvitation>>("/admin/invitations", { params });
+
+export type SiteBanner = {
+  id: string;
+  name: string;
+  displayPage: string;
+  isEnabled: boolean;
+  imgSrc?: string | null;
+  link?: string;
+};
+
+export type NavItem = {
+  id: string;
+  title: string;
+  path?: string;
+  order: number;
+  isVisible: boolean;
+  children: NavItem[];
+};
+
+export type AdminSiteSettings = {
+  theme: unknown;
+  headerNav: NavItem[];
+  banners: SiteBanner[];
+  introText: string;
+  [key: string]: unknown;
+};
+
+export const getAdminSettings = () => api.get<AdminSiteSettings>("/admin/settings");
+
+export const saveAdminBanners = (banners: SiteBanner[]) =>
+  api.put<AdminSiteSettings>("/admin/settings/banners", { banners });
+
+export const saveAdminHeaderNav = (headerNav: NavItem[]) =>
+  api.put<AdminSiteSettings>("/admin/settings/header-nav", { headerNav });
+
+/** Bỏ Content-Type mặc định (application/json) để trình duyệt tự đặt multipart kèm boundary. */
+export const uploadAdminImage = (file: File) => {
+  const form = new FormData();
+  form.append("file", file);
+  return api.post<{ url: string }>("/admin/settings/uploads", form, { headers: { "Content-Type": undefined } });
+};
