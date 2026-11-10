@@ -206,8 +206,7 @@ button {
     display: flex;
     justify-content: space-between; /* dàn đều, lấp đầy chiều ngang thanh menu */
     gap: clamp(16px, 2vw, 40px);
-    overflow-x: auto;
-    scrollbar-width: none;
+    overflow: visible; /* không scroll ngang: phần thừa được gom vào "Thiệp khác" */
     height: 51px;
     align-items: center;
 }
@@ -419,4 +418,42 @@ button {
     100% {
         transform: translateX(-100%);
     }
+}
+
+/* ----- NÚT "THIỆP KHÁC" (danh mục không vừa khung) ----- */
+.more-menu-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.more-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 60;
+    min-width: 240px;
+    max-height: 70vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 12px 28px -12px rgba(14, 27, 44, 0.35);
+}
+.more-menu button {
+    padding: 10px 18px;
+    text-align: left;
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--color-text-dark);
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+.more-menu button:hover,
+.more-menu button.active {
+    color: var(--color-accent);
+    background: #f5f5f5;
 }

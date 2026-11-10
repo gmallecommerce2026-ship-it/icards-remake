@@ -2,7 +2,7 @@
 
 /* Mã nguồn giữ theo GlobalHeader.js của bản src; CSS nằm ở GlobalHeader.css (cùng tên class). */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Menu, X, ChevronRight, Search } from "lucide-react";
 import { settingsApi, templatesApi } from "@/lib/api";
@@ -188,6 +188,150 @@ const AnnouncementBar = ({ bar }: { bar?: Announcement }) => {
   return link ? <a href={link} className="announcement-bar-link">{content}</a> : content;
 };
 
+/* ---------- Thanh menu desktop: vừa đủ khung, phần thừa gom vào "Thiệp khác" ---------- */
+/* Hai mục luôn đứng cuối menu và không bao giờ bị gom. */
+const PINNED_PATHS = ["/shop", "/blog"];
+const MORE_LABEL = "Thiệp khác";
+/* Chiều rộng dự phòng của nút "Thiệp khác" trước khi đo được */
+const MORE_FALLBACK_WIDTH = 120;
+
+const splitNav = (items: NavItem[]) => ({
+  cats: items.filter((i) => !PINNED_PATHS.includes(i.path ?? "")),
+  pinned: items.filter((i) => PINNED_PATHS.includes(i.path ?? "")),
+});
+
+function DesktopNav({ items, menuData, activeMenu, onEnter, onLeave, onClear, onNavigate }: {
+  items: NavItem[];
+  menuData: Record<string, MenuNode>;
+  activeMenu: string | null;
+  onEnter: (key: string) => void;
+  onLeave: () => void;
+  onClear: () => void;
+  onNavigate: (path: string) => void;
+}) {
+  const navRef = useRef<HTMLElement>(null);
+  const moreRef = useRef<HTMLButtonElement>(null);
+  // Chiều rộng đo được của từng mục, giữ lại cả khi mục đó đang bị gom (chiều rộng không đổi theo số mục hiển thị)
+  const widths = useRef<Map<string, number>>(new Map());
+  const itemEls = useRef<Map<string, HTMLElement>>(new Map());
+  const moreWidth = useRef(MORE_FALLBACK_WIDTH);
+  const [visible, setVisible] = useState<number>(() => splitNav(items).cats.length);
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  const { cats, pinned } = useMemo(() => splitNav(items), [items]);
+
+  // Đo lại và chọn số danh mục hiển thị lớn nhất vừa khung
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const fit = () => {
+      itemEls.current.forEach((el, key) => widths.current.set(key, el.getBoundingClientRect().width));
+      if (moreRef.current) moreWidth.current = moreRef.current.getBoundingClientRect().width;
+      const gap = parseFloat(getComputedStyle(nav).columnGap) || 0;
+      const avail = nav.clientWidth;
+      const w = (key: string) => widths.current.get(key) ?? 0;
+      const pinnedKeys = pinned.map(menuKey);
+      const pinnedW = pinnedKeys.reduce((sum, k) => sum + w(k), 0);
+      let best = 0;
+      for (let k = cats.length; k >= 0; k--) {
+        const hasMore = k < cats.length;
+        const count = k + (hasMore ? 1 : 0) + pinnedKeys.length;
+        const total =
+          cats.slice(0, k).reduce((sum, c) => sum + w(menuKey(c)), 0) +
+          (hasMore ? moreWidth.current : 0) +
+          pinnedW +
+          gap * Math.max(0, count - 1);
+        if (total <= avail) {
+          best = k;
+          break;
+        }
+      }
+      setVisible((prev) => (prev === best ? prev : best));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(nav);
+    return () => ro.disconnect();
+  }, [cats, pinned]);
+
+  const shown = cats.slice(0, visible);
+  const hidden = cats.slice(visible);
+  const hiddenActive = hidden.some((c) => activeMenu === menuKey(c));
+
+  const btnClass = (key: string) => `nav-item-bottom ${activeMenu === key ? "active" : ""}`;
+  const register = (key: string) => (el: HTMLElement | null) => {
+    if (el) itemEls.current.set(key, el);
+    else itemEls.current.delete(key);
+  };
+
+  return (
+    <nav ref={navRef} className="header-bottom desktop-only">
+      {shown.map((item) => {
+        const key = menuKey(item);
+        return (
+          <button
+            key={key}
+            ref={register(key)}
+            onClick={() => onNavigate(menuData[key]?.path || item.path || "#")}
+            onMouseEnter={() => onEnter(key)}
+            onMouseLeave={onLeave}
+            className={btnClass(key)}
+          >
+            {item.title}
+          </button>
+        );
+      })}
+
+      {hidden.length > 0 && (
+        <div
+          className="more-menu-wrap"
+          onMouseEnter={() => { setMoreOpen(true); onClear(); }}
+          onMouseLeave={() => setMoreOpen(false)}
+        >
+          <button ref={moreRef} className={`nav-item-bottom ${hiddenActive ? "active" : ""}`} aria-haspopup="true" aria-expanded={moreOpen}>
+            {MORE_LABEL}
+          </button>
+          {moreOpen && (
+            <div className="more-menu" role="menu">
+              {hidden.map((item) => {
+                const key = menuKey(item);
+                return (
+                  <button
+                    key={key}
+                    role="menuitem"
+                    onMouseEnter={() => onEnter(key)}
+                    onMouseLeave={onLeave}
+                    onClick={() => { setMoreOpen(false); onNavigate(menuData[key]?.path || item.path || "#"); }}
+                    className={activeMenu === key ? "active" : ""}
+                  >
+                    {item.title}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {pinned.map((item) => {
+        const key = menuKey(item);
+        return (
+          <button
+            key={key}
+            ref={register(key)}
+            onClick={() => onNavigate(menuData[key]?.path || item.path || "#")}
+            onMouseEnter={() => onEnter(key)}
+            onMouseLeave={onLeave}
+            className={btnClass(key)}
+          >
+            {item.title}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
 /* ---------- Thanh chính ---------- */
 const MainHeader = ({
   onMenuToggle, isSticky, isVisible, activeMenu, setActiveMenu, menuData, mainNavItems, companyName, logoUrl, headerRef,
@@ -257,19 +401,15 @@ const MainHeader = ({
               <Menu size={28} />
             </button>
           </div>
-          <nav className="header-bottom desktop-only">
-            {mainNavItems.map((item) => (
-              <button
-                key={item.id || item.title}
-                onClick={() => handleNavigate(menuData[menuKey(item)]?.path || item.path || "#")}
-                onMouseEnter={() => handleMouseEnter(menuKey(item))}
-                onMouseLeave={handleMouseLeave}
-                className={`nav-item-bottom ${activeMenu === menuKey(item) ? "active" : ""}`}
-              >
-                {item.title}
-              </button>
-            ))}
-          </nav>
+          <DesktopNav
+            items={mainNavItems}
+            menuData={menuData}
+            activeMenu={activeMenu}
+            onEnter={handleMouseEnter}
+            onLeave={handleMouseLeave}
+            onClear={() => setActiveMenu(null)}
+            onNavigate={handleNavigate}
+          />
         </div>
         <MegaMenuPane
           activeMenuData={activeMenu ? menuData[activeMenu] ?? null : null}
