@@ -35,7 +35,7 @@ export default function BlogClient({ posts: allPosts, categories }: { posts: Pos
   return (
     <div>
       {/* Hero xanh thương hiệu với ô tìm kiếm */}
-      <section className="relative overflow-hidden bg-lacquer text-white">
+      <section className="full-bleed overflow-hidden bg-lacquer text-white">
         <div
           aria-hidden
           className="absolute inset-0 opacity-[0.08]"
@@ -87,7 +87,7 @@ export default function BlogClient({ posts: allPosts, categories }: { posts: Pos
         </Container>
       </section>
 
-      <Container className="relative">
+      <Container className="relative z-20">
         {/* Thanh chuyên mục nổi lên trên hero */}
         <nav
           id="blog-list"

@@ -59,7 +59,9 @@ function SectionHeader({ sub, title }: { sub: string; title: string }) {
 
 type OccasionItem = { key: string; title: string; href: string; img?: string };
 
-/* Nút trước/sau: nằm gọn trong mép carousel, tự mờ đi khi hết chỗ để cuộn, đổi sang xanh thương hiệu khi rê chuột */
+/* Nút trước/sau: ẩn khi chưa rê chuột vào carousel, rê vào thì hiện cả hai nút hai bên.
+   Trên màn hình cảm ứng (không có hover) hoặc khi dùng bàn phím (focus) thì luôn hiện.
+   Đang ở mép cuối thì nút đó chỉ mờ đi, vẫn giữ vị trí để bố cục không nhảy. */
 function ArrowButton({ direction, onClick, disabled }: { direction: "prev" | "next"; onClick: () => void; disabled: boolean }) {
   const Icon = direction === "prev" ? ChevronLeft : ChevronRight;
   return (
@@ -68,7 +70,7 @@ function ArrowButton({ direction, onClick, disabled }: { direction: "prev" | "ne
       onClick={onClick}
       disabled={disabled}
       aria-label={direction === "prev" ? "Xem các dịp trước" : "Xem các dịp tiếp theo"}
-      className={`absolute top-1/2 z-10 grid size-12 -translate-y-1/2 place-items-center rounded-full border border-[#27548A]/20 bg-white/95 text-[#27548A] shadow-[0_10px_24px_-10px_rgba(14,27,44,0.45)] backdrop-blur transition-all duration-200 hover:border-[#27548A] hover:bg-[#27548A] hover:text-white active:scale-95 disabled:pointer-events-none disabled:opacity-0 max-[769px]:size-10 ${
+      className={`absolute top-1/2 z-10 grid size-12 -translate-y-1/2 place-items-center rounded-full border border-[#27548A]/20 bg-white/95 text-[#27548A] shadow-[0_10px_24px_-10px_rgba(14,27,44,0.45)] backdrop-blur transition-all duration-200 hover:border-[#27548A] hover:bg-[#27548A] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#27548A] active:scale-95 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 max-[769px]:opacity-100 disabled:pointer-events-none disabled:opacity-40 group-hover:disabled:opacity-40 max-[769px]:disabled:opacity-40 max-[769px]:size-10 ${
         direction === "prev" ? "left-2" : "right-2"
       }`}
     >
@@ -98,7 +100,7 @@ function Occasions({ items }: { items: OccasionItem[] }) {
   };
 
   return (
-    <div className="relative mb-8 w-full">
+    <div className="group relative mb-8 w-full">
       <ArrowButton direction="prev" onClick={() => scroll(-1)} disabled={edge.start} />
       <div
         ref={ref}
@@ -309,7 +311,7 @@ export function HomepageContent() {
 
   return (
     <div className="bg-[#FEFDFD] font-inter text-[#333]">
-      <section className="w-full overflow-hidden">
+      <section className="full-bleed overflow-hidden">
         {hero?.link ? (
           <a href={hero.link}>
             <img src={hero.imgSrc || HERO_FALLBACK} alt={hero.name ?? "iCards"} className="block aspect-[16/9] max-h-[600px] w-full object-cover" />

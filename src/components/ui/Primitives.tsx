@@ -19,7 +19,7 @@ export function PageHero({ title, description, crumbs, eyebrow, children }: {
   children?: React.ReactNode;
 }) {
   return (
-    <div className="border-b border-line bg-white pt-[72px]">
+    <div className="full-bleed border-b border-line bg-white pt-[72px]">
       <Container className="py-14 lg:py-20">
         {crumbs && (
           <nav aria-label="Breadcrumb" className="mb-4 flex flex-wrap items-center gap-2 text-sm text-muted">

@@ -24,7 +24,7 @@ export function HeroCarousel({ slides, interval = 6000 }: { slides: Slide[]; int
     <section
       aria-roledescription="carousel"
       aria-label="Banner"
-      className="relative w-full overflow-hidden bg-[#0E1B2C]"
+      className="full-bleed overflow-hidden bg-[#0E1B2C]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
