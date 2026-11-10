@@ -8,6 +8,7 @@ export * as templatesApi from "./templates";
 export * as invitationsApi from "./invitations";
 export * as wishesApi from "./wishes";
 export * as productsApi from "./products";
+export * as adminApi from "./admin";
 export * as servicesApi from "./services";
 export * as settingsApi from "./settings";
 export * as contentApi from "./content";

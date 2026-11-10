@@ -10,10 +10,12 @@ export type User = {
   email: string;
   phone: string;
   avatarBg: string;
+  /** 'user' | 'admin' — lấy từ backend (users.role) */
+  role: "user" | "admin";
 };
 
 /** Dạng user trả về từ backend (xem docs/API_CONTRACT.md). */
-type ApiUser = { _id: string; username?: string; email?: string; fullName?: string | null; phone?: string | null };
+type ApiUser = { _id: string; username?: string; email?: string; fullName?: string | null; phone?: string | null; role?: "user" | "admin" };
 
 type AuthContextType = {
   user: User | null;
@@ -36,6 +38,7 @@ const toUser = (u: ApiUser): User => ({
   email: u.email ?? "",
   phone: u.phone ?? "",
   avatarBg: AVATAR_BG,
+  role: u.role === "admin" ? "admin" : "user",
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
