@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { settingsApi, templatesApi } from "@/lib/api";
+import { flattenTemplates, type TreeNode } from "@/lib/templates-tree";
 
 /* Giá trị lấy trực tiếp từ HomepageContent.css của bản src (đã áp dụng đúng thứ tự cascade). */
 
@@ -55,45 +57,63 @@ function SectionHeader({ sub, title }: { sub: string; title: string }) {
   );
 }
 
-/* Mũi tên: SVG và rotate giống hệt bản gốc (cả hai nút đều được xoay 180°, xem ghi chú) */
-function ArrowButton({ direction, onClick }: { direction: "prev" | "next"; onClick: () => void }) {
+type OccasionItem = { key: string; title: string; href: string; img?: string };
+
+/* Nút trước/sau: nằm gọn trong mép carousel, tự mờ đi khi hết chỗ để cuộn, đổi sang xanh thương hiệu khi rê chuột */
+function ArrowButton({ direction, onClick, disabled }: { direction: "prev" | "next"; onClick: () => void; disabled: boolean }) {
+  const Icon = direction === "prev" ? ChevronLeft : ChevronRight;
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`absolute top-1/2 z-10 flex h-[44px] w-[44px] -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-[#eee] bg-white shadow-[0_4px_10px_rgba(0,0,0,0.1)] backdrop-blur-[5px] transition-all duration-200 hover:bg-[#f8f9fa] hover:shadow-[0_6px_15px_rgba(0,0,0,0.15)] max-[993px]:hidden [&_svg]:rotate-180 ${
-        direction === "prev" ? "left-[-20px]" : "right-[-20px]"
+      disabled={disabled}
+      aria-label={direction === "prev" ? "Xem các dịp trước" : "Xem các dịp tiếp theo"}
+      className={`absolute top-1/2 z-10 grid size-12 -translate-y-1/2 place-items-center rounded-full border border-[#27548A]/20 bg-white/95 text-[#27548A] shadow-[0_10px_24px_-10px_rgba(14,27,44,0.45)] backdrop-blur transition-all duration-200 hover:border-[#27548A] hover:bg-[#27548A] hover:text-white active:scale-95 disabled:pointer-events-none disabled:opacity-0 max-[769px]:size-10 ${
+        direction === "prev" ? "left-2" : "right-2"
       }`}
     >
-      <svg width="13" height="22" viewBox="0 0 13 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M11 2L3 11L11 20" stroke="black" strokeWidth="2" strokeLinecap="round" />
-      </svg>
+      <Icon className="size-6 max-[769px]:size-5" strokeWidth={1.75} aria-hidden />
     </button>
   );
 }
 
-function Occasions({ items }: { items: Block[] }) {
+function Occasions({ items }: { items: OccasionItem[] }) {
   const ref = useRef<HTMLDivElement>(null);
+  const [edge, setEdge] = useState({ start: true, end: false });
+
+  const update = () => {
+    const el = ref.current;
+    if (!el) return;
+    setEdge({ start: el.scrollLeft <= 4, end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 });
+  };
+  useEffect(() => {
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [items]);
+
   const scroll = (dir: 1 | -1) => {
     const el = ref.current;
-    if (el) el.scrollBy({ left: dir * el.offsetWidth * 0.8, behavior: "smooth" });
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: "smooth" });
   };
 
   return (
-    <div className="relative mb-8 flex w-full items-center">
-      <ArrowButton direction="prev" onClick={() => scroll(-1)} />
+    <div className="relative mb-8 w-full">
+      <ArrowButton direction="prev" onClick={() => scroll(-1)} disabled={edge.start} />
       <div
         ref={ref}
-        className="flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-5 py-3 [-ms-overflow-style:none] [scrollbar-width:none] max-[769px]:gap-4 max-[769px]:px-[15px] [&::-webkit-scrollbar]:hidden"
+        onScroll={update}
+        className="flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-1 py-3 [-ms-overflow-style:none] [scrollbar-width:none] max-[769px]:gap-4 [&::-webkit-scrollbar]:hidden"
       >
         {items.map((o) => (
           <Link
-            key={o._id}
-            href="/templates"
+            key={o.key}
+            href={o.href}
             className="group block w-[clamp(160px,20vw,220px)] shrink-0 cursor-pointer snap-start transition-transform duration-300 hover:-translate-y-1"
           >
             <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-[#f3f1ee] shadow-[0_6px_18px_-8px_rgba(14,27,44,0.28)] ring-1 ring-[#0E1B2C]/10 transition-shadow duration-300 group-hover:shadow-[0_12px_28px_-10px_rgba(14,27,44,0.35)]">
               <img
-                src={o.templates?.[0]?.imgSrc || placeholder(o.title, "330x440")}
+                src={o.img || placeholder(o.title, "330x440")}
                 alt={o.title}
                 loading="lazy"
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
@@ -111,7 +131,6 @@ function Occasions({ items }: { items: Block[] }) {
           </Link>
         ))}
       </div>
-      <ArrowButton direction="next" onClick={() => scroll(1)} />
     </div>
   );
 }
@@ -228,7 +247,7 @@ function Intro({ html }: { html?: string }) {
 
 export function HomepageContent() {
   const [loading, setLoading] = useState(true);
-  const [occasions, setOccasions] = useState<Block[]>([]);
+  const [occasions, setOccasions] = useState<OccasionItem[]>([]);
   const [featured, setFeatured] = useState<Template[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [introHtml, setIntroHtml] = useState<string | undefined>();
@@ -240,12 +259,20 @@ export function HomepageContent() {
       templatesApi.getTemplateBlocks(),
       templatesApi.getTemplates({ limit: 50 }),
       settingsApi.getPublicSettings(),
+      templatesApi.getTemplateCategoryTree(),
     ])
-      .then(([blocksRes, templatesRes, settingsRes]) => {
+      .then(([blocksRes, templatesRes, settingsRes, treeRes]) => {
         if (!alive) return;
         const blocks: Block[] = blocksRes.status === "fulfilled" ? listOf<Block>(blocksRes.value.data) : [];
         const usedIds = new Set(blocks.flatMap((b) => b.templates?.map((t) => t._id) ?? []));
-        setOccasions(blocks.filter((b) => b.isActive));
+        // Dịp lan tỏa niềm vui = toàn bộ danh mục gốc giống menu header; chưa có cây thì dùng các khối cũ
+        const d = treeRes.status === "fulfilled" ? (treeRes.value.data?.data ?? treeRes.value.data) : [];
+        const roots: TreeNode[] = Array.isArray(d) ? d : [];
+        setOccasions(
+          roots.length
+            ? roots.map((r) => ({ key: r.id, title: r.label, href: r.path, img: flattenTemplates(r).find((t) => t.previewImage)?.previewImage ?? undefined }))
+            : blocks.filter((b) => b.isActive).map((b) => ({ key: b._id, title: b.title, href: "/templates", img: b.templates?.[0]?.imgSrc })),
+        );
 
         // list.ts giữ nguyên mọi trường backend trả về (palette, sample, motif...) nên đủ dữ liệu cho InvitationPreview.
         const all = (templatesRes.status === "fulfilled" ? templatesOf(templatesRes.value.data) : []) as unknown as Template[];
