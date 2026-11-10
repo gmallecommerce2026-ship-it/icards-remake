@@ -1,3 +1,4 @@
+import type { InvitationTemplate, TemplateDesign } from "@/lib/templates";
 import { api } from "./http";
 import type { BannerGroupData } from "@/lib/banner-groups";
 import type { PageCopy } from "@/lib/page-copy";
@@ -150,3 +151,59 @@ export const saveAdminBlogCategories = (categories: { slug: string; label: strin
 
 export const saveAdminPageCopy = (pageCopy: PageCopy) => api.put<AdminSiteSettings>("/admin/settings/page-copy", { pageCopy });
 
+/* ---------- Mẫu thiệp (tab Thiết kế) và phong bì (tab Phong bì) ---------- */
+
+export type AdminTemplate = {
+  _id: string;
+  slug: string;
+  name: string;
+  category: string;
+  categorySlug: string | null;
+  categoryPath: string | null;
+  tagline: string;
+  price: number;
+  format: "folding" | "card";
+  orientation: "landscape" | "square" | "portrait";
+  isPublished: boolean;
+  popularity: number;
+  hasDesign: boolean;
+  envelope: { envId?: string; linerId?: string } | null;
+};
+
+export type AdminTemplateDetail = InvitationTemplate & {
+  _id: string;
+  isPublished: boolean;
+  categorySlug: string | null;
+  design: TemplateDesign | null;
+};
+
+export type AdminTemplateInput = Partial<{
+  slug: string;
+  name: string;
+  category: string;
+  categorySlug: string | null;
+  tagline: string;
+  description: string;
+  price: number;
+  format: "folding" | "card";
+  orientation: "landscape" | "square" | "portrait";
+  isPublished: boolean;
+  features: string[];
+}>;
+
+export type AdminTemplateCategory = { slug: string; label: string; path: string; sortOrder: number };
+export type EnvelopePresetItem = { id: string; name: string; color: string; tone: string };
+export type LinerPresetItem = { id: string; name: string; background: string; tone: string };
+export type EnvelopePresetsData = { envelopes: EnvelopePresetItem[]; liners: LinerPresetItem[] };
+
+export const getAdminTemplates = () => api.get<AdminTemplate[]>("/admin/templates");
+export const getAdminTemplate = (id: string) => api.get<AdminTemplateDetail>(`/admin/templates/${id}`);
+export const createAdminTemplate = (body: AdminTemplateInput) => api.post<{ _id: string; slug: string }>("/admin/templates", body);
+export const updateAdminTemplate = (id: string, body: AdminTemplateInput) => api.put(`/admin/templates/${id}`, body);
+export const saveAdminTemplateDesign = (id: string, design: TemplateDesign) =>
+  api.put<{ ok: boolean; savedAt: string }>(`/admin/templates/${id}/design`, { design });
+export const saveAdminTemplateEnvelope = (id: string, body: { envId: string | null; linerId: string | null }) =>
+  api.put<{ envelope: { envId?: string; linerId?: string } | null }>(`/admin/templates/${id}/envelope`, body);
+export const getAdminTemplateCategories = () => api.get<AdminTemplateCategory[]>("/admin/template-categories");
+export const getAdminEnvelopePresets = () => api.get<EnvelopePresetsData>("/admin/envelope-presets");
+export const saveAdminEnvelopePresets = (body: EnvelopePresetsData) => api.put<EnvelopePresetsData>("/admin/envelope-presets", body);

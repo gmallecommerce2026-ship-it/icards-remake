@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { motion, useMotionValue, useSpring } from 'motion/react';
 import type { InvitationTemplate } from '@/lib/templates';
 import { invitationsApi, templatesApi } from '@/lib/api';
+import * as adminApi from '@/lib/api/admin';
 import { errorText, toEventDateIso, type ApiInvitation } from '@/lib/invitation-flow';
 import { ROUTES } from '@/lib/routes';
 import { EnvelopeScene } from './EnvelopeScene';
@@ -66,13 +67,24 @@ function EnvelopeThumb({ color }: { color: string }) {
   );
 }
 
-type Props = { recipientName?: string; editable?: boolean; templateSlug?: string | null; invitationId?: string | null };
+/**
+ * Chế độ admin: thiết kế một mẫu thiệp (lưu vào mẫu, không tạo thiệp). Có `adminTemplate` thì dùng luôn dữ liệu mẫu đã tải,
+ * không tự gọi API công khai, không lưu nháp cục bộ, và nút "Lưu mẫu" thay cho "Tiếp theo".
+ */
+type AdminTemplateTarget = { id: string; template: InvitationTemplate };
+type Props = {
+  recipientName?: string;
+  editable?: boolean;
+  templateSlug?: string | null;
+  invitationId?: string | null;
+  adminTemplate?: AdminTemplateTarget;
+};
 
 const DOTS: PageId[] = ['cover', 'inside', 'back'];
 const CARD_PAGES: PageId[] = ['cover', 'back'];
 const draftKey = (slug?: string | null) => `icards:draft:${slug ?? 'blank'}`;
 
-export function EnvelopeDesigner({ recipientName: recipientProp, editable = false, templateSlug, invitationId }: Props) {
+export function EnvelopeDesigner({ recipientName: recipientProp, editable = false, templateSlug, invitationId, adminTemplate }: Props) {
   const catalog = useEnvelopeCatalog();
   const [recipientName, setRecipientName] = useState(recipientProp);
   // Thiệp đã lưu trên máy chủ (mở lại bằng ?invitation=). Khi có, nội dung lấy từ server thay vì mẫu.
@@ -88,6 +100,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
   const [template, setTemplate] = useState<InvitationTemplate | undefined>(undefined);
   const [templateReady, setTemplateReady] = useState(!templateSlug);
   useEffect(() => {
+    if (adminTemplate) { setTemplate(adminTemplate.template); setTemplateReady(true); return; }
     if (!templateSlug) { setTemplate(undefined); setTemplateReady(true); return; }
     let alive = true;
     setTemplateReady(false);
@@ -381,10 +394,14 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
     const st = useEditorStore.getState();
     let loaded = serverDesignRef.current;
     try {
-      const raw = loaded ? null : localStorage.getItem(draftKey(templateSlug));
+      const raw = loaded || adminTemplate ? null : localStorage.getItem(draftKey(templateSlug));
       if (raw) { st.hydrate(JSON.parse(raw) as Snap); loaded = true; }
     } catch { /* bỏ qua bản nháp hỏng */ }
-    if (!loaded && template) st.loadTemplate(template);
+    // Mẫu đã có thiết kế (admin lưu) thì nạp đúng thiết kế đó; chưa có thì dựng từ sample như trước.
+    if (!loaded && template) {
+      if (template.design) st.hydrate({ pages: template.design.pages, backdrops: template.design.backdrops, format: template.design.format, orientation: template.design.orientation } as unknown as Snap);
+      else st.loadTemplate(template);
+    }
     st.setPage('cover');
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setReady(true);
@@ -397,8 +414,20 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
     try { localStorage.setItem(draftKey(templateSlug), JSON.stringify({ pages, backdrops, format, orientation })); setSaved('saved'); }
     catch { setSaved('idle'); alert('Không lưu được bản nháp (bộ nhớ trình duyệt đầy). Hãy dùng ảnh nhỏ hơn.'); }
   }, [templateSlug]);
+  const templateDirty = useRef(false);
+  const [templateSaving, setTemplateSaving] = useState(false);
   useEffect(() => {
     if (!editable || !ready) return;
+    if (adminTemplate) {
+      // Chế độ admin: không tự lưu, chỉ đánh dấu chưa lưu và cảnh báo khi rời trang
+      const unsub = useEditorStore.subscribe((s, p) => {
+        if (s.pages === p.pages && s.backdrops === p.backdrops) return;
+        templateDirty.current = true;
+      });
+      const warn = (e: BeforeUnloadEvent) => { if (templateDirty.current) { e.preventDefault(); e.returnValue = ''; } };
+      window.addEventListener('beforeunload', warn);
+      return () => { unsub(); window.removeEventListener('beforeunload', warn); };
+    }
     let t: ReturnType<typeof setTimeout> | undefined;
     const unsub = useEditorStore.subscribe((s, p) => {
       if (s.pages === p.pages && s.backdrops === p.backdrops) return;
@@ -407,7 +436,27 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
       t = setTimeout(saveNow, 800);
     });
     return () => { unsub(); clearTimeout(t); };
-  }, [editable, ready, saveNow]);
+  }, [editable, ready, saveNow, adminTemplate]);
+
+  // ---- Chế độ admin: lưu thiết kế vào mẫu
+  const saveTemplateDesign = async () => {
+    if (!adminTemplate || templateSaving) return;
+    const a = document.activeElement;
+    if (a instanceof HTMLElement) a.blur();          // chốt ô chữ đang gõ trước khi lưu
+    useEditorStore.getState().select(null);
+    const { pages, backdrops, format, orientation } = useEditorStore.getState();
+    setTemplateSaving(true);
+    setSaveError('');
+    try {
+      await adminApi.saveAdminTemplateDesign(adminTemplate.id, { pages, backdrops, format, orientation });
+      templateDirty.current = false;
+      setSaved('saved');
+    } catch (err) {
+      setSaveError(errorText(err, 'Chưa lưu được mẫu. Hãy kiểm tra kết nối và quyền admin rồi thử lại.'));
+    } finally {
+      setTemplateSaving(false);
+    }
+  };
 
   // ---- Bấm "Tiếp theo": chốt chữ đang gõ, lưu bản nháp thiết kế, rồi mở màn gói thiệp (xoay ngang → nhét vào phong bì → đóng nắp → tự cuộn xuống phần cấu hình thiệp online)
   const router = useRouter();
@@ -540,7 +589,11 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
               <button type="button" aria-pressed={mode === 'preview'} onClick={() => { stopPlay(); setMode('preview'); useEditorStore.getState().select(null); }}>Xem thử</button>
             </div>
           )}
-          {editable && <button type="button" className={d.save} onClick={handleNext} disabled={sendPending || sendOpen}>Tiếp theo</button>}
+          {editable && (adminTemplate ? (
+            <button type="button" className={d.save} onClick={saveTemplateDesign} disabled={templateSaving}>{templateSaving ? 'Đang lưu…' : 'Lưu mẫu'}</button>
+          ) : (
+            <button type="button" className={d.save} onClick={handleNext} disabled={sendPending || sendOpen}>Tiếp theo</button>
+          ))}
         </div>
       </header>
       <div className={d.body}>

@@ -49,6 +49,16 @@ export function orientationRatio(o: TemplateOrientation): string {
   return `${w} / ${h}`;
 }
 
+/** Thiết kế canvas của mẫu (cùng định dạng bản nháp thiệp). Có khi admin đã thiết kế mẫu. */
+export type TemplateDesign = {
+  /** Theo từng trang (cover / inside / back): mảng phần tử canvas. */
+  pages: Record<string, unknown>;
+  /** Hình nền theo từng trang. */
+  backdrops: Record<string, unknown>;
+  format: string;
+  orientation: string;
+};
+
 export type InvitationTemplate = {
   slug: string;
   name: string;
@@ -70,6 +80,8 @@ export type InvitationTemplate = {
   orientation?: TemplateOrientation;
   /** Bố cục hai mặt, chỉ có với format = card. */
   layout?: CardLayout;
+  /** Thiết kế canvas do admin lưu (chỉ có ở trang chi tiết mẫu). Không có thì studio dựng từ sample. */
+  design?: TemplateDesign;
   motif: Motif;
   palette: { bg: string; ink: string; accent: string; soft: string };
   sample: {

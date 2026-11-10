@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { LayoutDashboard, LogOut, FileText, Users, Image as ImageIcon, Menu as MenuIcon, ShoppingBag, Newspaper } from "lucide-react";
+import { LayoutDashboard, LogOut, FileText, Users, Image as ImageIcon, Menu as MenuIcon, ShoppingBag, Newspaper, LayoutTemplate, Mail } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 
 const NAV = [
   { href: "/admin", label: "Tổng quan", icon: LayoutDashboard },
   { href: "/admin/users", label: "Người dùng", icon: Users },
   { href: "/admin/invitations", label: "Thiệp mời", icon: FileText },
+  { href: "/admin/templates", label: "Thiết kế mẫu", icon: LayoutTemplate },
+  { href: "/admin/envelopes", label: "Phong bì", icon: Mail },
   { href: "/admin/banners", label: "Banner", icon: ImageIcon },
   { href: "/admin/menu", label: "Menu", icon: MenuIcon },
   { href: "/admin/shop", label: "Cửa hàng & Dịch vụ", icon: ShoppingBag },
