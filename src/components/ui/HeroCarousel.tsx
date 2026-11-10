@@ -2,24 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useHeaderHeight } from "./useHeaderHeight";
 
-/* Đo chiều cao header (đang nằm trong luồng trang) để banner lấp đúng phần màn hình còn lại. */
-function useHeaderHeight() {
-  const [h, setH] = useState(0);
-  useEffect(() => {
-    const el = document.querySelector<HTMLElement>(".main-header-wrapper");
-    const measure = () => setH(el ? el.offsetHeight : 0);
-    measure();
-    const ro = typeof ResizeObserver !== "undefined" && el ? new ResizeObserver(measure) : null;
-    ro?.observe(el!);
-    window.addEventListener("resize", measure);
-    return () => {
-      ro?.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, []);
-  return h;
-}
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Slide } from "./Carousel";
 

@@ -9,6 +9,7 @@ import { BLOG_KEYWORD_GROUPS, countByCategory, filterPosts, formatDate, getCateg
 import { Container, btn } from "@/components/ui/Primitives";
 import { Reveal } from "@/components/home/Reveal";
 import { SideAdsShell } from "@/components/ads/SideAdsShell";
+import { useHeaderHeight } from "@/components/ui/useHeaderHeight";
 
 const PAGE_SIZE = 6;
 
@@ -33,16 +34,20 @@ export default function BlogClient({ posts: allPosts, categories }: { posts: Pos
   const side = showFeatured && posts.length >= 4 ? posts.slice(1, 3) : [];
   const gridPosts = showFeatured ? posts.slice(1 + side.length) : posts;
 
+  const headerH = useHeaderHeight();
   const heroEl = (
     <>
       {/* Hero xanh thương hiệu với ô tìm kiếm */}
-      <section className="relative overflow-hidden bg-lacquer text-white">
+      <section
+        className="relative flex overflow-hidden bg-lacquer text-white"
+        style={{ minHeight: "480px", height: headerH ? `calc(100svh - ${headerH}px)` : "100svh" }}
+      >
         <div
           aria-hidden
           className="absolute inset-0 opacity-[0.08]"
           style={{ backgroundImage: "radial-gradient(#fff 1px, transparent 1px)", backgroundSize: "22px 22px" }}
         />
-        <Container className="relative py-16 lg:py-24">
+        <Container className="relative flex w-full flex-col justify-center py-16 lg:py-24">
           <p className="inline-flex items-center gap-2 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]">
             <span aria-hidden className="size-1.5 bg-gold" />
             Cẩm nang iCards

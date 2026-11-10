@@ -7,7 +7,7 @@ export default function ServicesLayout({ children }: { children: ReactNode }) {
   return (
     <PageShell>
       <div>
-        <HeroCarousel slides={SERVICES_BANNERS} />
+        <HeroCarousel slides={SERVICES_BANNERS} fullHeight />
         {children}
       </div>
     </PageShell>

@@ -7,7 +7,7 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
   return (
     <PageShell>
       <div>
-        <HeroCarousel slides={SHOP_BANNERS} />
+        <HeroCarousel slides={SHOP_BANNERS} fullHeight />
         {children}
       </div>
     </PageShell>

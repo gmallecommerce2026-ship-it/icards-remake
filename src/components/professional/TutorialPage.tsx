@@ -166,7 +166,7 @@ export default function TutorialPage() {
   return (
     // tone-blue: ép màu thương hiệu #27548A cho toàn trang, không theo theme 1–5
     <div className="tone-blue bg-[#FEFDFD] text-ink">
-      <SideAdsShell hero={<HeroCarousel slides={heroSlides} />}>
+      <SideAdsShell hero={<HeroCarousel slides={heroSlides} fullHeight />}>
 
       {/* Dải lợi ích nhanh */}
       <section aria-label="Lợi ích" className="border-b border-line bg-white">
