@@ -136,6 +136,7 @@ function Occasions({ items }: { items: OccasionItem[] }) {
           </Link>
         ))}
       </div>
+      <ArrowButton direction="next" onClick={() => scroll(1)} disabled={edge.end} />
     </div>
   );
 }
