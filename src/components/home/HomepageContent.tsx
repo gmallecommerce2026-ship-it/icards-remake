@@ -13,7 +13,9 @@ import { InvitationPreview } from "@/components/templates/InvitationPreview";
 import { TemplateShowcase } from "@/components/templates/TemplateShowcase";
 import type { InvitationTemplate } from "@/lib/templates";
 import type { TemplateTitleStyle } from "@/lib/title-style";
-import { HOME_BOTTOM_BANNERS } from "@/lib/banners";
+import { HOME_BANNERS, HOME_BOTTOM_BANNERS } from "@/lib/banners";
+import type { Slide } from "@/components/ui/Carousel";
+import { HeroCarousel } from "@/components/ui/HeroCarousel";
 import { AdBanner } from "@/components/ads/AdBanner";
 import { SideAdsShell } from "@/components/ads/SideAdsShell";
 
@@ -297,7 +299,7 @@ export function HomepageContent() {
   if (loading) {
     return (
       <div className="animate-pulse bg-[#FEFDFD] px-10 py-20">
-        <div className="aspect-[16/9] max-h-[600px] w-full bg-[#eee]" />
+        <div className="h-[calc(100svh-112px)] min-h-[480px] w-full bg-[#eee]" />
         <div className="mx-auto mt-16 grid max-w-[1520px] grid-cols-2 gap-6 md:grid-cols-4">
           {Array.from({ length: 8 }, (_, i) => (
             <div key={i} className="aspect-square bg-[#eee]" />
@@ -310,25 +312,20 @@ export function HomepageContent() {
   const hero = banners.find((b) => b.name?.toLowerCase().includes("chính")) ?? banners[0];
   const secondary = banners.filter((b) => b !== hero).slice(0, 2);
 
-  const heroImg = (
-    <img
-      src={hero?.imgSrc || HERO_FALLBACK}
-      alt={hero?.name ?? "iCards"}
-      className="absolute inset-0 size-full object-cover"
-    />
-  );
-  // Khung cố định, ảnh phủ kín (object-cover) nên không còn khoảng trắng bên dưới banner
-  const heroEl = (
-    <section className="relative h-[min(72vh,640px)] min-h-[420px] w-full overflow-hidden bg-[#0E1B2C]">
-      {hero?.link ? (
-        <a href={hero.link} className="absolute inset-0 block">
-          {heroImg}
-        </a>
-      ) : (
-        heroImg
-      )}
-    </section>
-  );
+  // Banner trang chủ: lấy từ cài đặt (bật, hiển thị ở trang chủ); chưa có thì dùng banner mặc định
+  const homeSlides: Slide[] = banners.length
+    ? banners.map((b, k) => ({
+        id: b.id ?? `home-${k}`,
+        eyebrow: "iCards",
+        title: b.name || "Thiệp mời online đẹp",
+        text: "Chọn mẫu, điền thông tin và gửi link cho khách mời trong vài phút.",
+        href: b.link || "/templates",
+        cta: "Xem mẫu thiệp",
+        tone: "from-[#0E1B2C] to-[#27548A]",
+        image: b.imgSrc || undefined,
+      }))
+    : HOME_BANNERS.map((sl, k) => ({ ...sl, image: k === 0 ? HERO_FALLBACK : undefined }));
+  const heroEl = <HeroCarousel slides={homeSlides} fullHeight />;
 
   return (
     <div className="bg-[#FEFDFD] font-inter text-[#333]">

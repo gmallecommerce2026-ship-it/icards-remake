@@ -2,12 +2,32 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+
+/* Đo chiều cao header (đang nằm trong luồng trang) để banner lấp đúng phần màn hình còn lại. */
+function useHeaderHeight() {
+  const [h, setH] = useState(0);
+  useEffect(() => {
+    const el = document.querySelector<HTMLElement>(".main-header-wrapper");
+    const measure = () => setH(el ? el.offsetHeight : 0);
+    measure();
+    const ro = typeof ResizeObserver !== "undefined" && el ? new ResizeObserver(measure) : null;
+    ro?.observe(el!);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+  return h;
+}
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Slide } from "./Carousel";
 
 /* Banner đầu trang toàn chiều rộng: ảnh (hoặc gradient) nền, chữ nằm trên ảnh có lớp phủ tối để dễ đọc. */
-export function HeroCarousel({ slides, interval = 6000 }: { slides: Slide[]; interval?: number }) {
+/** fullHeight: banner cao đúng bằng màn hình trừ header, người dùng phải cuộn mới thấy phần dưới. */
+export function HeroCarousel({ slides, interval = 6000, fullHeight = false }: { slides: Slide[]; interval?: number; fullHeight?: boolean }) {
   const [i, setI] = useState(0);
+  const headerH = useHeaderHeight();
   const [paused, setPaused] = useState(false);
   const n = slides.length;
 
@@ -30,7 +50,10 @@ export function HeroCarousel({ slides, interval = 6000 }: { slides: Slide[]; int
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <div className="relative h-[min(72vh,640px)] min-h-[420px] w-full">
+      <div
+        className={`relative w-full ${fullHeight ? "min-h-[480px]" : "h-[min(72vh,640px)] min-h-[420px]"}`}
+        style={fullHeight ? { height: headerH ? `calc(100svh - ${headerH}px)` : "100svh" } : undefined}
+      >
         {slides.map((s, k) => (
           <div
             key={s.id}
