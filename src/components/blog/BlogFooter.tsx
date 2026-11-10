@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { BLOG_KEYWORD_GROUPS, type BlogCategory } from "@/lib/blog";
+import { flatKeywords, type BlogCategory, type BlogKeywordGroup } from "@/lib/blog";
 import { FooterFlap } from "@/components/home/FooterFlap";
 
 /** Footer riêng của blog: nền trắng, chuyên mục, từ khoá và lối về trang chủ. */
-export function BlogFooter({ categories }: { categories: BlogCategory[] }) {
-  const keywords = BLOG_KEYWORD_GROUPS.flatMap((g) => g.items).slice(0, 8);
+export function BlogFooter({ categories, keywordGroups, tagline }: { categories: BlogCategory[]; keywordGroups: BlogKeywordGroup[]; tagline: string }) {
+  const keywords = flatKeywords(keywordGroups).slice(0, 8);
   const link = "text-sm text-muted transition-colors hover:text-[#27548A]";
 
   return (
@@ -16,7 +16,7 @@ export function BlogFooter({ categories }: { categories: BlogCategory[] }) {
         <div>
           <p className="text-xl font-bold tracking-tight text-[#27548A]">iCards Blog</p>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted">
-            Cẩm nang làm thiệp mời, viết lời mời và chuẩn bị cho ngày vui của bạn.
+            {tagline}
           </p>
           <Link
             href="/"

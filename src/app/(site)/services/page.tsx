@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
-import { getServices } from "@/lib/catalog";
+import { getPageCopy, getServices } from "@/lib/catalog";
 import ServiceCover from "@/components/services/ServiceCover";
 import { PageHero, Container } from "@/components/ui/Primitives";
 import { AdBanner } from "@/components/ads/AdBanner";
@@ -13,13 +13,13 @@ export const metadata: Metadata = {
 };
 
 export default async function ServicesPage() {
-  const services = await getServices();
+  const [services, copy] = await Promise.all([getServices(), getPageCopy()]);
 
   return (
     <main className="min-h-screen bg-porcelain">
-      <SideAdsShell hero={<PageHero 
-                title="Dịch vụ tiện ích mở rộng"
-                description="Hệ sinh thái công cụ hỗ trợ xuyên suốt từ bước mời khách đến khâu đón tiếp, giúp bạn tổ chức sự kiện thảnh thơi và trọn vẹn nhất."
+      <SideAdsShell hero={<PageHero
+                title={copy.services.heroTitle}
+                description={copy.services.heroDescription}
               />}>
       <Container className="py-20 lg:py-24">
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 mb-20 lg:mb-24">
@@ -45,25 +45,25 @@ export default async function ServicesPage() {
           ))}
         </div>
 
-        <AdBanner
-          className="mb-20 lg:mb-24"
-          title="Tư vấn dịch vụ theo yêu cầu"
-          text="Cần một giải pháp riêng cho sự kiện? Gửi yêu cầu để đội ngũ iCards tư vấn."
-          cta="Liên hệ tư vấn"
-          href="/contact"
-        />
+        {copy.services.adTitle && (
+          <AdBanner
+            className="mb-20 lg:mb-24"
+            title={copy.services.adTitle}
+            text={copy.services.adText}
+            cta={copy.services.adCta}
+            href="/contact"
+          />
+        )}
 
         {/* CTA Box */}
         <section className="rounded-3xl bg-lacquer-soft px-6 py-12 text-center border border-lacquer/10 max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-ink mb-4">Bạn không tìm thấy dịch vụ mong muốn?</h2>
-          <p className="text-muted mb-8 max-w-lg mx-auto">
-            iCards luôn sẵn sàng tinh chỉnh và xây dựng giải pháp riêng theo yêu cầu thực tế của sự kiện.
-          </p>
+          <h2 className="text-2xl font-bold text-ink mb-4">{copy.services.ctaTitle}</h2>
+          <p className="text-muted mb-8 max-w-lg mx-auto">{copy.services.ctaText}</p>
           <Link
             href="/contact"
             className="inline-flex h-11 items-center justify-center rounded-sm bg-white px-6 font-medium text-lacquer border border-line transition-colors hover:bg-porcelain focus-visible:outline-none"
           >
-            Yêu cầu dịch vụ riêng
+            {copy.services.ctaButton}
           </Link>
         </section>
       </Container>

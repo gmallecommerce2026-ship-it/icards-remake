@@ -1,5 +1,6 @@
 import { api } from "./http";
 import type { BannerGroupData } from "@/lib/banner-groups";
+import type { PageCopy } from "@/lib/page-copy";
 
 export type AdminStats = {
   users: number;
@@ -61,6 +62,7 @@ export type AdminSiteSettings = {
   theme: unknown;
   headerNav: NavItem[];
   bannerGroups: BannerGroupData[];
+  pageCopy?: PageCopy;
   introText: string;
   [key: string]: unknown;
 };
@@ -79,3 +81,72 @@ export const uploadAdminImage = (file: File) => {
   form.append("file", file);
   return api.post<{ url: string }>("/admin/settings/uploads", form, { headers: { "Content-Type": undefined } });
 };
+
+/* ---------- Cửa hàng, dịch vụ, tin tức ---------- */
+
+export type ProductVariantInput = { id: string; label: string; price: number };
+export type AdminProduct = {
+  _id: string;
+  slug: string;
+  name: string;
+  category: string;
+  summary: string;
+  description: string;
+  thumb: string;
+  tone: { bg: string; ink: string };
+  variants: ProductVariantInput[];
+  shipping: "ship" | "digital";
+  leadTime: string;
+  highlights: string[];
+  specs: { label: string; value: string }[];
+  sortOrder: number;
+  isPublished: boolean;
+};
+export type AdminService = {
+  _id: string;
+  slug: string;
+  name: string;
+  summary: string;
+  description: string;
+  priceFrom: number;
+  duration: string;
+  audience: string;
+  includes: string[];
+  sortOrder: number;
+  isPublished: boolean;
+};
+export type AdminPostBlock = { t: "h2" | "p" | "tip"; text: string } | { t: "ul"; items: string[] };
+export type AdminPost = {
+  _id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  category: string;
+  publishedOn: string;
+  readMinutes: number;
+  author: string;
+  tone: { bg: string; ink: string };
+  content: AdminPostBlock[];
+  isPublished: boolean;
+};
+
+export const getAdminProducts = (search?: string) => api.get<AdminProduct[]>("/admin/products", { params: { search } });
+export const createAdminProduct = (body: Omit<AdminProduct, "_id">) => api.post<AdminProduct>("/admin/products", body);
+export const updateAdminProduct = (id: string, body: Omit<AdminProduct, "_id">) => api.put<AdminProduct>(`/admin/products/${id}`, body);
+export const deleteAdminProduct = (id: string) => api.delete(`/admin/products/${id}`);
+
+export const getAdminServices = () => api.get<AdminService[]>("/admin/services");
+export const createAdminService = (body: Omit<AdminService, "_id">) => api.post<AdminService>("/admin/services", body);
+export const updateAdminService = (id: string, body: Omit<AdminService, "_id">) => api.put<AdminService>(`/admin/services/${id}`, body);
+export const deleteAdminService = (id: string) => api.delete(`/admin/services/${id}`);
+
+export const getAdminPosts = () => api.get<AdminPost[]>("/admin/posts");
+export const createAdminPost = (body: Omit<AdminPost, "_id">) => api.post<AdminPost>("/admin/posts", body);
+export const updateAdminPost = (id: string, body: Omit<AdminPost, "_id">) => api.put<AdminPost>(`/admin/posts/${id}`, body);
+export const deleteAdminPost = (id: string) => api.delete(`/admin/posts/${id}`);
+
+export const saveAdminBlogCategories = (categories: { slug: string; label: string }[]) =>
+  api.put<{ categories: { slug: string; label: string }[] }>("/admin/blog-categories", { categories });
+
+export const saveAdminPageCopy = (pageCopy: PageCopy) => api.put<AdminSiteSettings>("/admin/settings/page-copy", { pageCopy });
+

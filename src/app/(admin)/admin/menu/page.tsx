@@ -98,8 +98,8 @@ export default function AdminMenuPage() {
   return (
     <>
       <PageTitle
-        title="Menu trang chủ"
-        description="Menu dự phòng (headerNav). Nếu đã có cây danh mục mẫu thiệp, menu trên trang sẽ lấy theo cây đó."
+        title="Menu"
+        description="Đây là menu thật trên thanh điều hướng của web. Mục cấp 1 là mục chính, mục con là cột trong menu thả xuống, mục cấp 3 là liên kết trong cột."
         action={
           <div className="flex gap-2">
             <button type="button" className={btnGhostCls} onClick={() => setNav((n) => [...n!, newItem()])}>+ Thêm mục</button>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { LayoutDashboard, LogOut, FileText, Users, Image as ImageIcon, Menu as MenuIcon } from "lucide-react";
+import { LayoutDashboard, LogOut, FileText, Users, Image as ImageIcon, Menu as MenuIcon, ShoppingBag, Newspaper } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 
 const NAV = [
@@ -11,7 +11,9 @@ const NAV = [
   { href: "/admin/users", label: "Người dùng", icon: Users },
   { href: "/admin/invitations", label: "Thiệp mời", icon: FileText },
   { href: "/admin/banners", label: "Banner", icon: ImageIcon },
-  { href: "/admin/menu", label: "Menu trang chủ", icon: MenuIcon },
+  { href: "/admin/menu", label: "Menu", icon: MenuIcon },
+  { href: "/admin/shop", label: "Cửa hàng & Dịch vụ", icon: ShoppingBag },
+  { href: "/admin/news", label: "Tin tức", icon: Newspaper },
 ];
 
 /** Chỉ tài khoản role=admin mới vào được khu quản trị. Trang đăng nhập được hiển thị trần, không có thanh điều hướng. */

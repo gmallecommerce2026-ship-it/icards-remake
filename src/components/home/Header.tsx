@@ -16,17 +16,12 @@ type Column = { title: string; path: string; links: Link[] };
 type MenuNode = { path: string; columns: Column[] };
 type NavItem = { id?: string; title: string; path?: string; order?: number; isVisible?: boolean; children?: any[] };
 
-const titleToSlug = (title: string) =>
-  title.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/\s+/g, "-").replace(/[^\w-]+/g, "");
 
 /* Đường dẫn trong project Next: danh mục thiệp đều dẫn về /templates, cửa hàng và tin tức đổi sang route thật */
 const TEMPLATES = "/templates";
 const SHOP = "/shop";
-const BLOG = "/blog";
-/* Số danh mục hiện thẳng trên thanh menu (còn lại gom vào "Thiệp khác"); số link tối đa mỗi cột */
-const MAIN_SLOTS = 5;
+/* Số link tối đa mỗi cột khi dựng menu từ cây mẫu thiệp (chỉ dùng khi chưa có menu admin) */
 const MAX_LINKS = 4;
-const OTHER_TITLE = "Thiệp khác";
 
 const UserMenu = ({ name, email, initial, onLogout }: { name: string; email: string; initial: string; onLogout: () => void }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -234,9 +229,6 @@ const MainHeader = ({
               <div className="logo" onClick={() => handleNavigate("/")}>
                 {logoUrl ? <img src={logoUrl} alt={companyName} /> : companyName}
               </div>
-              <nav className="header-nav-main desktop-only">
-                <button className="nav-item" onClick={() => handleNavigate("/professional")}>Chuyên nghiệp</button>
-              </nav>
             </div>
             <div className="header-section right">
               <form className="search-bar-wrapper" onSubmit={handleSearchSubmit}>
@@ -320,32 +312,27 @@ export function Header({ className }: { className?: string }) {
   const { mainNavItems, menuData } = useMemo(() => {
     const data: Record<string, MenuNode> = {};
     const items: NavItem[] = [];
+    const byOrder = (a: NavItem, b: NavItem) => (a.order || 0) - (b.order || 0);
+    const visible = (list: NavItem[] | undefined) => (list ?? []).filter((i) => i.isVisible !== false).sort(byOrder);
 
-    /* 1) Nguồn danh mục: cây API > headerNav cũ > danh mục dự phòng */
-    let roots: TreeNode[] = tree;
-    if (!roots.length) {
-      const legacy: NavItem[] = (settings?.headerNav ?? []).filter((i: NavItem) => i.isVisible).sort((a: NavItem, b: NavItem) => (a.order || 0) - (b.order || 0));
-      roots = legacy.map((n) => ({
-        ...rootOf(n.id || titleToSlug(n.title), n.title),
-        path: n.path || TEMPLATES,
-        children: (n.children || []).filter((c) => c.isVisible).map((c) => ({
-          ...rootOf(c.id || titleToSlug(c.title), c.title),
-          path: n.path || TEMPLATES,
-          templates: (c.children || []).filter((l: any) => l.isVisible).map((l: any) => ({ _id: l.id, slug: String(l.path ?? "").split("/").pop() || "", name: l.title })),
-        })),
-      }));
+    /* 1) Menu do admin cấu hình (tab Menu): đây là nguồn duy nhất của thanh menu.
+       Cấp 1 = mục chính, cấp 2 = cột trong menu thả xuống, cấp 3 = liên kết trong cột. */
+    const nav = visible(settings?.headerNav);
+    if (nav.length) {
+      nav.forEach((root, i) => {
+        const columns: Column[] = visible(root.children).map((col) => ({
+          title: col.title,
+          path: col.path || root.path || "#",
+          links: visible(col.children).map((l) => ({ text: l.title, href: l.path || "#" })),
+        }));
+        items.push({ id: root.id || root.title, title: root.title, path: root.path || "", order: i + 1, isVisible: true });
+        data[root.title] = { path: root.path || columns[0]?.path || "#", columns };
+      });
+      return { mainNavItems: items, menuData: data };
     }
 
-    /* 2) Thanh menu luôn đủ MAIN_SLOTS danh mục: thiếu thì bù từ danh mục dự phòng */
-    const main = roots.slice(0, MAIN_SLOTS);
-    for (const f of FALLBACK_ROOTS) {
-      if (main.length >= MAIN_SLOTS) break;
-      if (!main.some((m) => m.id === f.id)) main.push(rootOf(f.id, f.label));
-    }
-    const overflow = roots.slice(MAIN_SLOTS);
-
-    /* 3) Một cột = một nhóm: liệt kê mẫu thiệp (bấm vào ra trang chi tiết), nhóm con và nút "Xem tất cả" */
-    // Cột của một nhóm: mẫu thiệp ở mọi cấp bên dưới (bấm vào ra trang chi tiết), rồi tên các nhóm con và "Xem tất cả" (ra trang lọc)
+    /* 2) Chưa có menu nào: dựng từ cây danh mục mẫu thiệp (hoặc danh mục dự phòng) để trang không trống. */
+    const roots: TreeNode[] = tree.length ? tree : FALLBACK_ROOTS.map((f) => rootOf(f.id, f.label));
     const columnOf = (n: TreeNode): Column => {
       const shown = flattenTemplates(n).slice(0, MAX_LINKS);
       const links: Link[] = shown.map((t) => ({ text: t.name, href: `${TEMPLATES}/${t.slug}` }));
@@ -353,57 +340,12 @@ export function Header({ className }: { className?: string }) {
       if (n.count > shown.length) links.push({ text: `Xem tất cả (${n.count})`, href: n.path });
       return { title: n.label, path: n.path, links };
     };
-    const columnsOf = (root: TreeNode): Column[] => {
+    roots.forEach((root, i) => {
       const cols = root.children.map(columnOf);
       if (root.templates.length) cols.unshift(columnOf({ ...root, children: [] }));
-      return cols;
-    };
-
-    main.forEach((root, i) => {
       items.push({ id: root.id, title: root.label, path: root.path, order: i + 1, isVisible: true });
-      data[root.label] = { path: root.path, columns: columnsOf(root) };
+      data[root.label] = { path: root.path, columns: cols };
     });
-
-    /* 4) "Thiệp khác" luôn có mặt. Gom các danh mục còn lại; nếu không còn thì hiện lối tắt khám phá */
-    items.push({ id: "other-invitations", title: OTHER_TITLE, path: TEMPLATES, order: 90, isVisible: true });
-    data[OTHER_TITLE] = {
-      path: TEMPLATES,
-      columns: overflow.length
-        ? overflow.map((r) => ({ title: r.label, path: r.path, links: columnsOf(r).flatMap((c) => c.links).slice(0, MAX_LINKS) }))
-        : [
-            {
-              title: "Khám phá thêm",
-              path: TEMPLATES,
-              links: [
-                { text: "Tất cả mẫu thiệp", href: TEMPLATES },
-                { text: "Mới nhất", href: `${TEMPLATES}?sort=newest` },
-                { text: "Dùng nhiều nhất", href: `${TEMPLATES}?sort=popular` },
-                { text: "Giá thấp đến cao", href: `${TEMPLATES}?sort=price-asc` },
-              ],
-            },
-          ],
-    };
-
-    /* Gộp Cửa hàng và Dịch vụ thành một mục */
-    items.push({ id: "static-shop", title: "Cửa hàng - Dịch vụ", path: SHOP, order: 98, isVisible: true });
-    data["Cửa hàng - Dịch vụ"] = {
-      path: SHOP,
-      columns: [
-        {
-          title: "Sản phẩm & Dịch vụ",
-          path: SHOP,
-          links: [
-            { text: "In ấn", href: `${SHOP}?category=print` },
-            { text: "Tại sự kiện", href: `${SHOP}?category=onsite` },
-            { text: "Kỹ thuật số", href: `${SHOP}?category=digital` },
-            { text: "Dịch vụ", href: `${SHOP}#dich-vu` },
-          ],
-        },
-      ],
-    };
-
-    items.push({ id: "static-blogs", title: "Tin tức", path: BLOG, order: 99, isVisible: true });
-    data["Tin tức"] = { path: BLOG, columns: [] };
 
     return { mainNavItems: items, menuData: data };
   }, [settings, tree]);

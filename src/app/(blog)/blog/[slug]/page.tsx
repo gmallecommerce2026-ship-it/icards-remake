@@ -8,8 +8,8 @@ import ShareButtons from "@/components/blog/ShareButtons";
 import TocNav from "@/components/blog/TocNav";
 import { Reveal } from "@/components/home/Reveal";
 import { Container } from "@/components/ui/Primitives";
-import { BLOG_KEYWORD_GROUPS, formatDate, getCategory, getRelated, slugify, type Block } from "@/lib/blog";
-import { getBlogCategories, getPost, getPosts } from "@/lib/catalog";
+import { flatKeywords, formatDate, getCategory, getRelated, slugify, type Block } from "@/lib/blog";
+import { getBlogCategories, getPageCopy, getPost, getPosts } from "@/lib/catalog";
 import { SideAdsShell } from "@/components/ads/SideAdsShell";
 
 type Params = Promise<{ slug: string }>;
@@ -30,7 +30,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
   const post = await getPost(slug);
   if (!post) notFound();
 
-  const [categories, all] = await Promise.all([getBlogCategories(), getPosts()]);
+  const [categories, all, copy] = await Promise.all([getBlogCategories(), getPosts(), getPageCopy()]);
   const cat = getCategory(categories, post.category);
   const content = post.content ?? [];
   const toc = content
@@ -156,7 +156,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
               <div>
                 <p className="mb-3 text-sm font-bold uppercase tracking-[0.14em] text-lacquer">Từ khoá thường gặp</p>
                 <ul className="divide-y divide-line border-y border-line">
-                  {BLOG_KEYWORD_GROUPS.flatMap((g) => g.items).slice(0, 8).map((k) => (
+                  {flatKeywords(copy.blog.keywordGroups).slice(0, 8).map((k) => (
                     <li key={k.keyword}>
                       <Link href={`/blog?q=${encodeURIComponent(k.keyword)}#blog-list`} className="flex items-center justify-between gap-2 py-2.5 text-sm text-ink transition-colors hover:text-lacquer">
                         <span>{k.keyword}</span>

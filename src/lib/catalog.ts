@@ -10,6 +10,7 @@ import type { Post } from "./blog";
 import type { FaqGroup, FaqItem } from "./faq";
 import type { PortfolioItem, Tier, ProfessionalProcessStep } from "./professional";
 import type { BannerGroupData } from "./banner-groups";
+import { EMPTY_PAGE_COPY, type PageCopy } from "./page-copy";
 
 export type Option = { id: string; label: string };
 export type SlugOption = { slug: string; label: string };
@@ -65,12 +66,14 @@ export const getProfessionalProcess = () => content<ProfessionalProcessStep[]>("
 export const getProfessionalTiers = () => content<Tier[]>("professional.tiers", []);
 export const getProfessionalPortfolio = () => content<PortfolioItem[]>("professional.portfolio", []);
 
-// ---- Banner (nhóm do admin quản lý). Lỗi backend thì trả về [] để trang vẫn hiển thị phần còn lại.
-export const getBannerGroups = async (): Promise<BannerGroupData[]> => {
+// ---- Cấu hình công khai (banner, chữ trang). Lỗi backend thì trả về {} để trang vẫn hiển thị phần còn lại.
+type PublicSettings = { bannerGroups?: BannerGroupData[]; pageCopy?: PageCopy };
+export const getPublicSettingsServer = async (): Promise<PublicSettings> => {
   try {
-    const s = await serverGet<{ bannerGroups?: BannerGroupData[] }>("/public/settings", undefined, 60);
-    return s?.bannerGroups ?? [];
+    return (await serverGet<PublicSettings>("/public/settings", undefined, 60)) ?? {};
   } catch {
-    return [];
+    return {};
   }
 };
+export const getBannerGroups = async (): Promise<BannerGroupData[]> => (await getPublicSettingsServer()).bannerGroups ?? [];
+export const getPageCopy = async (): Promise<PageCopy> => (await getPublicSettingsServer()).pageCopy ?? EMPTY_PAGE_COPY;

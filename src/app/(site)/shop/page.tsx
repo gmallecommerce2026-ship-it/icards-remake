@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import ShopClient from "./ShopClient";
 import ServiceCover from "@/components/services/ServiceCover";
-import { getProducts, getServices, getShopCategories } from "@/lib/catalog";
+import { getPageCopy, getProducts, getServices, getShopCategories } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { AdBanner } from "@/components/ads/AdBanner";
 import { SideAdsShell } from "@/components/ads/SideAdsShell";
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const [products, categories, services] = await Promise.all([getProducts(), getShopCategories(), getServices()]);
+  const [products, categories, services, copy] = await Promise.all([getProducts(), getShopCategories(), getServices(), getPageCopy()]);
   return (
     <SideAdsShell>
     <>
@@ -23,21 +23,20 @@ export default async function Page() {
         <ShopClient products={products} categories={categories} />
       </Suspense>
 
-      <div className="mx-auto w-full max-w-[1520px] px-5 pt-20 lg:pt-24">
-        <AdBanner
-          title="Phong bì và hộp quà đồng bộ thiệp"
-          text="Chọn bộ sản phẩm đồng bộ cho ngày trọng đại của bạn."
-          cta="Xem sản phẩm"
-          href="/shop"
-        />
-      </div>
+      {copy.shop.adTitle && (
+        <div className="mx-auto w-full max-w-[1520px] px-5 pt-20 lg:pt-24">
+          <AdBanner title={copy.shop.adTitle} text={copy.shop.adText} cta={copy.shop.adCta} href="/shop" />
+        </div>
+      )}
 
       {/* Dịch vụ: lưới ảnh giống lưới sản phẩm, chỉ có tên và giá */}
       {services.length > 0 && (
         <section id="dich-vu" className="mx-auto w-full max-w-[1520px] scroll-mt-24 px-5 py-20 lg:py-24">
-          <h2 className="mb-12 text-center text-base font-semibold uppercase tracking-[0.02em] text-[#27548A]">
-            Dịch vụ
-          </h2>
+          {copy.shop.servicesHeading && (
+            <h2 className="mb-12 text-center text-base font-semibold uppercase tracking-[0.02em] text-[#27548A]">
+              {copy.shop.servicesHeading}
+            </h2>
+          )}
           <div className="grid w-full grid-cols-4 gap-x-5 gap-y-[60px] max-[1200px]:grid-cols-3 max-[769px]:grid-cols-2 max-[769px]:gap-y-10 max-[481px]:grid-cols-1">
             {services.map((s) => (
               <Link key={s.slug} href={`/services/${s.slug}`} className="group flex cursor-pointer flex-col gap-5">

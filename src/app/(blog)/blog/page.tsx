@@ -1,19 +1,18 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import BlogClient from "./BlogClient";
-import { getBlogCategories, getPosts } from "@/lib/catalog";
+import { getBlogCategories, getPageCopy, getPosts } from "@/lib/catalog";
 
-export const metadata: Metadata = {
-  title: "Blog | iCards",
-  description:
-    "Hướng dẫn tạo thiệp mời online, cách viết lời mời, kinh nghiệm tổ chức đám cưới và sự kiện.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = await getPageCopy();
+  return { title: `${copy.blog.title} | iCards`, description: copy.blog.description };
+}
 
 export default async function Page() {
-  const [posts, categories] = await Promise.all([getPosts(), getBlogCategories()]);
+  const [posts, categories, copy] = await Promise.all([getPosts(), getBlogCategories(), getPageCopy()]);
   return (
     <Suspense fallback={null}>
-      <BlogClient posts={posts} categories={categories} />
+      <BlogClient posts={posts} categories={categories} copy={copy.blog} />
     </Suspense>
   );
 }

@@ -5,7 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Search, X } from "lucide-react";
 import PostCard, { AuthorAvatar, PostCover, PostMeta } from "@/components/blog/PostCard";
-import { BLOG_KEYWORD_GROUPS, countByCategory, filterPosts, formatDate, getCategory, searchPosts, type BlogCategory, type Post } from "@/lib/blog";
+import { countByCategory, filterPosts, formatDate, getCategory, searchPosts, type BlogCategory, type BlogKeywordGroup, type Post } from "@/lib/blog";
+import type { PageCopy } from "@/lib/page-copy";
 import { Container, btn } from "@/components/ui/Primitives";
 import { Reveal } from "@/components/home/Reveal";
 import { SideAdsShell } from "@/components/ads/SideAdsShell";
@@ -13,7 +14,7 @@ import { useHeaderHeight } from "@/components/ui/useHeaderHeight";
 
 const PAGE_SIZE = 6;
 
-export default function BlogClient({ posts: allPosts, categories }: { posts: Post[]; categories: BlogCategory[] }) {
+export default function BlogClient({ posts: allPosts, categories, copy }: { posts: Post[]; categories: BlogCategory[]; copy: PageCopy["blog"] }) {
   const sp = useSearchParams();
   const category = sp.get("category") ?? undefined;
   const active = getCategory(categories, category);
@@ -50,13 +51,13 @@ export default function BlogClient({ posts: allPosts, categories }: { posts: Pos
         <Container className="relative flex w-full flex-col justify-center py-16 lg:py-24">
           <p className="inline-flex items-center gap-2 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]">
             <span aria-hidden className="size-1.5 bg-gold" />
-            Cẩm nang iCards
+            {copy.eyebrow}
           </p>
           <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-            Cẩm nang thiệp mời & ngày cưới
+            {copy.title}
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-white/80">
-            Cách làm thiệp, cách viết lời mời và kinh nghiệm chuẩn bị cho ngày vui của bạn.
+            {copy.description}
           </p>
 
           <form role="search" onSubmit={(e) => e.preventDefault()} className="mt-10 flex max-w-xl">
@@ -68,7 +69,7 @@ export default function BlogClient({ posts: allPosts, categories }: { posts: Pos
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Tìm: lời mời, mẫu thiệp, ngân sách..."
+                placeholder={copy.searchPlaceholder}
                 className="h-13 w-full rounded-l-[2px] bg-white py-3.5 pl-11 pr-10 text-[15px] text-ink outline-none placeholder:text-muted/80"
               />
               {searching && (
@@ -185,7 +186,7 @@ export default function BlogClient({ posts: allPosts, categories }: { posts: Pos
 
           <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-14">
             <div className="grid gap-10 md:grid-cols-3">
-              {BLOG_KEYWORD_GROUPS.map((g) => (
+              {copy.keywordGroups.map((g: BlogKeywordGroup) => (
                 <div key={g.title}>
                   <h3 className="mb-3 text-sm font-bold uppercase tracking-[0.14em] text-lacquer">{g.title}</h3>
                   <ul className="divide-y divide-line border-y border-line">
