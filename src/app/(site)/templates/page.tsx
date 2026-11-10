@@ -9,19 +9,29 @@ export const metadata: Metadata = {
 };
 
 type Search = Promise<Record<string, string | string[] | undefined>>;
+const SORT_VALUES = ["popular", "newest", "price-asc"];
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
 export default async function TemplatesPage({ searchParams }: { searchParams: Search }) {
   const sp = await searchParams;
-  const [templates, categories, tree] = await Promise.all([getTemplates(), getTemplateCategories(), getTemplateTree()]);
+  // Lọc theo nhóm (hoặc danh mục gốc) ngay trên backend; trang chỉ nhận danh sách đã lọc.
+  const category = first(sp.category) ?? "all";
+  const group = first(sp.group);
+  const sort = first(sp.sort);
+  const categoryId = group ?? (category !== "all" ? category : undefined);
+  const [templates, categories, tree] = await Promise.all([
+    getTemplates({ categoryId, sort: SORT_VALUES.includes(sort ?? "") ? sort : undefined }),
+    getTemplateCategories(),
+    getTemplateTree(),
+  ]);
   return (
     <TemplatesListing
       templates={templates}
       categories={categories}
       tree={tree}
-      category={first(sp.category) ?? "all"}
-      group={first(sp.group)}
-      initialSort={first(sp.sort)}
+      category={category}
+      group={group}
+      initialSort={sort}
     />
   );
 }

@@ -5,7 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Option } from "@/lib/catalog";
 import { type InvitationTemplate } from "@/lib/templates";
 import { TemplateShowcase } from "./TemplateShowcase";
-import { collectSlugs, findPath, type TreeNode } from "@/lib/templates-tree";
+import { findPath, type TreeNode } from "@/lib/templates-tree";
+import { templatesApi } from "@/lib/api";
 import { SideAdsShell } from "@/components/ads/SideAdsShell";
 import { PageHero } from "@/components/ui/Primitives";
 
@@ -18,8 +19,7 @@ const SORTS: { value: Sort; label: string }[] = [
   { value: "price-asc", label: "Giá thấp đến cao" },
 ];
 
-const normalize = (s: string) =>
-  s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d");
+const SORT_VALUES = SORTS.map((o) => o.value) as string[];
 
 type Props = {
   templates: InvitationTemplate[];
@@ -86,21 +86,50 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
     return t.length ? t : findPath(tree, category);
   }, [tree, category, group]);
   const node = trail[trail.length - 1];
-  const slugSet = useMemo(() => (node ? collectSlugs(node) : null), [node]);
 
-  const list = useMemo(() => {
-    const q = normalize(query.trim());
-    const filtered = templates.filter((t) => {
-      let inCategory = true;
-      if (category !== "all") inCategory = slugSet ? slugSet.has(t.slug) : t.category === category; // danh mục không có trong cây: lọc theo enum
-      return inCategory && (!q || normalize(`${t.name} ${t.tagline} ${t.description}`).includes(q));
-    });
-    return [...filtered].sort((a, b) => {
-      if (sort === "newest") return b.createdAt.localeCompare(a.createdAt);
-      if (sort === "price-asc") return a.price - b.price;
-      return b.popularity - a.popularity;
-    });
-  }, [templates, category, slugSet, query, sort]);
+  // Lọc danh mục, tìm kiếm và sắp xếp đều do backend thực hiện (GET /invitation-templates?categoryId=&search=&sort=).
+  // `templates` từ server đã đúng cho trạng thái trên URL (không tìm kiếm); chỉ gọi lại API khi người dùng đổi tìm kiếm hoặc sắp xếp.
+  const categoryId = group ?? (category !== "all" ? category : undefined);
+  const urlSort: Sort = SORT_VALUES.includes(initialSort ?? "") ? (initialSort as Sort) : "popular";
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [query]);
+
+  const [list, setList] = useState<InvitationTemplate[]>(templates);
+  const [loading, setLoading] = useState(false);
+  // Khóa của danh sách hiện có (danh mục | sắp xếp | từ khóa). Trùng khóa thì không gọi lại API.
+  const loadedKey = useRef(`${categoryId ?? ""}|${urlSort}|`);
+
+  // Server gửi danh sách mới (đổi danh mục qua link): dùng luôn, không cần gọi lại.
+  useEffect(() => {
+    setList(templates);
+    loadedKey.current = `${categoryId ?? ""}|${urlSort}|`;
+  }, [templates, categoryId, urlSort]);
+
+  const key = `${categoryId ?? ""}|${sort}|${debouncedQuery}`;
+  useEffect(() => {
+    if (key === loadedKey.current) return;
+    loadedKey.current = key;
+    let cancelled = false;
+    setLoading(true);
+    templatesApi
+      .getTemplates({ categoryId, sort, search: debouncedQuery || undefined })
+      .then((r) => {
+        if (!cancelled) setList(Array.isArray(r.data) ? (r.data as InvitationTemplate[]) : []);
+      })
+      .catch(() => {
+        if (!cancelled) setList([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [key, categoryId, sort, debouncedQuery]);
+
 
   const tabs: Option[] = [{ id: "all", label: "Tất cả" }, ...(tree.length ? tree.map((r) => ({ id: r.id, label: r.label })) : categories)];
   const currentLabel = node?.label ?? categories.find((c) => c.id === category)?.label;
@@ -212,7 +241,7 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
         {list.length === 0 ? (
           <p className="col-span-full px-5 py-20 text-center text-lg text-[#666]">Chưa có mẫu thiệp nào trong danh mục này.</p>
         ) : (
-          <div className="grid gap-x-[30px] gap-y-10 py-[45px] [grid-template-columns:repeat(auto-fill,minmax(250px,1fr))]">
+          <div aria-busy={loading} className={`grid gap-x-[30px] gap-y-10 py-[45px] transition-opacity [grid-template-columns:repeat(auto-fill,minmax(250px,1fr))] ${loading ? "opacity-50" : ""}`}>
             {list.map((t) => (
               <Link key={t.slug} href={`/templates/${t.slug}`} className="group flex cursor-pointer flex-col items-center gap-4 [color:inherit] no-underline">
                 <div className="w-full">

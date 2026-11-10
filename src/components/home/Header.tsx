@@ -15,6 +15,8 @@ type Link = { text: string; href: string };
 type Column = { title: string; path: string; links: Link[] };
 type MenuNode = { path: string; columns: Column[] };
 type NavItem = { id?: string; title: string; path?: string; order?: number; isVisible?: boolean; children?: any[] };
+/* Khóa menu theo id (không theo tiêu đề: hai mục có thể cùng tên, vd "Sự kiện" là danh mục thiệp và mục Sự kiện). */
+const menuKey = (item: { id?: string; title: string }) => item.id || item.title;
 
 
 /* Đường dẫn trong project Next: danh mục thiệp đều dẫn về /templates, cửa hàng và tin tức đổi sang route thật */
@@ -99,8 +101,8 @@ const MobileNav = ({ isOpen, onMenuToggle, menuData, mainNavItems }: { isOpen: b
   if (!isOpen) return null;
 
   const handleItemClick = (item: NavItem) => {
-    const node = menuData[item.title];
-    if (node?.columns?.length) setOpenSubMenu((prev) => (prev === item.title ? null : item.title));
+    const node = menuData[menuKey(item)];
+    if (node?.columns?.length) setOpenSubMenu((prev) => (prev === menuKey(item) ? null : menuKey(item)));
     else {
       router.push(node?.path || "#");
       onMenuToggle();
@@ -121,9 +123,9 @@ const MobileNav = ({ isOpen, onMenuToggle, menuData, mainNavItems }: { isOpen: b
         </div>
         <div className="mobile-nav-scroll-area">
           {mainNavItems.map((item) => {
-            const node = menuData[item.title];
+            const node = menuData[menuKey(item)];
             const hasSubMenu = !!node?.columns?.length;
-            const isSubMenuOpen = openSubMenu === item.title;
+            const isSubMenuOpen = openSubMenu === menuKey(item);
             return (
               <div key={item.id || item.title} className="mobile-nav-group">
                 <button className="mobile-nav-item" onClick={() => handleItemClick(item)}>
@@ -259,10 +261,10 @@ const MainHeader = ({
             {mainNavItems.map((item) => (
               <button
                 key={item.id || item.title}
-                onClick={() => handleNavigate(menuData[item.title]?.path || item.path || "#")}
-                onMouseEnter={() => handleMouseEnter(item.title)}
+                onClick={() => handleNavigate(menuData[menuKey(item)]?.path || item.path || "#")}
+                onMouseEnter={() => handleMouseEnter(menuKey(item))}
                 onMouseLeave={handleMouseLeave}
-                className={`nav-item-bottom ${activeMenu === item.title ? "active" : ""}`}
+                className={`nav-item-bottom ${activeMenu === menuKey(item) ? "active" : ""}`}
               >
                 {item.title}
               </button>
@@ -326,7 +328,7 @@ export function Header({ className }: { className?: string }) {
           links: visible(col.children).map((l) => ({ text: l.title, href: l.path || "#" })),
         }));
         items.push({ id: root.id || root.title, title: root.title, path: root.path || "", order: i + 1, isVisible: true });
-        data[root.title] = { path: root.path || columns[0]?.path || "#", columns };
+        data[menuKey(root)] = { path: root.path || columns[0]?.path || "#", columns };
       });
       return { mainNavItems: items, menuData: data };
     }
@@ -344,7 +346,7 @@ export function Header({ className }: { className?: string }) {
       const cols = root.children.map(columnOf);
       if (root.templates.length) cols.unshift(columnOf({ ...root, children: [] }));
       items.push({ id: root.id, title: root.label, path: root.path, order: i + 1, isVisible: true });
-      data[root.label] = { path: root.path, columns: cols };
+      data[root.id] = { path: root.path, columns: cols };
     });
 
     return { mainNavItems: items, menuData: data };

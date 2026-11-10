@@ -21,7 +21,11 @@ async function content<T>(key: PublicContentKey, fallback: T): Promise<T> {
 
 // ---- Mẫu thiệp
 export const getTemplates = async (query?: {
+  /** Nhóm gốc (enum cũ). Bộ lọc mới dùng categoryId. */
   category?: string;
+  /** Mã nút trong cây danh mục (danh mục gốc hoặc nhóm con). Backend lấy cả nhóm con. */
+  categoryId?: string;
+  search?: string;
   /** folding | card */
   format?: string;
   /** landscape | square | portrait */
