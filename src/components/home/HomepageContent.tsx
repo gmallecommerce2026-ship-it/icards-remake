@@ -310,19 +310,24 @@ export function HomepageContent() {
   const hero = banners.find((b) => b.name?.toLowerCase().includes("chính")) ?? banners[0];
   const secondary = banners.filter((b) => b !== hero).slice(0, 2);
 
+  const heroImg = (
+    <img
+      src={hero?.imgSrc || HERO_FALLBACK}
+      alt={hero?.name ?? "iCards"}
+      className="absolute inset-0 size-full object-cover"
+    />
+  );
+  // Khung cố định, ảnh phủ kín (object-cover) nên không còn khoảng trắng bên dưới banner
   const heroEl = (
-    <>
-        <section className="w-full overflow-hidden">
-          {hero?.link ? (
-            <a href={hero.link}>
-              <img src={hero.imgSrc || HERO_FALLBACK} alt={hero.name ?? "iCards"} className="block aspect-[16/9] max-h-[600px] w-full object-cover" />
-            </a>
-          ) : (
-            <img src={hero?.imgSrc || HERO_FALLBACK} alt={hero?.name ?? "iCards"} className="block aspect-[16/9] max-h-[600px] w-full object-cover" />
-          )}
-        </section>
-
-    </>
+    <section className="relative h-[min(72vh,640px)] min-h-[420px] w-full overflow-hidden bg-[#0E1B2C]">
+      {hero?.link ? (
+        <a href={hero.link} className="absolute inset-0 block">
+          {heroImg}
+        </a>
+      ) : (
+        heroImg
+      )}
+    </section>
   );
 
   return (
