@@ -16,7 +16,7 @@ export function BlogHeader({ categories }: { categories: BlogCategory[] }) {
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-5 lg:h-[72px] lg:gap-8 lg:px-8">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-5 lg:h-[72px] lg:gap-8">
         {/* Nút về trang chủ */}
         <Link
           href="/"

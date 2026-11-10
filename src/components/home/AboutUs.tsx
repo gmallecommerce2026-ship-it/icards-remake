@@ -10,7 +10,7 @@ const pillars = [
 
 export function AboutUs() {
   return (
-    <section id="ve-chung-toi" className="mx-auto max-w-7xl px-5 pb-20 lg:px-8 lg:pb-28">
+    <section id="ve-chung-toi" className="mx-auto max-w-7xl px-5 pb-20 lg:pb-28">
       <Reveal>
         <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:items-start">
           <div>

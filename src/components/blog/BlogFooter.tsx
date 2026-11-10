@@ -12,7 +12,7 @@ export function BlogFooter({ categories }: { categories: BlogCategory[] }) {
     <footer className="border-t border-line bg-white text-ink">
       <FooterFlap />
 
-      <div className="mx-auto grid max-w-7xl gap-12 px-5 pb-16 pt-14 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1.2fr] lg:px-8">
+      <div className="mx-auto grid max-w-7xl gap-12 px-5 pb-16 pt-14 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1.2fr]">
         <div>
           <p className="text-xl font-bold tracking-tight text-[#27548A]">iCards Blog</p>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted">
@@ -59,7 +59,7 @@ export function BlogFooter({ categories }: { categories: BlogCategory[] }) {
       </div>
 
       <div className="border-t border-line bg-porcelain">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-5 py-6 text-sm text-muted sm:flex-row lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-5 py-6 text-sm text-muted sm:flex-row">
           <p>© {new Date().getFullYear()} iCards. Bảo lưu mọi quyền.</p>
           <ul className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <li><Link href="/templates" className="transition-colors hover:text-[#27548A]">Mẫu thiệp</Link></li>

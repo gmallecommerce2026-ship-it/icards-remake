@@ -36,7 +36,7 @@ export function Footer() {
 
       {/* Điều hướng */}
       <div className="border-t border-line">
-        <div className="mx-auto grid max-w-7xl gap-12 px-5 py-14 md:grid-cols-2 lg:grid-cols-[1.5fr_repeat(3,1fr)] lg:px-8">
+        <div className="mx-auto grid max-w-7xl gap-12 px-5 py-14 md:grid-cols-2 lg:grid-cols-[1.5fr_repeat(3,1fr)]">
           <div>
             <p className="text-2xl font-bold tracking-tight" style={{ color: BRAND }}>iCards</p>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
@@ -66,7 +66,7 @@ export function Footer() {
 
       {/* Thanh dưới cùng */}
       <div className="border-t border-line bg-porcelain">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-5 py-6 text-sm text-muted sm:flex-row lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-5 py-6 text-sm text-muted sm:flex-row">
           <p>© {new Date().getFullYear()} iCards. Bảo lưu mọi quyền.</p>
           <ul className="flex flex-wrap items-center gap-x-6 gap-y-2">
             {legal.map(([label, href]) => (

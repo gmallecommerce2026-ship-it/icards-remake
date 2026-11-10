@@ -21,7 +21,7 @@ export default async function Page() {
         <ShopClient products={products} categories={categories} />
       </Suspense>
 
-      <div className="mx-auto w-full max-w-[1520px] px-5 pt-20 lg:px-8 lg:pt-24">
+      <div className="mx-auto w-full max-w-[1520px] px-5 pt-20 lg:pt-24">
         <AdBanner
           title="Phong bì và hộp quà đồng bộ thiệp"
           text="Chọn bộ sản phẩm đồng bộ cho ngày trọng đại của bạn."
@@ -32,7 +32,7 @@ export default async function Page() {
 
       {/* Dịch vụ: lưới ảnh giống lưới sản phẩm, chỉ có tên và giá */}
       {services.length > 0 && (
-        <section id="dich-vu" className="mx-auto w-full max-w-[1520px] scroll-mt-24 px-5 py-20 lg:px-8 lg:py-24">
+        <section id="dich-vu" className="mx-auto w-full max-w-[1520px] scroll-mt-24 px-5 py-20 lg:py-24">
           <h2 className="mb-12 text-center text-base font-semibold uppercase tracking-[0.02em] text-[#27548A]">
             Dịch vụ
           </h2>

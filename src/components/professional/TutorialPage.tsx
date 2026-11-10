@@ -171,7 +171,7 @@ export default function TutorialPage() {
       <section aria-label="Lợi ích" className="border-b border-line bg-white">
         <Container className="grid grid-cols-2 lg:grid-cols-4">
           {BENEFITS.map(([a, b]) => (
-            <div key={a} className="border-b border-line px-5 py-6 lg:border-b-0 lg:border-l lg:px-8 lg:first:border-l-0 lg:first:pl-0">
+            <div key={a} className="border-b border-line px-5 py-6 lg:border-b-0 lg:border-l lg:first:border-l-0 lg:first:pl-0">
               <p className="text-sm font-bold text-ink">{a}</p>
               <p className="mt-1 text-sm text-muted">{b}</p>
             </div>

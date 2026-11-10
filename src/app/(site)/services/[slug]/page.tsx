@@ -26,7 +26,7 @@ export default async function ServiceDetailPage({ params }: { params: Params }) 
   const related = getRelatedServices(all, service.slug);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+    <div className="mx-auto max-w-7xl px-5 py-10 lg:py-14">
       <nav aria-label="Breadcrumb" className="mb-8 text-sm font-medium">
         <Link href="/services" className="text-[#5B6B7F] hover:text-[#27548A]">Dịch vụ</Link>
         <span className="mx-2 text-[#C5D0DE]">/</span>

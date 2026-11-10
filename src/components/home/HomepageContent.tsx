@@ -38,7 +38,7 @@ const DEFAULT_INTRO = `
 /* ---- Class theo CSS gốc (.homepage-main, .section-header, ...) ---- */
 /* Quy tắc: lưới 4px; khoảng cách giữa các khối 96 / 80 / 56px theo breakpoint. */
 const MAIN =
-  "mx-auto flex max-w-[1520px] flex-col items-center gap-24 px-10 py-20 max-[1200px]:gap-20 max-[1200px]:px-[30px] max-[1200px]:py-[60px] max-[769px]:gap-14 max-[769px]:px-5 max-[769px]:py-10";
+  "mx-auto flex max-w-[1520px] flex-col items-center gap-24 px-5 py-20 max-[1200px]:gap-20 max-[1200px]:py-[60px] max-[769px]:gap-14 max-[769px]:py-10";
 const SECTION = "flex w-full flex-col items-center";
 /* Tiêu đề mục: eyebrow 12px · tiêu đề 36 → 30 → 26px, semibold · khoảng cách tiêu đề → nội dung 32px (24px trên mobile). */
 const HEADER = "mb-8 flex flex-col items-center gap-3 text-center max-[769px]:mb-6";

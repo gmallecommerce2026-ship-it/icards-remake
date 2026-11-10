@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 @theme {
+  /* Mọi trang dùng chung một bề rộng nội dung tối đa 1520px (khớp header) */
+  --container-7xl: 95rem;
   /* Mọi màu, font, bo góc, bóng đều đọc từ biến --c-* / --f-* / --r-* / --s-* của theme đang bật */
   --font-sans: var(--f-sans);
   /* Toàn site dùng Be Vietnam Pro (đã nạp ở layout) */

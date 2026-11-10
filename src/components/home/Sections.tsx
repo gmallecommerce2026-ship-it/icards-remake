@@ -15,7 +15,7 @@ export function Stats() {
   ];
   return (
     <section className="border-y border-line bg-white">
-      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 px-5 py-12 lg:grid-cols-4 lg:px-8">
+      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 px-5 py-12 lg:grid-cols-4">
         {items.map((i) => (
           <div key={i.l}>
             <p className="text-4xl font-semibold text-lacquer sm:text-5xl"><Counter to={i.n} suffix={i.s} /></p>
@@ -30,7 +30,7 @@ export function Stats() {
 /* ---------- Tính năng (bento) ---------- */
 export function Features() {
   return (
-    <section className="mx-auto max-w-7xl px-5 py-20 lg:py-28 lg:px-8">
+    <section className="mx-auto max-w-7xl px-5 py-20 lg:py-28">
       <Reveal className="max-w-2xl">
         <h2 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl">Mọi việc của ngày cưới liên quan đến khách mời, gói trong một nơi.</h2>
         <p className="mt-4 text-lg text-muted">Từ thiết kế thiệp đến danh sách bàn tiệc, bạn không cần chuyển qua lại giữa bảng tính và tin nhắn nữa.</p>
@@ -78,7 +78,7 @@ export function Steps() {
   ];
   return (
     <section className="bg-white py-20 lg:py-28">
-      <div className="mx-auto max-w-7xl px-5 lg:px-8">
+      <div className="mx-auto max-w-7xl px-5">
         <Reveal><h2 className="max-w-xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl">Có thiệp trong tay chỉ sau ba bước.</h2></Reveal>
         <ol className="mt-14 grid gap-6 md:grid-cols-3">
           {steps.map((s, i) => (
@@ -125,7 +125,7 @@ export function Templates() {
   }, []);
 
   return (
-    <section className="mx-auto max-w-7xl px-5 py-20 lg:py-28 lg:px-8">
+    <section className="mx-auto max-w-7xl px-5 py-20 lg:py-28">
       <Reveal className="flex flex-wrap items-end justify-between gap-4">
         <h2 className="max-w-xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl">Mẫu thiệp được yêu thích nhất.</h2>
         <Link href="/invitations" className="font-semibold text-lacquer hover:underline">Xem tất cả mẫu</Link>
@@ -161,7 +161,7 @@ export function Testimonials() {
   ];
   return (
     <section className="bg-white py-20 lg:py-28">
-      <div className="mx-auto max-w-7xl px-5 lg:px-8">
+      <div className="mx-auto max-w-7xl px-5">
         <Reveal><h2 className="max-w-xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl">Các cặp đôi nói gì về iCards.</h2></Reveal>
         <div className="mt-12 grid gap-5 md:grid-cols-3">
           {list.map((t, i) => (
@@ -187,7 +187,7 @@ export function Testimonials() {
 /* ---------- CTA cuối ---------- */
 export function FinalCta() {
   return (
-    <section className="px-5 py-20 lg:py-28 lg:px-8">
+    <section className="px-5 py-20 lg:py-28">
       <Reveal>
         <div className="relative mx-auto max-w-5xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-lacquer to-lacquer-dark px-8 py-16 text-center text-white sm:px-16">
           <Heart aria-hidden className="absolute -left-6 -top-6 size-32 text-white/5" />

@@ -42,7 +42,7 @@ function StationeryCard() {
 export function Hero() {
   return (
     <section className="bg-paper">
-      <div className="mx-auto grid max-w-7xl items-center gap-16 px-5 pb-24 pt-36 lg:grid-cols-[1.08fr_.92fr] lg:gap-20 lg:px-8 lg:pb-36 lg:pt-44">
+      <div className="mx-auto grid max-w-7xl items-center gap-16 px-5 pb-24 pt-36 lg:grid-cols-[1.08fr_.92fr] lg:gap-20 lg:pb-36 lg:pt-44">
         <div>
           <motion.h1
             {...rise(0.05)}

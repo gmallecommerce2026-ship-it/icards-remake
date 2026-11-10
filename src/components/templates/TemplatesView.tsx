@@ -62,7 +62,7 @@ function View1(s: State) {
   return (
     <>
       <header className="bg-paper pt-40 text-center">
-        <div className="mx-auto max-w-3xl px-5 pb-16 lg:px-8">
+        <div className="mx-auto max-w-3xl px-5 pb-16">
           <h1 className="font-display text-5xl font-medium leading-tight sm:text-6xl">Mẫu thiệp mời</h1>
           <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-muted">
             Chọn một mẫu, điền thông tin sự kiện, rồi gửi link cho khách. Mẫu nào cũng xem trước được như khách sẽ thấy.
@@ -70,7 +70,7 @@ function View1(s: State) {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-5 pb-28 lg:px-8">
+      <div className="mx-auto max-w-7xl px-5 pb-28">
         <nav aria-label="Danh mục" className="flex flex-wrap justify-center gap-x-9 gap-y-3 border-b border-line pb-5">
           {s.tabs.map((t) => (
             <button key={t.id} type="button" aria-pressed={s.category === t.id} onClick={() => s.setCategory(t.id as CategoryId | "all")}
@@ -122,7 +122,7 @@ function View1(s: State) {
 /* ================================================================== */
 function View2(s: State) {
   return (
-    <div className="mx-auto grid max-w-7xl gap-14 px-5 pb-28 pt-40 lg:grid-cols-[220px_1fr] lg:px-8">
+    <div className="mx-auto grid max-w-7xl gap-14 px-5 pb-28 pt-40 lg:grid-cols-[220px_1fr]">
       <aside className="space-y-10 lg:sticky lg:top-28 lg:self-start">
         <div>
           <p className="mb-3 text-sm font-semibold">Danh mục</p>
@@ -186,7 +186,7 @@ function View3(s: State) {
   return (
     <>
       <header className="bg-lacquer pb-14 pt-40 text-white">
-        <div className="mx-auto max-w-7xl px-5 lg:px-8">
+        <div className="mx-auto max-w-7xl px-5">
           <h1 className="font-display text-5xl font-bold tracking-tight sm:text-6xl">Chọn mẫu thiệp của bạn</h1>
           <div className="mt-8 flex flex-col gap-4 md:flex-row md:items-center">
             <input type="search" value={s.query} onChange={(e) => s.setQuery(e.target.value)} placeholder="Tìm theo tên hoặc phong cách" aria-label="Tìm mẫu thiệp"
@@ -207,7 +207,7 @@ function View3(s: State) {
         </div>
       </header>
 
-      <section className="mx-auto max-w-7xl px-5 py-14 lg:px-8">
+      <section className="mx-auto max-w-7xl px-5 py-14">
         <p className="mb-6 text-sm text-muted" aria-live="polite">{s.list.length} mẫu</p>
         {s.list.length === 0 ? (
           <p className="text-muted">Không có mẫu phù hợp. <button type="button" onClick={s.reset} className="font-semibold text-lacquer underline">Xem tất cả</button></p>
@@ -240,13 +240,13 @@ function View4(s: State) {
   return (
     <>
       <header className="pt-40 text-center">
-        <div className="mx-auto max-w-2xl px-5 pb-14 lg:px-8">
+        <div className="mx-auto max-w-2xl px-5 pb-14">
           <h1 className="font-display text-5xl font-medium italic leading-tight sm:text-6xl">Mẫu thiệp mời</h1>
           <p className="mx-auto mt-5 max-w-lg text-lg leading-relaxed text-muted">Một mẫu thật đẹp cho ngày vui của hai bạn. Điền thông tin, rồi gửi đi.</p>
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-5 pb-28 lg:px-8">
+      <div className="mx-auto max-w-7xl px-5 pb-28">
         <div className="flex flex-col items-center gap-6">
           <div className="flex flex-wrap justify-center gap-2">
             {s.tabs.map((t) => (
@@ -295,7 +295,7 @@ function View5(s: State) {
   return (
     <>
       <header className="bg-lacquer pb-16 pt-40 text-white">
-        <div className="mx-auto grid max-w-7xl gap-8 px-5 lg:grid-cols-[1fr_auto] lg:items-end lg:px-8">
+        <div className="mx-auto grid max-w-7xl gap-8 px-5 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
             <span className="block h-px w-16 bg-gold" aria-hidden />
             <h1 className="mt-8 font-display text-5xl font-medium sm:text-6xl">Bộ sưu tập mẫu thiệp</h1>
@@ -306,7 +306,7 @@ function View5(s: State) {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
+      <div className="mx-auto max-w-7xl px-5 py-20">
         <div className="flex flex-wrap items-center justify-between gap-6 border-b border-gold/50 pb-4">
           <nav aria-label="Danh mục" className="flex flex-wrap gap-7">
             {s.tabs.map((t) => (

@@ -29,7 +29,7 @@ export default async function ProductPage({ params }: { params: Params }) {
   const related = getRelatedProducts(all, product.slug);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+    <div className="mx-auto max-w-7xl px-5 py-10 lg:py-14">
       <nav aria-label="Breadcrumb" className="text-sm text-[#5B6B7F]">
         <Link href="/shop" className="hover:text-[#27548A]">Cửa hàng</Link>
         {cat && (
