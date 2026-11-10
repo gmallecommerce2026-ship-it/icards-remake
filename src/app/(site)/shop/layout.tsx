@@ -1,13 +1,16 @@
 import type { ReactNode } from "react";
 import { PageShell } from "@/components/shop/PageShell";
-import { SHOP_BANNERS } from "@/lib/banners";
-import { HeroCarousel } from "@/components/ui/HeroCarousel";
+import { BannerGroupList } from "@/components/banners/BannerGroupView";
+import { getBannerGroups } from "@/lib/catalog";
+import { groupsFor } from "@/lib/banner-groups";
 
-export default function ShopLayout({ children }: { children: ReactNode }) {
+export default async function ShopLayout({ children }: { children: ReactNode }) {
+  // Banner đầu trang do admin quản lý (trang "shop")
+  const groups = groupsFor(await getBannerGroups(), "shop", "top");
   return (
     <PageShell>
       <div>
-        <HeroCarousel slides={SHOP_BANNERS} fullHeight />
+        <BannerGroupList groups={groups} heroFirst />
         {children}
       </div>
     </PageShell>

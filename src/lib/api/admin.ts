@@ -1,4 +1,5 @@
 import { api } from "./http";
+import type { BannerGroupData } from "@/lib/banner-groups";
 
 export type AdminStats = {
   users: number;
@@ -45,14 +46,7 @@ export const updateAdminUser = (id: string, body: { role?: "user" | "admin"; isA
 export const getAdminInvitations = (params: { page?: number; limit?: number; search?: string; status?: string }) =>
   api.get<Page<AdminInvitation>>("/admin/invitations", { params });
 
-export type SiteBanner = {
-  id: string;
-  name: string;
-  displayPage: string;
-  isEnabled: boolean;
-  imgSrc?: string | null;
-  link?: string;
-};
+export type { BannerGroupData as BannerGroup, BannerItemData as BannerItem, BannerPage, BannerSlot, BannerLayout } from "@/lib/banner-groups";
 
 export type NavItem = {
   id: string;
@@ -66,15 +60,15 @@ export type NavItem = {
 export type AdminSiteSettings = {
   theme: unknown;
   headerNav: NavItem[];
-  banners: SiteBanner[];
+  bannerGroups: BannerGroupData[];
   introText: string;
   [key: string]: unknown;
 };
 
 export const getAdminSettings = () => api.get<AdminSiteSettings>("/admin/settings");
 
-export const saveAdminBanners = (banners: SiteBanner[]) =>
-  api.put<AdminSiteSettings>("/admin/settings/banners", { banners });
+export const saveAdminBannerGroups = (bannerGroups: BannerGroupData[]) =>
+  api.put<AdminSiteSettings>("/admin/settings/banner-groups", { bannerGroups });
 
 export const saveAdminHeaderNav = (headerNav: NavItem[]) =>
   api.put<AdminSiteSettings>("/admin/settings/header-nav", { headerNav });

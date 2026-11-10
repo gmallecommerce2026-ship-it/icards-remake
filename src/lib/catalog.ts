@@ -9,6 +9,7 @@ import type { Service, ProcessStep } from "./services";
 import type { Post } from "./blog";
 import type { FaqGroup, FaqItem } from "./faq";
 import type { PortfolioItem, Tier, ProfessionalProcessStep } from "./professional";
+import type { BannerGroupData } from "./banner-groups";
 
 export type Option = { id: string; label: string };
 export type SlugOption = { slug: string; label: string };
@@ -63,3 +64,13 @@ export const getFaq = async () =>
 export const getProfessionalProcess = () => content<ProfessionalProcessStep[]>("professional.process", []);
 export const getProfessionalTiers = () => content<Tier[]>("professional.tiers", []);
 export const getProfessionalPortfolio = () => content<PortfolioItem[]>("professional.portfolio", []);
+
+// ---- Banner (nhóm do admin quản lý). Lỗi backend thì trả về [] để trang vẫn hiển thị phần còn lại.
+export const getBannerGroups = async (): Promise<BannerGroupData[]> => {
+  try {
+    const s = await serverGet<{ bannerGroups?: BannerGroupData[] }>("/public/settings", undefined, 60);
+    return s?.bannerGroups ?? [];
+  } catch {
+    return [];
+  }
+};

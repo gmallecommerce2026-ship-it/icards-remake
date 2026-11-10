@@ -7,16 +7,13 @@ import { settingsApi, templatesApi } from "@/lib/api";
 import { templatesOf } from "@/lib/api/list";
 import type { InvitationTemplate } from "@/lib/templates";
 import { TemplateShowcase } from "@/components/templates/TemplateShowcase";
-import { HeroCarousel } from "@/components/ui/HeroCarousel";
-import { BannerCard } from "@/components/ui/BannerCard";
+import { BannerGroupList } from "@/components/banners/BannerGroupView";
 import { Container } from "@/components/ui/Primitives";
 import { AdBanner } from "@/components/ads/AdBanner";
-import type { Slide } from "@/components/ui/Carousel";
-import { PROFESSIONAL_BANNERS, PROFESSIONAL_BOTTOM_BANNERS } from "@/lib/banners";
+import { groupsFor, type BannerGroupData } from "@/lib/banner-groups";
 import { SideAdsShell } from "@/components/ads/SideAdsShell";
 
 type Template = InvitationTemplate & { _id: string; title: string; imgSrc?: string };
-type Banner = { displayPage?: string; isEnabled?: boolean; imageUrl?: string; title?: string; subtitle?: string; link?: string; mediaType?: string; videoUrl?: string; htmlContent?: string };
 
 const FAQ = [
   { q: "Thiệp mời online là gì?", a: "Thiệp mời online là thiệp mời trên nền tảng số trực tuyến, thay vì được in ra giấy như các tấm thiệp mời truyền thống. Sau khi tạo thiệp mời online, bạn sẽ gửi tấm thiệp tới khách mời thông qua tin nhắn hoặc mạng xã hội như Facebook, Zalo,... Khi đó, khách mời chỉ cần có kết nối Internet là đã có thể xem được tấm thiệp mời của bạn." },
@@ -93,22 +90,6 @@ function ProTemplateCard({ template }: { template: Template }) {
   );
 }
 
-/* Banner đầu trang: lấy từ CMS (displayPage professional / all) nếu có, không thì dùng bộ mặc định */
-function heroSlidesFrom(banners: Banner[]): Slide[] {
-  const cms = banners
-    .filter((b) => b.isEnabled && (b.displayPage === "professional" || b.displayPage === "all") && b.title)
-    .map((b, i) => ({
-      id: `cms-${i}`,
-      title: b.title ?? "",
-      text: b.subtitle,
-      image: b.imageUrl,
-      href: b.link,
-      cta: b.link ? "Khám phá" : undefined,
-      tone: "",
-    }));
-  return cms.length ? cms : PROFESSIONAL_BANNERS;
-}
-
 export default function TutorialPage() {
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState("");
@@ -116,17 +97,15 @@ export default function TutorialPage() {
   const [loading, setLoading] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [showcaseTemplates, setShowcaseTemplates] = useState<Template[]>([]);
-  const [banners, setBanners] = useState<Banner[]>([]);
-  const [bannerSecondary, setBannerSecondary] = useState("https://pub-f720e3221ef5464a93d19bbdae2cfb86.r2.dev/herotutorial.png");
+  const [bannerGroups, setBannerGroups] = useState<BannerGroupData[]>([]);
+  const bannerSecondary = "https://pub-f720e3221ef5464a93d19bbdae2cfb86.r2.dev/herotutorial.png";
 
   useEffect(() => {
     settingsApi
       .getPublicSettings()
       .then((res) => {
         const s = res.data?.data ?? res.data ?? {};
-        setBanners(s.banners ?? []);
-        const sec = s.banners?.professional_secondary_1?.imageUrl;
-        if (sec) setBannerSecondary(sec);
+        setBannerGroups(s.bannerGroups ?? []);
       })
       .catch(() => {});
   }, []);
@@ -161,12 +140,14 @@ export default function TutorialPage() {
       .finally(() => setLoading(false));
   }, [activeCategory]);
 
-  const heroSlides = heroSlidesFrom(banners);
+  // Banner trang chuyên nghiệp do admin quản lý: nhóm đầu trang là hero, nhóm cuối trang nằm trên chân trang
+  const heroTop = groupsFor(bannerGroups, "professional", "top");
+  const bottomGroups = groupsFor(bannerGroups, "professional", "bottom");
 
   return (
     // tone-blue: ép màu thương hiệu #27548A cho toàn trang, không theo theme 1–5
     <div className="tone-blue bg-[#FEFDFD] text-ink">
-      <SideAdsShell hero={<HeroCarousel slides={heroSlides} fullHeight />}>
+      <SideAdsShell hero={<BannerGroupList groups={heroTop} heroFirst />}>
 
       {/* Dải lợi ích nhanh */}
       <section aria-label="Lợi ích" className="border-b border-line bg-white">
@@ -323,14 +304,12 @@ export default function TutorialPage() {
         </div>
       </Section>
 
-      {/* Banner cuối trang */}
-      <Section label="Banner">
-        <div className="grid gap-6 md:grid-cols-2">
-          {PROFESSIONAL_BOTTOM_BANNERS.map((b) => (
-            <BannerCard key={b.id} b={b} className="aspect-[16/9] md:aspect-[4/3] lg:aspect-[16/10]" />
-          ))}
-        </div>
-      </Section>
+      {/* Banner cuối trang (admin quản lý) */}
+      {bottomGroups.length > 0 && (
+        <Section label="Banner">
+          <BannerGroupList groups={bottomGroups} />
+        </Section>
+      )}
       </SideAdsShell>
     </div>
   );

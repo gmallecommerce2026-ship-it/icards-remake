@@ -13,17 +13,13 @@ import { InvitationPreview } from "@/components/templates/InvitationPreview";
 import { TemplateShowcase } from "@/components/templates/TemplateShowcase";
 import type { InvitationTemplate } from "@/lib/templates";
 import type { TemplateTitleStyle } from "@/lib/title-style";
-import { HOME_BANNERS, HOME_BOTTOM_BANNERS } from "@/lib/banners";
-import type { Slide } from "@/components/ui/Carousel";
-import { HeroCarousel } from "@/components/ui/HeroCarousel";
+import { BannerGroupList } from "@/components/banners/BannerGroupView";
+import { groupsFor, type BannerGroupData } from "@/lib/banner-groups";
 import { AdBanner } from "@/components/ads/AdBanner";
 import { SideAdsShell } from "@/components/ads/SideAdsShell";
 
 type Block = { _id: string; title: string; slug: string; isActive?: boolean; templates?: { _id: string; imgSrc?: string }[] };
 type Template = InvitationTemplate & { _id: string; title: string; imgSrc?: string; titleStyle?: TemplateTitleStyle };
-type Banner = { id?: string; name?: string; displayPage?: string; isEnabled?: boolean; imgSrc?: string; link?: string };
-
-const HERO_FALLBACK = "https://pub-f720e3221ef5464a93d19bbdae2cfb86.r2.dev/herohome.png";
 const placeholder = (text: string, size: string) => `https://placehold.co/${size}/e6e6e6/999?text=${encodeURIComponent(text)}`;
 
 const DEFAULT_INTRO = `
@@ -164,46 +160,6 @@ function FeaturedCard({ t }: { t: Template }) {
   );
 }
 
-/* 3 banner cuối trang, đặt ngay phía trên khối "Về chúng tôi".
-   2 banner đầu xếp cạnh nhau, banner thứ 3 rộng toàn chiều ngang. Chiều cao rút gọn để cả 3 vừa một màn hình. */
-function BannerLink({ b, className }: { b: (typeof HOME_BOTTOM_BANNERS)[number]; className: string }) {
-  return (
-    <Link href={b.href} className={`group relative flex overflow-hidden rounded-sm bg-[#0E1B2C] ${className}`}>
-      {b.image ? (
-        <img src={b.image} alt="" className="absolute inset-0 size-full object-cover transition-transform duration-700 group-hover:scale-105" />
-      ) : (
-        <div className="absolute inset-0 bg-[#0E1B2C]" />
-      )}
-      <div className="absolute inset-0 bg-black/40" />
-
-      <div className="relative flex w-full flex-col justify-end p-8 text-white [text-shadow:0_1px_12px_rgba(0,0,0,0.35)] md:p-12">
-        {b.eyebrow && <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/85">{b.eyebrow}</p>}
-        <h3 className="mt-3 text-3xl font-bold leading-[1.2] tracking-tight md:text-4xl">{b.title}</h3>
-        {b.text && <p className="mt-4 max-w-md text-base leading-relaxed text-white/90">{b.text}</p>}
-        {b.cta && (
-          <span className="mt-7 inline-flex h-12 w-fit items-center rounded-sm bg-white px-7 text-sm font-semibold text-[#0E1B2C] transition group-hover:bg-white/90">
-            {b.cta}
-          </span>
-        )}
-      </div>
-    </Link>
-  );
-}
-
-function BottomBanners() {
-  const [first, second, wide] = HOME_BOTTOM_BANNERS;
-  return (
-    <section className="flex w-full flex-col gap-6">
-      <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-2">
-        {[first, second].map((b) => (
-          <BannerLink key={b.id} b={b} className="h-[48vh] min-h-[320px]" />
-        ))}
-      </div>
-      {wide && <BannerLink b={wide} className="h-[44vh] min-h-[300px] w-full" />}
-    </section>
-  );
-}
-
 function Intro({ html }: { html?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -255,7 +211,7 @@ export function HomepageContent() {
   const [loading, setLoading] = useState(true);
   const [occasions, setOccasions] = useState<OccasionItem[]>([]);
   const [featured, setFeatured] = useState<Template[]>([]);
-  const [banners, setBanners] = useState<Banner[]>([]);
+  const [bannerGroups, setBannerGroups] = useState<BannerGroupData[]>([]);
   const [introHtml, setIntroHtml] = useState<string | undefined>();
 
   useEffect(() => {
@@ -286,7 +242,7 @@ export function HomepageContent() {
 
         if (settingsRes.status === "fulfilled") {
           const s = settingsRes.value.data?.data ?? settingsRes.value.data ?? {};
-          setBanners((s.banners ?? []).filter((b: Banner) => b.displayPage === "home" && b.isEnabled));
+          setBannerGroups(s.bannerGroups ?? []);
           setIntroHtml(s.introText || undefined);
         }
       })
@@ -310,23 +266,10 @@ export function HomepageContent() {
     );
   }
 
-  const hero = banners.find((b) => b.name?.toLowerCase().includes("chính")) ?? banners[0];
-  const secondary = banners.filter((b) => b !== hero).slice(0, 2);
-
-  // Banner trang chủ: lấy từ cài đặt (bật, hiển thị ở trang chủ); chưa có thì dùng banner mặc định
-  const homeSlides: Slide[] = banners.length
-    ? banners.map((b, k) => ({
-        id: b.id ?? `home-${k}`,
-        eyebrow: "iCards",
-        title: b.name || "Thiệp mời online đẹp",
-        text: "Chọn mẫu, điền thông tin và gửi link cho khách mời trong vài phút.",
-        href: b.link || "/templates",
-        cta: "Xem mẫu thiệp",
-        tone: "from-[#0E1B2C] to-[#27548A]",
-        image: b.imgSrc || undefined,
-      }))
-    : HOME_BANNERS.map((sl, k) => ({ ...sl, image: k === 0 ? HERO_FALLBACK : undefined }));
-  const heroEl = <HeroCarousel slides={homeSlides} fullHeight />;
+  // Banner trang chủ do admin quản lý: nhóm đầu trang làm hero, nhóm cuối trang nằm trên khối "Giới thiệu"
+  const topGroups = groupsFor(bannerGroups, "home", "top");
+  const bottomGroups = groupsFor(bannerGroups, "home", "bottom");
+  const heroEl = <BannerGroupList groups={topGroups} heroFirst />;
 
   return (
     <div className="bg-[#FEFDFD] font-inter text-[#333]">
@@ -362,17 +305,7 @@ export function HomepageContent() {
           href="/templates"
         />
 
-        {secondary.length > 0 && (
-          <section className="flex w-full flex-col gap-10">
-            {secondary.map((b, i) => (
-              <a key={b.id ?? i} href={b.link ?? "#"} className="block w-full">
-                <img src={b.imgSrc} alt={b.name ?? ""} className="h-auto w-full object-cover" />
-              </a>
-            ))}
-          </section>
-        )}
-
-        <BottomBanners />
+        <BannerGroupList groups={bottomGroups} />
 
         <Intro html={introHtml} />
       </main>

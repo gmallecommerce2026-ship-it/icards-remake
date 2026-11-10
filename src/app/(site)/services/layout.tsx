@@ -1,13 +1,16 @@
 import type { ReactNode } from "react";
+import { BannerGroupList } from "@/components/banners/BannerGroupView";
 import { PageShell } from "@/components/shop/PageShell";
-import { SERVICES_BANNERS } from "@/lib/banners";
-import { HeroCarousel } from "@/components/ui/HeroCarousel";
+import { getBannerGroups } from "@/lib/catalog";
+import { groupsFor } from "@/lib/banner-groups";
 
-export default function ServicesLayout({ children }: { children: ReactNode }) {
+export default async function ServicesLayout({ children }: { children: ReactNode }) {
+  // Banner đầu trang do admin quản lý (trang "services")
+  const groups = groupsFor(await getBannerGroups(), "services", "top");
   return (
     <PageShell>
       <div>
-        <HeroCarousel slides={SERVICES_BANNERS} fullHeight />
+        <BannerGroupList groups={groups} heroFirst />
         {children}
       </div>
     </PageShell>
