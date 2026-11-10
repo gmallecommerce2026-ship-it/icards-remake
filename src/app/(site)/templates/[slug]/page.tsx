@@ -6,6 +6,7 @@ import { TemplateCard } from "@/components/templates/TemplateCard";
 import { CREATE_EVENT_HREF, formatPrice, getRelatedTemplates } from "@/lib/templates";
 import { getTemplate, getTemplateCategories, getTemplates } from "@/lib/catalog";
 import { Container } from "@/components/ui/Primitives";
+import { SideAdsShell } from "@/components/ads/SideAdsShell";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -37,6 +38,7 @@ export default async function TemplateDetailPage({ params }: Props) {
   const free = template.price === 0;
 
   return (
+    <SideAdsShell>
     <main className="min-h-screen pt-[72px]">
       <Container className="py-8 sm:py-12">
         <nav aria-label="Đường dẫn" className="text-sm text-[#5B6B7F]">
@@ -131,5 +133,6 @@ export default async function TemplateDetailPage({ params }: Props) {
         )}
       </Container>
     </main>
+    </SideAdsShell>
   );
 }

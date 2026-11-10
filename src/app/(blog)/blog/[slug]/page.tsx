@@ -10,6 +10,7 @@ import { Reveal } from "@/components/home/Reveal";
 import { Container } from "@/components/ui/Primitives";
 import { BLOG_KEYWORD_GROUPS, formatDate, getCategory, getRelated, slugify, type Block } from "@/lib/blog";
 import { getBlogCategories, getPost, getPosts } from "@/lib/catalog";
+import { SideAdsShell } from "@/components/ads/SideAdsShell";
 
 type Params = Promise<{ slug: string }>;
 
@@ -49,6 +50,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
   };
 
   return (
+    <SideAdsShell>
     <div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <ReadingProgress targetId="post-body" />
@@ -201,6 +203,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
         </Reveal>
       </Container>
     </div>
+    </SideAdsShell>
   );
 }
 

@@ -15,6 +15,7 @@ import type { InvitationTemplate } from "@/lib/templates";
 import type { TemplateTitleStyle } from "@/lib/title-style";
 import { HOME_BOTTOM_BANNERS } from "@/lib/banners";
 import { AdBanner } from "@/components/ads/AdBanner";
+import { SideAdsShell } from "@/components/ads/SideAdsShell";
 
 type Block = { _id: string; title: string; slug: string; isActive?: boolean; templates?: { _id: string; imgSrc?: string }[] };
 type Template = InvitationTemplate & { _id: string; title: string; imgSrc?: string; titleStyle?: TemplateTitleStyle };
@@ -309,18 +310,24 @@ export function HomepageContent() {
   const hero = banners.find((b) => b.name?.toLowerCase().includes("chính")) ?? banners[0];
   const secondary = banners.filter((b) => b !== hero).slice(0, 2);
 
+  const heroEl = (
+    <>
+        <section className="w-full overflow-hidden">
+          {hero?.link ? (
+            <a href={hero.link}>
+              <img src={hero.imgSrc || HERO_FALLBACK} alt={hero.name ?? "iCards"} className="block aspect-[16/9] max-h-[600px] w-full object-cover" />
+            </a>
+          ) : (
+            <img src={hero?.imgSrc || HERO_FALLBACK} alt={hero?.name ?? "iCards"} className="block aspect-[16/9] max-h-[600px] w-full object-cover" />
+          )}
+        </section>
+
+    </>
+  );
+
   return (
     <div className="bg-[#FEFDFD] font-inter text-[#333]">
-      <section className="full-bleed overflow-hidden">
-        {hero?.link ? (
-          <a href={hero.link}>
-            <img src={hero.imgSrc || HERO_FALLBACK} alt={hero.name ?? "iCards"} className="block aspect-[16/9] max-h-[600px] w-full object-cover" />
-          </a>
-        ) : (
-          <img src={hero?.imgSrc || HERO_FALLBACK} alt={hero?.name ?? "iCards"} className="block aspect-[16/9] max-h-[600px] w-full object-cover" />
-        )}
-      </section>
-
+      <SideAdsShell hero={heroEl}>
       <main className={MAIN}>
         <section className={SECTION}>
           <SectionHeader sub="NHỮNG CƠ HỘI MỌI NGƯỜI KẾT NỐI THÂN THIẾT" title="NHỮNG DỊP LAN TỎA NIỀM VUI" />
@@ -366,6 +373,7 @@ export function HomepageContent() {
 
         <Intro html={introHtml} />
       </main>
+      </SideAdsShell>
     </div>
   );
 }

@@ -6,6 +6,8 @@ import type { Option } from "@/lib/catalog";
 import { type InvitationTemplate } from "@/lib/templates";
 import { TemplateShowcase } from "./TemplateShowcase";
 import { collectSlugs, findPath, type TreeNode } from "@/lib/templates-tree";
+import { SideAdsShell } from "@/components/ads/SideAdsShell";
+import { PageHero } from "@/components/ui/Primitives";
 
 /* Giá trị lấy từ InvitationContent.css của bản src. */
 
@@ -107,15 +109,8 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
   const hoverRoot = hover ? rootOfId(hover.id) : undefined;
 
   return (
+    <SideAdsShell hero={<PageHero title={currentLabel ?? "Khám Phá Các Mẫu Thiệp"} description="Thiết kế ấn tượng, thao tác dễ dàng chỉ trong vài phút" />}>
     <div className="bg-[#FEFDFD] font-inter text-[#333]">
-      {/* Tiêu đề trang (UniversalBanner của bản src chưa có mã nguồn, dùng tiêu đề thay thế) */}
-      <section className="flex flex-col items-center gap-2 px-5 pb-10 pt-10 text-center">
-        <h1 className="font-playfair text-[42px] font-bold leading-[1.2] text-[#1a1a1a] max-[769px]:text-[28px]">
-          {currentLabel ?? "Khám Phá Các Mẫu Thiệp"}
-        </h1>
-        <p className="text-base text-[#555]">Thiết kế ấn tượng, thao tác dễ dàng chỉ trong vài phút</p>
-      </section>
-
       <div className="mx-auto w-full max-w-[1520px] px-5 py-[20px]">
         {/* Bộ lọc danh mục: nền xanh, chữ trắng như bản src */}
         <div ref={wrapRef} className="relative" onMouseLeave={scheduleClose}>
@@ -232,5 +227,6 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
         )}
       </div>
     </div>
+    </SideAdsShell>
   );
 }

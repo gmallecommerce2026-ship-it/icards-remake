@@ -8,6 +8,7 @@ import { formatPrice } from "@/lib/format";
 import ServiceCover from "@/components/services/ServiceCover";
 import { ServiceRequestForm } from "@/components/shop/ServiceRequestForm";
 import { ServiceCard } from "@/components/shop/ServiceCard";
+import { SideAdsShell } from "@/components/ads/SideAdsShell";
 
 type Params = Promise<{ slug: string }>;
 
@@ -26,6 +27,7 @@ export default async function ServiceDetailPage({ params }: { params: Params }) 
   const related = getRelatedServices(all, service.slug);
 
   return (
+    <SideAdsShell>
     <div className="mx-auto max-w-7xl px-5 py-10 lg:py-14">
       <nav aria-label="Breadcrumb" className="mb-8 text-sm font-medium">
         <Link href="/services" className="text-[#5B6B7F] hover:text-[#27548A]">Dịch vụ</Link>
@@ -92,5 +94,6 @@ export default async function ServiceDetailPage({ params }: { params: Params }) 
         </section>
       )}
     </div>
+    </SideAdsShell>
   );
 }

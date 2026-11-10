@@ -66,7 +66,7 @@ export function WelcomePopup() {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-ink/50 p-4" onClick={close}>
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-ink/50 p-4" onClick={close}>
       <div
         role="dialog"
         aria-modal="true"

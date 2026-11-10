@@ -8,6 +8,7 @@ import PostCard, { AuthorAvatar, PostCover, PostMeta } from "@/components/blog/P
 import { BLOG_KEYWORD_GROUPS, countByCategory, filterPosts, formatDate, getCategory, searchPosts, type BlogCategory, type Post } from "@/lib/blog";
 import { Container, btn } from "@/components/ui/Primitives";
 import { Reveal } from "@/components/home/Reveal";
+import { SideAdsShell } from "@/components/ads/SideAdsShell";
 
 const PAGE_SIZE = 6;
 
@@ -32,10 +33,10 @@ export default function BlogClient({ posts: allPosts, categories }: { posts: Pos
   const side = showFeatured && posts.length >= 4 ? posts.slice(1, 3) : [];
   const gridPosts = showFeatured ? posts.slice(1 + side.length) : posts;
 
-  return (
-    <div>
+  const heroEl = (
+    <>
       {/* Hero xanh thương hiệu với ô tìm kiếm */}
-      <section className="full-bleed overflow-hidden bg-lacquer text-white">
+      <section className="relative overflow-hidden bg-lacquer text-white">
         <div
           aria-hidden
           className="absolute inset-0 opacity-[0.08]"
@@ -86,8 +87,14 @@ export default function BlogClient({ posts: allPosts, categories }: { posts: Pos
           </p>
         </Container>
       </section>
+    </>
+  );
 
-      <Container className="relative z-20">
+  return (
+    <SideAdsShell hero={heroEl}>
+    <div>
+
+      <Container className="relative">
         {/* Thanh chuyên mục nổi lên trên hero */}
         <nav
           id="blog-list"
@@ -235,6 +242,7 @@ export default function BlogClient({ posts: allPosts, categories }: { posts: Pos
         </Reveal>
       </Container>
     </div>
+    </SideAdsShell>
   );
 }
 

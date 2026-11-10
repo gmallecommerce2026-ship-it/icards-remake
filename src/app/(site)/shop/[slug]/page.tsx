@@ -6,6 +6,7 @@ import { ProductThumb } from "@/components/shop/ProductThumb";
 import { getRelatedProducts, priceFrom } from "@/lib/shop";
 import { getProduct, getProducts, getShopCategories } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
+import { SideAdsShell } from "@/components/ads/SideAdsShell";
 
 type Params = Promise<{ slug: string }>;
 
@@ -29,6 +30,7 @@ export default async function ProductPage({ params }: { params: Params }) {
   const related = getRelatedProducts(all, product.slug);
 
   return (
+    <SideAdsShell>
     <div className="mx-auto max-w-7xl px-5 py-10 lg:py-14">
       <nav aria-label="Breadcrumb" className="text-sm text-[#5B6B7F]">
         <Link href="/shop" className="hover:text-[#27548A]">Cửa hàng</Link>
@@ -99,5 +101,6 @@ export default async function ProductPage({ params }: { params: Params }) {
         </section>
       )}
     </div>
+    </SideAdsShell>
   );
 }

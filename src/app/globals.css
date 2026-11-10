@@ -153,14 +153,3 @@ body { background: var(--color-porcelain); color: var(--color-ink); font-family:
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
-
-/* Hero toàn chiều rộng màn hình. Dùng trong khung SideAdsShell (3 cột: quảng cáo | nội dung | quảng cáo):
-   phần hero thoát ra khỏi cột giữa nhờ margin âm, z-10 để che các banner dọc đang dính ở mép trên.
-   Nhờ vậy banner dọc chỉ hiện bên dưới hero, không đè lên hero. Header cố định có z-index cao hơn (990+). */
-@utility full-bleed {
-  position: relative;
-  z-index: 10;
-  width: 100vw;
-  max-width: none;
-  margin-left: calc(50% - 50vw);
-}

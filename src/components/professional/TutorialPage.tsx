@@ -13,6 +13,7 @@ import { Container } from "@/components/ui/Primitives";
 import { AdBanner } from "@/components/ads/AdBanner";
 import type { Slide } from "@/components/ui/Carousel";
 import { PROFESSIONAL_BANNERS, PROFESSIONAL_BOTTOM_BANNERS } from "@/lib/banners";
+import { SideAdsShell } from "@/components/ads/SideAdsShell";
 
 type Template = InvitationTemplate & { _id: string; title: string; imgSrc?: string };
 type Banner = { displayPage?: string; isEnabled?: boolean; imageUrl?: string; title?: string; subtitle?: string; link?: string; mediaType?: string; videoUrl?: string; htmlContent?: string };
@@ -165,7 +166,7 @@ export default function TutorialPage() {
   return (
     // tone-blue: ép màu thương hiệu #27548A cho toàn trang, không theo theme 1–5
     <div className="tone-blue bg-[#FEFDFD] text-ink">
-      <HeroCarousel slides={heroSlides} />
+      <SideAdsShell hero={<HeroCarousel slides={heroSlides} />}>
 
       {/* Dải lợi ích nhanh */}
       <section aria-label="Lợi ích" className="border-b border-line bg-white">
@@ -330,6 +331,7 @@ export default function TutorialPage() {
           ))}
         </div>
       </Section>
+      </SideAdsShell>
     </div>
   );
 }

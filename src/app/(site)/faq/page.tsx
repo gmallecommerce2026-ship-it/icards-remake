@@ -3,6 +3,7 @@ import Link from "next/link";
 import FaqAccordion from "@/components/faq/FaqAccordion";
 import { getFaq } from "@/lib/catalog";
 import { PageHero, Container } from "@/components/ui/Primitives";
+import { SideAdsShell } from "@/components/ads/SideAdsShell";
 
 export const metadata: Metadata = {
   title: "Hỏi đáp | iCards",
@@ -28,12 +29,10 @@ export default async function FaqPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
-
-      <PageHero 
-        title="Hỏi đáp"
-        description="Tìm nhanh câu trả lời về cách tạo thiệp, gửi cho khách và quản lý đơn hàng."
-      />
-
+      <SideAdsShell hero={<PageHero 
+                title="Hỏi đáp"
+                description="Tìm nhanh câu trả lời về cách tạo thiệp, gửi cho khách và quản lý đơn hàng."
+              />}>
       <Container className="py-12 lg:py-16">
         <div className="max-w-3xl mx-auto">
           <FaqAccordion groups={faq.groups} items={faq.items} />
@@ -52,6 +51,7 @@ export default async function FaqPage() {
           </section>
         </div>
       </Container>
+      </SideAdsShell>
     </main>
   );
 }

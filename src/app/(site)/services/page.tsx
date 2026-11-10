@@ -5,6 +5,7 @@ import { getServices } from "@/lib/catalog";
 import ServiceCover from "@/components/services/ServiceCover";
 import { PageHero, Container } from "@/components/ui/Primitives";
 import { AdBanner } from "@/components/ads/AdBanner";
+import { SideAdsShell } from "@/components/ads/SideAdsShell";
 
 export const metadata: Metadata = {
   title: "Dịch vụ hệ sinh thái | iCards",
@@ -16,11 +17,10 @@ export default async function ServicesPage() {
 
   return (
     <main className="min-h-screen bg-porcelain">
-      <PageHero 
-        title="Dịch vụ tiện ích mở rộng"
-        description="Hệ sinh thái công cụ hỗ trợ xuyên suốt từ bước mời khách đến khâu đón tiếp, giúp bạn tổ chức sự kiện thảnh thơi và trọn vẹn nhất."
-      />
-
+      <SideAdsShell hero={<PageHero 
+                title="Dịch vụ tiện ích mở rộng"
+                description="Hệ sinh thái công cụ hỗ trợ xuyên suốt từ bước mời khách đến khâu đón tiếp, giúp bạn tổ chức sự kiện thảnh thơi và trọn vẹn nhất."
+              />}>
       <Container className="py-20 lg:py-24">
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 mb-20 lg:mb-24">
           {services.map((service) => (
@@ -67,6 +67,7 @@ export default async function ServicesPage() {
           </Link>
         </section>
       </Container>
+      </SideAdsShell>
     </main>
   );
 }

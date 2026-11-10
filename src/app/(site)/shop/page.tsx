@@ -6,6 +6,7 @@ import ServiceCover from "@/components/services/ServiceCover";
 import { getProducts, getServices, getShopCategories } from "@/lib/catalog";
 import { formatPrice } from "@/lib/format";
 import { AdBanner } from "@/components/ads/AdBanner";
+import { SideAdsShell } from "@/components/ads/SideAdsShell";
 
 export const metadata: Metadata = {
   title: "Cửa hàng & Dịch vụ | iCards",
@@ -16,6 +17,7 @@ export const metadata: Metadata = {
 export default async function Page() {
   const [products, categories, services] = await Promise.all([getProducts(), getShopCategories(), getServices()]);
   return (
+    <SideAdsShell>
     <>
       <Suspense fallback={null}>
         <ShopClient products={products} categories={categories} />
@@ -59,5 +61,6 @@ export default async function Page() {
         </section>
       )}
     </>
+    </SideAdsShell>
   );
 }

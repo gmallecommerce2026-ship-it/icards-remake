@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHero, Container } from "@/components/ui/Primitives";
+import { SideAdsShell } from "@/components/ads/SideAdsShell";
 
 export const metadata: Metadata = {
   title: "Liên hệ | iCards",
@@ -9,11 +10,10 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <main className="min-h-screen bg-porcelain">
-      <PageHero
-        title="Liên hệ với chúng tôi"
-        description="Bạn cần tư vấn thiết kế riêng, báo giá in ấn số lượng lớn hay hỗ trợ kỹ thuật? Đội ngũ iCards luôn sẵn sàng lắng nghe và giải đáp."
-      />
-
+      <SideAdsShell hero={<PageHero
+                title="Liên hệ với chúng tôi"
+                description="Bạn cần tư vấn thiết kế riêng, báo giá in ấn số lượng lớn hay hỗ trợ kỹ thuật? Đội ngũ iCards luôn sẵn sàng lắng nghe và giải đáp."
+              />}>
       <Container className="py-12 lg:py-16">
         <div className="mx-auto grid max-w-5xl gap-10 md:grid-cols-2 lg:gap-16">
           
@@ -131,6 +131,7 @@ export default function ContactPage() {
 
         </div>
       </Container>
+      </SideAdsShell>
     </main>
   );
 }
