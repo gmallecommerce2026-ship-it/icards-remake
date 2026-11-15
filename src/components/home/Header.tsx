@@ -3,7 +3,7 @@
 /* Mã nguồn giữ theo GlobalHeader.js của bản src; CSS nằm ở GlobalHeader.css (cùng tên class). */
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Menu, X, ChevronRight, Search } from "lucide-react";
 import { settingsApi, templatesApi } from "@/lib/api";
 import { FALLBACK_ROOTS, flattenTemplates, rootOf, type TreeNode } from "@/lib/templates-tree";
@@ -22,6 +22,8 @@ const menuKey = (item: { id?: string; title: string }) => item.id || item.title;
 /* Đường dẫn trong project Next: danh mục thiệp đều dẫn về /templates, cửa hàng và tin tức đổi sang route thật */
 const TEMPLATES = "/templates";
 const SHOP = "/shop";
+/* Trang dành cho chuyên nghiệp (nút iPro cạnh logo) */
+const IPRO_PATH = "/professional";
 /* Số link tối đa mỗi cột khi dựng menu từ cây mẫu thiệp (chỉ dùng khi chưa có menu admin) */
 const MAX_LINKS = 4;
 
@@ -343,6 +345,8 @@ const MainHeader = ({
   const { isAuthenticated, user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
+  const pathname = usePathname();
+  const iproActive = !!pathname?.startsWith(IPRO_PATH);
   const menuTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleNavigate = (path: string) => {
@@ -375,6 +379,16 @@ const MainHeader = ({
               <div className="logo" onClick={() => handleNavigate("/")}>
                 {logoUrl ? <img src={logoUrl} alt={companyName} /> : companyName}
               </div>
+              <span className="logo-divider" aria-hidden="true" />
+              <button
+                type="button"
+                className={`ipro-btn ${iproActive ? "active" : ""}`}
+                onClick={() => handleNavigate(IPRO_PATH)}
+                aria-current={iproActive ? "page" : undefined}
+                aria-label="iPro: trang dành cho chuyên nghiệp"
+              >
+                iPro
+              </button>
             </div>
             <div className="header-section right">
               <form className="search-bar-wrapper" onSubmit={handleSearchSubmit}>

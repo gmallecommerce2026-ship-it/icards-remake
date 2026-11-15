@@ -136,6 +136,43 @@ button {
     font-weight: 700;
     color: var(--color-text-dark);
 }
+/* Vạch ngăn và nút iPro cạnh logo */
+.logo-divider {
+    display: inline-block;
+    width: 1px;
+    height: 22px;
+    flex-shrink: 0;
+    background-color: #8A97A8;
+}
+.ipro-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background-color: var(--color-primary);
+    color: var(--color-text-white);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.ipro-btn:hover {
+    background-color: #1f4370;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(39, 84, 138, 0.25);
+}
+.ipro-btn.active {
+    background-color: #1f4370;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+@media (max-width: 992px) {
+    .logo-divider { height: 18px; }
+    .ipro-btn { height: 26px; padding: 0 10px; font-size: 13px; }
+}
+
 .logo img {
     height: 32px;
     max-width: 180px;
