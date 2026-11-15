@@ -32,18 +32,19 @@ const SCENES: Record<Exclude<HeroPreset, "envelope">, ComponentType<SceneProps>>
 export const HERO_HEIGHT = "75svh";
 
 const WHEEL_PX = 1000; // một lần lăn chuột (px) đi hết animation khi speed = 1
-const TOUCH_PX = 700; // một lần vuốt (px) đi hết animation khi speed = 1
 const SMOOTH = { stiffness: 70, damping: 24, mass: 0.7 }; // làm mượt tiến trình, cùng thông số với phong bì
-const ALIGN_TOP = 4; // banner nằm đầu màn hình khi mép trên <= 4px
-const ALIGN_BOTTOM = 60; // banner còn đang hiện khi mép dưới > 60px
+const ALIGN_BOTTOM = 60; // banner coi như đã trôi qua khi mép dưới <= 60px
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 /**
  * Tiến trình animation của banner, từ 0 đến 1.
- * - Khi banner nằm đúng đầu màn hình, lăn chuột hoặc vuốt sẽ điều khiển tiến trình, và trang không cuộn tiếp cho đến khi xong.
- *   Nhờ vậy animation luôn hết trước khi trang đi qua.
- * - Trang vẫn cuộn bình thường khi banner chưa tới đầu màn hình, hoặc sau khi animation đã hết.
+ * - Thiết bị có chuột: khi con trỏ đang nằm trên banner và animation chưa hết, lăn chuột xuống sẽ chạy animation tới,
+ *   và sự kiện cuộn KHÔNG lan ra trang. Hết animation thì trang cuộn bình thường. Lăn lên thì animation chạy lùi;
+ *   khi về đầu thì trang mới cuộn lên.
  * - Nếu banner đã trôi qua mà animation chưa hết (ví dụ kéo thanh cuộn), tự chạy nốt. Cuộn ngược lên đầu sẽ phát lại.
- * - speed do admin đặt: lớn hơn 1 thì một lần cuộn đi được nhiều tiến trình hơn.
+ * - Thiết bị cảm ứng (không có chuột): animation đi theo vị trí cuộn của trang.
+ * - speed do admin đặt: lớn hơn 1 thì một lần lăn đi được nhiều tiến trình hơn.
  */
 export function useHeroProgress(ref: RefObject<HTMLElement | null>, speed: number): MotionValue<number> {
   const prog = useMotionValue(0);
@@ -52,52 +53,58 @@ export function useHeroProgress(ref: RefObject<HTMLElement | null>, speed: numbe
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+
+    if (window.matchMedia("(pointer: coarse)").matches) {
+      const sync = () => {
+        const r = el.getBoundingClientRect();
+        prog.set(clamp01(-r.top / Math.max(1, el.offsetHeight)));
+      };
+      sync();
+      window.addEventListener("scroll", sync, { passive: true });
+      window.addEventListener("resize", sync);
+      return () => {
+        window.removeEventListener("scroll", sync);
+        window.removeEventListener("resize", sync);
+      };
+    }
+
     let ctl: AnimationPlaybackControls | null = null;
-    const aligned = () => {
-      const r = el.getBoundingClientRect();
-      return r.top <= ALIGN_TOP && r.bottom > ALIGN_BOTTOM;
-    };
+    let hovering = false;
     const glide = (to: number) => {
       ctl?.stop();
       ctl = animate(prog, to, { duration: 0.6, ease: "easeOut" });
     };
-    // Trả về true nếu đã dùng cú cuộn để điều khiển animation (khi đó phải chặn cuộn trang)
-    const step = (dy: number, px: number) => {
-      const cur = prog.get();
-      if ((dy > 0 && cur >= 1) || (dy < 0 && cur <= 0)) return false;
-      ctl?.stop();
-      prog.set(Math.min(1, Math.max(0, cur + dy / (px / k))));
-      return true;
+    const onEnter = () => {
+      hovering = true;
+    };
+    const onLeave = () => {
+      hovering = false;
     };
     const onWheel = (e: WheelEvent) => {
-      if (e.ctrlKey || e.deltaY === 0 || !aligned()) return;
+      if (!hovering || e.ctrlKey || e.deltaY === 0) return;
       const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * window.innerHeight : e.deltaY;
-      if (step(dy, WHEEL_PX)) e.preventDefault();
-    };
-    let lastY = 0;
-    const onTouchStart = (e: TouchEvent) => {
-      lastY = e.touches[0]?.clientY ?? 0;
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      const y = e.touches[0]?.clientY ?? lastY;
-      const dy = lastY - y;
-      lastY = y;
-      if (aligned() && step(dy, TOUCH_PX)) e.preventDefault();
+      const cur = prog.get();
+      if ((dy > 0 && cur >= 1) || (dy < 0 && cur <= 0)) return; // xong (hoặc về đầu) rồi: để trang cuộn
+      e.preventDefault(); // đang trên banner và animation chưa hết: không cho trang cuộn
+      ctl?.stop();
+      prog.set(clamp01(cur + dy / (WHEEL_PX / k)));
     };
     const onScroll = () => {
+      if (hovering) return;
       const r = el.getBoundingClientRect();
       if (r.bottom <= ALIGN_BOTTOM && prog.get() < 1) glide(1);
-      else if (r.top > ALIGN_TOP && prog.get() > 0) glide(0);
+      else if (r.top > 0 && prog.get() > 0) glide(0);
     };
-    window.addEventListener("wheel", onWheel, { passive: false });
-    window.addEventListener("touchstart", onTouchStart, { passive: true });
-    window.addEventListener("touchmove", onTouchMove, { passive: false });
+
+    el.addEventListener("pointerenter", onEnter);
+    el.addEventListener("pointerleave", onLeave);
+    el.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       ctl?.stop();
-      window.removeEventListener("wheel", onWheel);
-      window.removeEventListener("touchstart", onTouchStart);
-      window.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("pointerenter", onEnter);
+      el.removeEventListener("pointerleave", onLeave);
+      el.removeEventListener("wheel", onWheel);
       window.removeEventListener("scroll", onScroll);
     };
   }, [ref, prog, k]);
