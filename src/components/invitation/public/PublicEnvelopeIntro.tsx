@@ -531,9 +531,8 @@ function CardIntroStage({ p, orientation, envelopeColor, liner }: { p: MotionVal
       {/* lớp lót nhìn qua miệng */}
       <div style={{ ...pct(g.originX, g.originY, g.envW, g.envH), background: liner, clipPath: CARD_LINER_CLIP, zIndex: 2 }} />
       {/* nắp: bản lề ở mép trên thân */}
-      <motion.div style={{ ...pct(g.originX, g.originY - g.flapH, g.envW, g.flapH), background: envelopeColor, clipPath: CARD_FLAP_CLIP, transformOrigin: "50% 100%", rotateX: flapDeg, zIndex: flapZ, filter: "brightness(1.08)" }}>
-        <div style={{ position: "absolute", left: "7%", right: "7%", bottom: 0, top: "16%", background: liner, clipPath: CARD_FLAP_CLIP }} />
-      </motion.div>
+      {/* nắp: CÙNG MÀU phong bì (không phủ lớp lót lên nắp; lớp lót chỉ nhìn thấy qua miệng túi) */}
+      <motion.div style={{ ...pct(g.originX, g.originY - g.flapH, g.envW, g.flapH), background: `linear-gradient(180deg, rgba(255,255,255,.18), transparent), ${envelopeColor}`, clipPath: CARD_FLAP_CLIP, transformOrigin: "50% 100%", rotateX: flapDeg, zIndex: flapZ }} />
       {/* thiệp: hai mặt, lật 3D quanh trục giữa */}
       <motion.div
         style={{

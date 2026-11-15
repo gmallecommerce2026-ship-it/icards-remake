@@ -128,11 +128,7 @@ export function CardEnvelopeScene({ card, orientation, envelopeColor, liner, sen
               background: envelopeColor, clipPath: FLAP_CLIP, transformOrigin: '50% 100%',
               rotateX: flapDeg, zIndex: flapZ, filter: 'brightness(1.08)',
             }}
-          >
-            <div
-              style={{ position: 'absolute', left: '7%', right: '7%', bottom: 0, top: '16%', background: liner, clipPath: FLAP_CLIP }}
-            />
-          </motion.div>
+          />
 
           {/* 4. Thiệp (đúng hướng của nó, không xoay) */}
           <motion.div
