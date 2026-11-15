@@ -47,16 +47,35 @@ export function CategoryHero3D({ hero, categoryLabel }: Props) {
     if (!el || reduce) return;
     const WHEEL_PX = 1000; // số px lăn chuột để chạy hết animation
     const onWheel = (e: WheelEvent) => {
-      if (!hovering.current) return;
+      // Sự kiện wheel chỉ tới section khi con trỏ đang ở trên nó, nên không cần chờ pointerenter
+      // (pointerenter có thể đến trễ hoặc không đến khi trang cuộn dưới con trỏ đứng yên).
+      if (!hovering.current) {
+        hovering.current = true;
+        run.current?.stop();
+      }
+      if (e.ctrlKey || e.deltaY === 0) return; // ctrl+lăn = zoom của trình duyệt; lăn ngang thì bỏ qua
+      // Chuẩn hóa về px: Firefox/chuột cũ báo theo dòng (deltaMode 1) hoặc trang (2)
+      const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * window.innerHeight : e.deltaY;
       const cur = p.get();
-      const atEnd = (e.deltaY > 0 && cur >= 1) || (e.deltaY < 0 && cur <= 0);
+      const atEnd = (dy > 0 && cur >= 1) || (dy < 0 && cur <= 0);
       if (atEnd) return; // đã hết animation theo chiều này: để trang cuộn bình thường
       e.preventDefault();
-      p.set(Math.min(1, Math.max(0, cur + e.deltaY / WHEEL_PX)));
+      p.set(Math.min(1, Math.max(0, cur + dy / WHEEL_PX)));
+    };
+    // Con trỏ rời cửa sổ mà section không nhận pointerleave: vẫn phải trả p về theo cuộn trang
+    const onDocLeave = () => {
+      if (!hovering.current) return;
+      hovering.current = false;
+      run.current?.stop();
+      run.current = animate(p, scrollYProgress.get(), { duration: 0.6, ease: "easeOut" });
     };
     el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [p, reduce]);
+    document.documentElement.addEventListener("mouseleave", onDocLeave);
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      document.documentElement.removeEventListener("mouseleave", onDocLeave);
+    };
+  }, [p, reduce, scrollYProgress]);
   const k = reduce ? 0 : hero.speed;
   const accent = hero.accent;
   const title = hero.title || categoryLabel;
