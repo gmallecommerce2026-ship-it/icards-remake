@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { animate, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useTransform, type AnimationPlaybackControls, type MotionValue } from "motion/react";
 import type { TemplateHero } from "@/lib/template-heroes";
 
@@ -27,19 +27,36 @@ export function CategoryHero3D({ hero, categoryLabel }: Props) {
   useMotionValueEvent(scrollYProgress, "change", (v) => {
     if (!hovering.current && !reduce) p.set(v);
   });
+  // Khi chuột ở trên hero: lăn chuột điều khiển animation, chưa xong thì chặn cuộn trang.
+  // Hết animation theo chiều đang lăn thì trả lại cuộn trang bình thường.
   const onEnter = () => {
     if (reduce) return;
     hovering.current = true;
     run.current?.stop();
-    // thời lượng tỉ lệ nghịch với tốc độ admin cài: tốc độ cao thì chạy nhanh hơn
-    run.current = animate(p, 1, { duration: 6 / Math.max(hero.speed, 0.2), ease: "linear" });
   };
   const onLeave = () => {
     if (reduce) return;
     hovering.current = false;
     run.current?.stop();
-    run.current = animate(p, scrollYProgress.get(), { duration: 0.8, ease: "easeOut" });
+    // rời chuột thì đưa animation về đúng vị trí cuộn trang hiện tại
+    run.current = animate(p, scrollYProgress.get(), { duration: 0.6, ease: "easeOut" });
   };
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || reduce) return;
+    const WHEEL_PX = 1000; // số px lăn chuột để chạy hết animation
+    const onWheel = (e: WheelEvent) => {
+      if (!hovering.current) return;
+      const cur = p.get();
+      const atEnd = (e.deltaY > 0 && cur >= 1) || (e.deltaY < 0 && cur <= 0);
+      if (atEnd) return; // đã hết animation theo chiều này: để trang cuộn bình thường
+      e.preventDefault();
+      p.set(Math.min(1, Math.max(0, cur + e.deltaY / WHEEL_PX)));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [p, reduce]);
   const k = reduce ? 0 : hero.speed;
   const accent = hero.accent;
   const title = hero.title || categoryLabel;
