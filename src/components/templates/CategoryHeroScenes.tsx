@@ -23,7 +23,7 @@ function Frame({ hero, categoryLabel, height, hint, p, children }: SceneProps & 
   const accent = hero.accent;
   const title = hero.title || categoryLabel;
   return (
-    <div className="relative mx-auto w-full" style={{ containerType: "inline-size", maxWidth: "min(1080px, calc((100svh - 120px) * 1.7))" }}>
+    <div className="relative mx-auto w-full" style={{ containerType: "inline-size", maxWidth: "min(1080px, calc((75svh - 56px) * 1.05))" }}>
       <div className="text-center">
         {hero.title && (
           <p className="font-semibold uppercase" style={{ color: accent, fontSize: "1.6cqw", letterSpacing: "0.32em" }}>

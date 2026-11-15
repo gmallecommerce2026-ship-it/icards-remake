@@ -126,11 +126,11 @@ export default function TemplateHeroAdmin() {
                     ))}
                   </select>
                 </Field>
-                <Field label="Tốc độ chạy theo cuộn (0.2 – 3)">
+                <Field label="Tốc độ chạy theo cuộn (1 – 3, 1 là bình thường)">
                   <input
-                    type="number" min={0.2} max={3} step={0.1} className={inputCls}
+                    type="number" min={1} max={3} step={0.1} className={inputCls}
                     value={h.speed}
-                    onChange={(e) => patch(id, { speed: Math.min(3, Math.max(0.2, Number(e.target.value) || 1)) })}
+                    onChange={(e) => patch(id, { speed: Math.min(3, Math.max(1, Number(e.target.value) || 1)) })}
                   />
                 </Field>
                 <Field label="Tiêu đề (để trống = tên danh mục)">

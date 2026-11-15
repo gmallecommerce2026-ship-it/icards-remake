@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ComponentType, type CSSProperties, type ReactNode } from "react";
+import { useRef, type ComponentType, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { cubicBezier, motion, useMotionValue, useReducedMotion, useScroll, useSpring, useTime, useTransform, useVelocity, type MotionValue } from "motion/react";
 import type { HeroPreset, TemplateHero } from "@/lib/template-heroes";
 import { CubeScene, BookScene, FanScene, FlowerScene, type SceneProps } from "./CategoryHeroScenes";
@@ -9,7 +9,8 @@ type Props = { hero: TemplateHero; categoryLabel: string };
 
 /**
  * Hero 3D cho trang danh mục mẫu thiệp. Kiểu do admin chọn, nội dung do admin nhập.
- * Mọi kiểu đều là cảnh "ghim" (sticky): cuộn trang điều khiển animation. Tốc độ do admin đặt (speed): lớn hơn thì chạy nhanh hơn.
+ * Banner cao khoảng 3/4 màn hình (không ghim) để group filter bên dưới luôn lộ ra. Animation chạy theo tiến trình cuộn
+ * khi banner đi qua đầu màn hình. Speed do admin đặt: từ 1 trở lên thì animation chạy nhanh hơn (dưới 1 coi như 1).
  * - envelope: phong bì lật lấy thiệp (EnvelopeHero).
  * - fan / book / flower / cube: các cảnh 3D trong CategoryHeroScenes.
  */
@@ -17,7 +18,7 @@ export function CategoryHero3D(props: Props) {
   const preset = props.hero.preset;
   if (preset === "envelope") return <EnvelopeHero {...props} />;
   const Scene = SCENES[preset as Exclude<HeroPreset, "envelope">];
-  return <PinnedScene {...props} Scene={Scene} />;
+  return <HeroSection {...props} Scene={Scene} />;
 }
 
 const SCENES: Record<Exclude<HeroPreset, "envelope">, ComponentType<SceneProps>> = {
@@ -27,38 +28,30 @@ const SCENES: Record<Exclude<HeroPreset, "envelope">, ComponentType<SceneProps>>
   cube: CubeScene,
 };
 
-/** Chiều cao vùng ghim (svh) theo tốc độ: speed 1 giữ nguyên base; speed lớn thì ngắn lại. Quãng cuộn = chiều cao − 100 svh. */
-export function pinHeight(speed: number, base: number): number {
-  const s = Number.isFinite(speed) && speed > 0 ? speed : 1;
-  return Math.round(100 + (base - 100) / s);
+/** Chiều cao banner (svh): để phần dưới màn hình cho group filter. */
+export const HERO_HEIGHT = "75svh";
+
+/** Tiến trình cuộn của banner: 0 khi banner nằm đầu màn hình, 1 khi đã đi qua hết. Speed nhân tiến trình, tối đa 1. */
+export function useHeroProgress(ref: RefObject<HTMLElement | null>, speed: number) {
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+  const eased = useSpring(scrollYProgress, { stiffness: 70, damping: 24, mass: 0.7 }); // làm mượt như trước
+  const k = Math.max(1, Number.isFinite(speed) ? speed : 1);
+  return useTransform(eased, (v) => Math.min(1, v * k));
 }
 
-/** Chiều cao ghim cho các kiểu mới (svh). Tăng để chậm hơn. */
-const SCENE_PIN_VH = 360;
-
-/** Khung ghim dùng chung cho các kiểu mới: nhận một cảnh và truyền tiến độ cuộn xuống. */
-function PinnedScene({ hero, categoryLabel, Scene }: Props & { Scene: ComponentType<SceneProps> }) {
+/** Khung banner dùng chung cho các kiểu mới: một cảnh, cao 75svh, không ghim. */
+function HeroSection({ hero, categoryLabel, Scene }: Props & { Scene: ComponentType<SceneProps> }) {
   const ref = useRef<HTMLElement>(null);
-  const reduce = !!useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
-  // Cùng thông số làm mượt với phong bì
-  const p = useSpring(scrollYProgress, { stiffness: 70, damping: 24, mass: 0.7 });
-  const settled = useMotionValue(1); // người dùng bật giảm chuyển động: hiện cảnh ở trạng thái cuối, không ghim
-
+  const p = useHeroProgress(ref, hero.speed);
   return (
     <section
       ref={ref}
       aria-label={`Giới thiệu danh mục ${categoryLabel}`}
-      className="relative border-b border-black/5"
-      style={{
-        height: reduce ? undefined : `${pinHeight(hero.speed, SCENE_PIN_VH)}svh`,
-        background: `linear-gradient(180deg, ${hero.accent}1f 0%, #FEFDFD 85%)`,
-      }}
+      className="relative flex items-center justify-center overflow-hidden border-b border-black/5 px-5"
+      style={{ height: HERO_HEIGHT, background: `linear-gradient(180deg, ${hero.accent}1f 0%, #FEFDFD 85%)` }}
     >
-      <div className="sticky top-0 flex h-[100svh] items-center justify-center overflow-hidden px-5">
-        <div className="w-full">
-          <Scene p={reduce ? settled : p} reduce={reduce} hero={hero} categoryLabel={categoryLabel} />
-        </div>
+      <div className="w-full">
+        <Scene p={p} reduce={false} hero={hero} categoryLabel={categoryLabel} />
       </div>
     </section>
   );
@@ -66,15 +59,12 @@ function PinnedScene({ hero, categoryLabel, Scene }: Props & { Scene: ComponentT
 
 /* ====================== Phong bì: cảnh ghim + cuộn ====================== */
 
-/** Chiều cao vùng ghim (svh). Quãng cuộn để chạy hết animation = (PIN_VH − 100) svh. Tăng để chậm hơn, giảm để nhanh hơn. */
-const PIN_VH = 480;
 
 function EnvelopeHero({ hero, categoryLabel }: Props) {
   const ref = useRef<HTMLElement>(null);
   const reduce = !!useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
-  // Cùng thông số làm mượt với trang xem thiệp mời (PublicEnvelopeIntro)
-  const p = useSpring(scrollYProgress, { stiffness: 70, damping: 24, mass: 0.7 });
+  // Cùng thông số làm mượt với trang xem thiệp mời (PublicEnvelopeIntro), và cùng cách tính tiến trình như các kiểu khác
+  const p = useHeroProgress(ref, hero.speed);
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
   const look = { x: useSpring(mx, { stiffness: 60, damping: 18 }), y: useSpring(my, { stiffness: 60, damping: 18 }) };
@@ -88,10 +78,10 @@ function EnvelopeHero({ hero, categoryLabel }: Props) {
       ref={ref}
       aria-label={`Giới thiệu danh mục ${categoryLabel}`}
       className="relative border-b border-black/5"
-      style={{ height: `${pinHeight(hero.speed, PIN_VH)}svh`, background: `linear-gradient(180deg, ${hero.accent}1f 0%, #FEFDFD 85%)` }}
+      style={{ height: HERO_HEIGHT, background: `linear-gradient(180deg, ${hero.accent}1f 0%, #FEFDFD 85%)` }}
     >
       <div
-        className="sticky top-0 flex h-[100svh] items-center justify-center overflow-hidden px-5"
+        className="flex h-full items-center justify-center overflow-hidden px-5"
         onPointerMove={(e) => {
           if (e.pointerType !== "mouse" || reduce) return;
           const r = e.currentTarget.getBoundingClientRect();
@@ -265,7 +255,7 @@ function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: Moti
   const H = "33cqw";
 
   return (
-    <div className="relative mx-auto w-full" style={{ containerType: "inline-size", maxWidth: "min(1080px, calc((100svh - 120px) * 2))" }}>
+    <div className="relative mx-auto w-full" style={{ containerType: "inline-size", maxWidth: "min(1080px, calc((75svh - 56px) * 1.6))" }}>
       <div className="relative w-full" style={{ height: "50cqw", perspective: 1400 }}>
         {/* Cánh hoa rơi chậm (phẳng, nằm sau cảnh) */}
         {!reduce && PETALS.map((pt, i) => <Petal key={i} p={p} {...pt} accent={accent} />)}
