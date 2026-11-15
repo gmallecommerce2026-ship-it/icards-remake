@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   AlignLeft,
@@ -41,6 +41,11 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 /* ------------------------------------------------------------------ */
 /*  KIỂU TRANG (tab Page Style)                                        */
 /* ------------------------------------------------------------------ */
+export type PageDeco =
+  | "none" | "bunting" | "flourish"
+  | "heritage" | "gazette" | "botanica" | "deco" | "confetti" | "blueprint" | "monogram" | "aurora";
+/** kiểu khối "Chủ tiệc / Thời gian / Địa điểm" */
+export type ColsVariant = "plain" | "ruled" | "cards" | "boxed" | "glass";
 export type PageStyle = {
   id: string;
   name: string;
@@ -51,8 +56,14 @@ export type PageStyle = {
   upper: boolean;
   tracking: string;
   titleSize: string;
-  deco: "none" | "bunting" | "flourish";
-  btn: "outline" | "solid";
+  deco: PageDeco;
+  btn: "outline" | "solid" | "pill" | "soft";
+  titleItalic?: boolean;
+  titleColor?: "ink" | "accent";
+  labelFont?: string;
+  cols?: ColsVariant;
+  /** cỡ chữ của nút chọn kiểu trong bảng (mặc định 1.25rem) */
+  previewSize?: string;
 };
 
 const PAGE_STYLES: PageStyle[] = [
@@ -60,7 +71,24 @@ const PAGE_STYLES: PageStyle[] = [
   { id: "bunting", name: "Bunting", font: "var(--ev-mono), monospace", body: "var(--ev-mono), monospace", weight: 400, upper: false, tracking: "0.03em", titleSize: "clamp(1.5rem,3.6vw,2.3rem)", deco: "bunting", btn: "solid" },
   { id: "sloane", name: "Sloane", font: "var(--ev-sans), sans-serif", body: "var(--ev-sans), sans-serif", weight: 500, upper: true, tracking: "0.12em", titleSize: "clamp(1.5rem,3.6vw,2.4rem)", deco: "none", btn: "outline" },
   { id: "offset", name: "Offset", font: "var(--ev-display), sans-serif", body: "var(--ev-sans), sans-serif", weight: 700, upper: true, tracking: "0.04em", titleSize: "clamp(2.2rem,6.5vw,4.2rem)", deco: "none", btn: "solid" },
-  { id: "plume", name: "Plume", font: "var(--ev-script), cursive", body: "var(--ev-serif), serif", bodyItalic: true, weight: 400, upper: false, tracking: "0", titleSize: "clamp(2.8rem,7.5vw,4.8rem)", deco: "flourish", btn: "outline" },
+  { id: "plume", name: "Plume", font: "var(--ev-script), cursive", body: "var(--ev-serif), serif", bodyItalic: true, weight: 400, upper: false, tracking: "0", titleSize: "clamp(2.8rem,7.5vw,4.8rem)", deco: "flourish", btn: "outline", previewSize: "1.9rem" },
+  // ---- 8 kiểu mới ----
+  // Cổ điển: chữ hoa thưa, khung đôi + hoạ tiết góc, ngăn cách hình thoi
+  { id: "heritage", name: "Heritage", font: "var(--ev-serif), serif", body: "var(--ev-serif), serif", weight: 600, upper: true, tracking: "0.16em", titleSize: "clamp(1.7rem,4.2vw,2.8rem)", deco: "heritage", btn: "outline", cols: "ruled", previewSize: "1.05rem" },
+  // Báo chí: tiêu đề đậm kiểu masthead kẹp giữa hai đường kẻ đôi
+  { id: "gazette", name: "Gazette", font: "var(--ev-serif), serif", body: "var(--ev-serif), serif", weight: 700, upper: true, tracking: "0.05em", titleSize: "clamp(2rem,5.2vw,3.5rem)", deco: "gazette", btn: "solid", cols: "ruled", previewSize: "1.15rem" },
+  // Vườn hoa: chữ nghiêng mềm, cành lá đối xứng, thẻ bo tròn
+  { id: "botanica", name: "Botanica", font: "var(--ev-serif), serif", body: "var(--ev-serif), serif", bodyItalic: true, titleItalic: true, weight: 500, upper: false, tracking: "0", titleSize: "clamp(2.4rem,6.2vw,4rem)", deco: "botanica", btn: "soft", cols: "cards", previewSize: "1.45rem" },
+  // Art Deco: chữ Oswald thưa, màu nhấn, khung vát + quạt ở bốn góc
+  { id: "deco", name: "Art Deco", font: "var(--ev-display), sans-serif", body: "var(--ev-sans), sans-serif", weight: 500, upper: true, tracking: "0.22em", titleSize: "clamp(1.8rem,4.6vw,3rem)", titleColor: "accent", deco: "deco", btn: "outline", cols: "boxed", previewSize: "1rem" },
+  // Tiệc vui: chữ tròn đậm, confetti nhiều màu, nút bo tròn
+  { id: "confetti", name: "Confetti", font: "var(--ev-sans), sans-serif", body: "var(--ev-sans), sans-serif", weight: 600, upper: false, tracking: "-0.02em", titleSize: "clamp(2rem,5.6vw,3.6rem)", titleColor: "accent", deco: "confetti", btn: "pill", cols: "cards", previewSize: "1.2rem" },
+  // Bản vẽ kỹ thuật: lưới ô vuông, dấu góc, chữ mono hoa
+  { id: "blueprint", name: "Blueprint", font: "var(--ev-mono), monospace", body: "var(--ev-mono), monospace", weight: 700, upper: true, tracking: "0.08em", titleSize: "clamp(1.4rem,3.4vw,2.2rem)", labelFont: "var(--ev-mono), monospace", deco: "blueprint", btn: "outline", cols: "boxed", previewSize: "1rem" },
+  // Chữ lồng: vòng tròn chữ cái đầu tên + serif thanh lịch
+  { id: "monogram", name: "Monogram", font: "var(--ev-serif), serif", body: "var(--ev-serif), serif", bodyItalic: true, weight: 500, upper: false, tracking: "0.02em", titleSize: "clamp(1.9rem,4.8vw,3.1rem)", deco: "monogram", btn: "pill", cols: "plain", previewSize: "1.3rem" },
+  // Cực quang: nền loang màu nhấn, chữ mảnh, thẻ kính mờ
+  { id: "aurora", name: "Aurora", font: "var(--ev-sans), sans-serif", body: "var(--ev-sans), sans-serif", weight: 500, upper: false, tracking: "-0.03em", titleSize: "clamp(2.2rem,6vw,4rem)", titleColor: "accent", deco: "aurora", btn: "soft", cols: "glass", previewSize: "1.25rem" },
 ];
 const ACCENTS = ["#2F4C8F", "#A3152F", "#0F7B6C", "#C9811B", "#D6478A", "#1D1B2A"];
 const BGS = ["#FFFCF6", "#FFFFFF", "#FCEFF2", "#EAF1FB", "#EFEBE0", "#14233F"];
@@ -184,6 +212,29 @@ export function getPageStyle(id: string): PageStyle {
   return PAGE_STYLES.find((x) => x.id === id) ?? PAGE_STYLES[0];
 }
 
+/** Chữ nhãn nhỏ ("CHỦ TIỆC", "THỜI GIAN"...) theo kiểu trang */
+export function labelStyle(st: PageStyle): CSSProperties {
+  return {
+    fontFamily: st.labelFont ?? "var(--ev-sans), sans-serif",
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: "0.2em",
+    textTransform: "uppercase",
+    opacity: 0.65,
+  };
+}
+
+/** Nút (phản hồi tham dự, gửi lời chúc...) theo kiểu trang */
+export function buttonStyle(st: PageStyle): CSSProperties {
+  const solid: CSSProperties = { background: "var(--ev-accent)", color: "var(--ev-on-accent)", border: "1px solid var(--ev-accent)" };
+  switch (st.btn) {
+    case "solid": return { ...solid, borderRadius: 0 };
+    case "pill": return { ...solid, borderRadius: 999 };
+    case "soft": return { background: "color-mix(in srgb, var(--ev-accent) 16%, transparent)", color: "var(--ev-accent)", border: "1px solid color-mix(in srgb, var(--ev-accent) 35%, transparent)", borderRadius: 999 };
+    default: return { border: "1px solid var(--ev-ink)", color: "var(--ev-ink)", borderRadius: 0 };
+  }
+}
+
 /** Biến màu của trang: cùng công thức với khung thiệp trong editor */
 export function pageTheme(accent: string, bg: string): CSSProperties {
   return {
@@ -233,18 +284,13 @@ export function EventDetailsEditor({
   const head: CSSProperties = {
     fontFamily: st.font,
     fontWeight: st.weight,
+    fontStyle: st.titleItalic ? "italic" : "normal",
     letterSpacing: st.tracking,
     textTransform: st.upper ? "uppercase" : "none",
+    color: st.titleColor === "accent" ? "var(--ev-accent)" : undefined,
   };
   const body: CSSProperties = { fontFamily: st.body, fontStyle: st.bodyItalic ? "italic" : "normal" };
-  const label: CSSProperties = {
-    fontFamily: "var(--ev-sans), sans-serif",
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: "0.2em",
-    textTransform: "uppercase",
-    opacity: 0.65,
-  };
+  const label = labelStyle(st);
   const underline: CSSProperties = { borderBottom: "1px dotted var(--ev-accent)" };
 
   const set = <K extends keyof EventInfo>(k: K) => (v: string) => setInfo((s) => ({ ...s, [k]: v }));
@@ -271,10 +317,7 @@ export function EventDetailsEditor({
   };
 
   const g: GuestLists = guests ?? { attending: [], pending: [] };
-  const rsvpStyle: CSSProperties =
-    st.btn === "solid"
-      ? { background: "var(--ev-accent)", color: "var(--ev-on-accent)", border: "1px solid var(--ev-accent)" }
-      : { border: "1px solid var(--ev-ink)", color: "var(--ev-ink)" };
+  const rsvpStyle = buttonStyle(st);
 
   return (
     <div className={`relative flex min-h-full flex-col ${readOnly ? "" : "bg-white"} text-[#1D1B2A]`} style={{ fontFamily: "var(--ev-sans), system-ui, sans-serif" }}>
@@ -351,7 +394,7 @@ export function EventDetailsEditor({
                             fontWeight: s.weight,
                             letterSpacing: s.tracking,
                             textTransform: s.upper ? "uppercase" : "none",
-                            fontSize: s.id === "plume" ? "1.9rem" : "1.25rem",
+                            fontSize: s.previewSize ?? "1.25rem",
                             lineHeight: 1.2,
                           }}
                         >
@@ -359,7 +402,7 @@ export function EventDetailsEditor({
                         </button>
                       ))}
                     </div>
-                    <div className="flex flex-col items-center gap-2 rounded-full border border-black/10 px-2 py-3">
+                    <div className="sticky top-0 flex flex-col items-center gap-2 self-start rounded-full border border-black/10 bg-white px-2 py-3">
                       <ColorWheel label="Chọn màu nhấn tuỳ ý" value={accent} onPick={setAccent} />
                       {ACCENTS.map((c) => (
                         <Dot key={c} label={`Màu nhấn ${c}`} color={c} active={c === accent} onPick={() => setAccent(c)} />
@@ -425,16 +468,17 @@ export function EventDetailsEditor({
 
         {/* TRANG THIỆP ONLINE */}
         <main
-          className="relative min-w-0 flex-1 overflow-hidden px-5 pb-28 pt-20 transition-colors duration-500 md:px-10"
+          className="relative isolate min-w-0 flex-1 overflow-hidden px-5 pb-28 pt-20 transition-colors duration-500 md:px-10"
           style={{ ...vars, background: "var(--ev-bg)", color: "var(--ev-ink)", ...body }}
         >
           <ReadOnlyCtx.Provider value={preview}>
-          {st.deco === "bunting" && <Bunting />}
+          <Backdrop deco={st.deco} />
 
-          <div className="mx-auto max-w-3xl text-center">
-            <Editable id="ev-title" multiline cpl={26} value={info.title} onChange={set("title")} placeholder="Tên sự kiện" style={{ ...head, fontSize: st.titleSize, lineHeight: 1.12 }} />
+          <div className="relative mx-auto max-w-3xl text-center">
+            <AboveTitle deco={st.deco} title={info.title} />
+            <Editable id="ev-title" multiline value={info.title} onChange={set("title")} placeholder="Tên sự kiện" style={{ ...head, fontSize: st.titleSize, lineHeight: 1.2 }} />
 
-            {st.deco === "flourish" && <Flourish />}
+            <BelowTitle deco={st.deco} />
 
             {showRsvp && (
               <div className="mt-10 flex flex-wrap justify-center gap-3">
@@ -447,18 +491,18 @@ export function EventDetailsEditor({
             )}
 
             <div className="mx-auto mt-10 max-w-xl text-lg">
-              <Editable multiline cpl={44} value={info.description} onChange={set("description")} placeholder="Lời mời của bạn" />
+              <Editable multiline value={info.description} onChange={set("description")} placeholder="Lời mời của bạn" />
             </div>
 
             <div className="mt-14 grid gap-10 text-base md:grid-cols-3">
-              <InfoCol label="Chủ tiệc" labelStyle={label}>
+              <InfoCol label="Chủ tiệc" labelStyle={label} cols={st.cols}>
                 <Editable value={info.host} onChange={set("host")} placeholder="Tên bạn" style={underline} />
               </InfoCol>
-              <InfoCol label="Thời gian" labelStyle={label}>
+              <InfoCol label="Thời gian" labelStyle={label} cols={st.cols}>
                 <Editable value={info.date} onChange={set("date")} placeholder="Ngày" style={underline} />
                 <Editable value={info.time} onChange={set("time")} placeholder="Giờ" style={underline} />
               </InfoCol>
-              <InfoCol label="Địa điểm" labelStyle={label}>
+              <InfoCol label="Địa điểm" labelStyle={label} cols={st.cols}>
                 <Editable value={info.venue} onChange={set("venue")} placeholder="Tên địa điểm" style={underline} />
                 <Editable value={info.address} onChange={set("address")} placeholder="Địa chỉ" style={underline} />
               </InfoCol>
@@ -567,9 +611,18 @@ function MiniBtn({ label, icon: Icon, onClick, disabled }: { label: string; icon
   );
 }
 
-function InfoCol({ label, labelStyle, children }: { label: string; labelStyle: CSSProperties; children: ReactNode }) {
+const COLS: Record<ColsVariant, { cls: string; style?: CSSProperties }> = {
+  plain: { cls: "" },
+  ruled: { cls: "md:px-4 md:[&:not(:first-child)]:border-l", style: { borderColor: "color-mix(in srgb, var(--ev-accent) 45%, transparent)" } },
+  cards: { cls: "rounded-2xl p-6", style: { background: "color-mix(in srgb, var(--ev-accent) 9%, transparent)", border: "1px solid color-mix(in srgb, var(--ev-accent) 22%, transparent)" } },
+  boxed: { cls: "p-6", style: { border: "1px solid var(--ev-accent)", boxShadow: "5px 5px 0 color-mix(in srgb, var(--ev-accent) 30%, transparent)" } },
+  glass: { cls: "rounded-2xl p-6 backdrop-blur-sm", style: { background: "color-mix(in srgb, var(--ev-ink) 5%, transparent)", border: "1px solid color-mix(in srgb, var(--ev-ink) 12%, transparent)" } },
+};
+
+function InfoCol({ label, labelStyle, cols = "plain", children }: { label: string; labelStyle: CSSProperties; cols?: ColsVariant; children: ReactNode }) {
+  const v = COLS[cols];
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className={`flex flex-col items-center gap-3 ${v.cls}`} style={v.style}>
       <h3 style={labelStyle}>{label}</h3>
       <div className="flex w-full flex-col gap-2">{children}</div>
     </div>
@@ -600,7 +653,6 @@ function Editable({
   placeholder,
   style,
   multiline,
-  cpl = 30,
   id,
 }: {
   value: string;
@@ -608,7 +660,6 @@ function Editable({
   placeholder?: string;
   style?: CSSProperties;
   multiline?: boolean;
-  cpl?: number; // số ký tự ước tính trên một dòng, để tự giãn chiều cao
   id?: string;
 }) {
   const ro = useContext(ReadOnlyCtx);
@@ -616,8 +667,50 @@ function Editable({
   if (!multiline) {
     return <input id={id} type="text" readOnly={ro} tabIndex={ro ? -1 : undefined} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={cls} style={{ font: "inherit", ...style }} />;
   }
-  const rows = Math.max(1, value.split("\n").reduce((n, l) => n + Math.max(1, Math.ceil(l.length / cpl)), 0));
-  return <textarea id={id} readOnly={ro} tabIndex={ro ? -1 : undefined} rows={rows} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={`${cls} resize-none`} style={{ font: "inherit", ...style }} />;
+  return <AutoTextarea id={id} readOnly={ro} value={value} placeholder={placeholder} onChange={onChange} className={cls} style={style} />;
+}
+
+/**
+ * Ô nhiều dòng tự co giãn theo nội dung THẬT (scrollHeight), không đoán số ký tự mỗi dòng như trước.
+ * Cách cũ đoán thiếu dòng -> hiện scrollbar cạnh tiêu đề (nhất là chữ tiếng Việt nhiều dấu, phông to).
+ * Chạy lại khi: nội dung/kiểu chữ đổi, chiều rộng khung đổi, phông tải xong.
+ */
+function AutoTextarea({ id, value, placeholder, onChange, readOnly, className, style }: {
+  id?: string; value: string; placeholder?: string; onChange: (v: string) => void; readOnly: boolean; className: string; style?: CSSProperties;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const fit = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+  useLayoutEffect(fit);   // mỗi lần render (đổi chữ, đổi kiểu trang, đổi cỡ chữ)
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(fit);
+    ro.observe(el.parentElement ?? el);   // quan sát khung cha (chiều rộng), không phải chính ô (tránh lặp vô hạn)
+    const fonts = document.fonts;
+    void fonts?.ready.then(fit);
+    fonts?.addEventListener?.("loadingdone", fit);
+    return () => { ro.disconnect(); fonts?.removeEventListener?.("loadingdone", fit); };
+  }, [fit]);
+  return (
+    <textarea
+      ref={ref}
+      id={id}
+      rows={1}
+      readOnly={readOnly}
+      tabIndex={readOnly ? -1 : undefined}
+      value={value}
+      placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
+      className={`${className} block resize-none overflow-hidden`}
+      // đệm trên/dưới để dấu tiếng Việt (ế, ử, ặ...) không bị cắt khi ô ẩn phần tràn
+      style={{ font: "inherit", paddingBlock: "0.1em", ...style }}
+    />
+  );
 }
 
 function BlockBody({ b, patch }: { b: Block; patch: (p: Partial<Block>) => void }) {
@@ -642,7 +735,7 @@ function BlockBody({ b, patch }: { b: Block; patch: (p: Partial<Block>) => void 
   }
 
   if (b.type === "details") {
-    return <Editable multiline cpl={56} value={b.text} onChange={(v) => patch({ text: v })} placeholder="Chỉ đường, bãi đỗ xe, trang phục…" />;
+    return <Editable multiline value={b.text} onChange={(v) => patch({ text: v })} placeholder="Chỉ đường, bãi đỗ xe, trang phục…" />;
   }
 
   if (b.type === "gallery") {
@@ -729,5 +822,291 @@ function Flourish() {
     <svg aria-hidden viewBox="0 0 200 20" className="mx-auto mt-6 h-5 w-44" fill="none" stroke="var(--ev-accent)" strokeWidth="1.5" strokeLinecap="round">
       <path d="M2 10 C 30 -4, 50 24, 80 10 S 130 -2, 198 10" />
     </svg>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  HOẠ TIẾT THEO KIỂU TRANG                                           */
+/*  Backdrop: lớp nền nằm SAU nội dung (khung, lưới, đốm màu...)       */
+/*  AboveTitle / BelowTitle: nằm ngay trên / dưới tiêu đề              */
+/*  Mọi màu lấy từ --ev-accent / --ev-ink nên đổi màu trang là đổi theo */
+/* ------------------------------------------------------------------ */
+const mix = (pct: number, c = "var(--ev-accent)") => `color-mix(in srgb, ${c} ${pct}%, transparent)`;
+const LEAF = "M0 0 C 6 -9 20 -9 28 0 C 20 9 6 9 0 0Z";
+
+function Backdrop({ deco }: { deco: PageDeco }) {
+  if (deco === "none" || deco === "flourish" || deco === "gazette" || deco === "monogram") return null;
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      {deco === "bunting" && <Bunting />}
+      {deco === "heritage" && <HeritageFrame />}
+      {deco === "botanica" && <BotanicaCorners />}
+      {deco === "deco" && <DecoFrame />}
+      {deco === "confetti" && <Confetti />}
+      {deco === "blueprint" && <BlueprintGrid />}
+      {deco === "aurora" && <AuroraGlow />}
+    </div>
+  );
+}
+
+function AboveTitle({ deco, title }: { deco: PageDeco; title: string }) {
+  if (deco === "gazette") return <Rules />;
+  if (deco === "botanica") return <BotanicaTop />;
+  if (deco === "monogram") return <Monogram title={title} />;
+  if (deco === "blueprint") return <Crosshair />;
+  return null;
+}
+
+function BelowTitle({ deco }: { deco: PageDeco }) {
+  switch (deco) {
+    case "flourish": return <Flourish />;
+    case "heritage": return <Divider />;
+    case "gazette": return <Rules flip />;
+    case "deco": return <DecoDivider />;
+    case "confetti": return <Squiggle />;
+    case "monogram": return <Divider round />;
+    case "blueprint": return <div className="mt-6 border-t border-dashed" style={{ borderColor: mix(60) }} />;
+    case "aurora": return <div className="mx-auto mt-6 h-px w-40" style={{ background: "linear-gradient(90deg, transparent, var(--ev-accent), transparent)" }} />;
+    default: return null;
+  }
+}
+
+/* ---- Heritage: khung đôi + hoạ tiết góc ---- */
+function HeritageFrame() {
+  const line = (inset: number, o: number): CSSProperties => ({ position: "absolute", inset, border: "1px solid var(--ev-accent)", opacity: o });
+  const corners: CSSProperties[] = [
+    { left: 8, top: 8 },
+    { right: 8, top: 8, transform: "scaleX(-1)" },
+    { left: 8, bottom: 8, transform: "scaleY(-1)" },
+    { right: 8, bottom: 8, transform: "scale(-1,-1)" },
+  ];
+  return (
+    <>
+      <div style={line(12, 0.75)} />
+      <div style={line(18, 0.3)} />
+      {corners.map((pos, i) => (
+        <svg key={i} viewBox="0 0 40 40" className="absolute size-10" style={pos} fill="none" stroke="var(--ev-accent)" strokeWidth="1.2" strokeLinecap="round">
+          <path d="M3 37 V12 Q3 3 12 3 H37" />
+          <circle cx="12" cy="12" r="2.2" fill="var(--ev-accent)" stroke="none" />
+        </svg>
+      ))}
+    </>
+  );
+}
+
+/** Đường kẻ có hình thoi (hoặc chấm tròn) ở giữa */
+function Divider({ round = false }: { round?: boolean }) {
+  return (
+    <svg viewBox="0 0 240 16" className="mx-auto mt-8 h-4 w-56" fill="none" stroke="var(--ev-accent)" strokeWidth="1.2" aria-hidden>
+      <path d="M0 8H100M140 8H240" />
+      {round ? <circle cx="120" cy="8" r="4" /> : <path d="M120 2 L126 8 L120 14 L114 8Z" fill="var(--ev-accent)" />}
+    </svg>
+  );
+}
+
+/* ---- Gazette: hai đường kẻ đôi (đậm + mảnh) ---- */
+function Rules({ flip = false }: { flip?: boolean }) {
+  const thick = <div style={{ height: 4, background: "var(--ev-ink)" }} />;
+  const thin = <div style={{ height: 1, background: "var(--ev-ink)" }} />;
+  return (
+    <div className={flip ? "mt-7" : "mb-7"} style={{ display: "grid", gap: 3 }}>
+      {flip ? <>{thin}{thick}</> : <>{thick}{thin}</>}
+    </div>
+  );
+}
+
+/* ---- Botanica: cành lá ---- */
+function BotanicaTop() {
+  const half = (
+    <g>
+      <path d="M4 20 C 40 20 80 20 118 20" />
+      {[14, 38, 62, 86].flatMap((x, i) =>
+        [-45, 45].map((a) => (
+          <path key={`${x}-${a}`} d={LEAF} fill="var(--ev-accent)" stroke="none" transform={`translate(${x} 20) rotate(${a}) scale(${(0.55 + i * 0.08).toFixed(2)})`} />
+        )),
+      )}
+    </g>
+  );
+  return (
+    <svg viewBox="0 0 280 40" className="mx-auto mb-6 h-9 w-72 max-w-full" fill="none" stroke="var(--ev-accent)" strokeWidth="1.3" strokeLinecap="round" aria-hidden>
+      {half}
+      <g transform="translate(280 0) scale(-1 1)">{half}</g>
+      <circle cx="140" cy="20" r="4" fill="var(--ev-accent)" stroke="none" />
+      <circle cx="140" cy="20" r="8" />
+    </svg>
+  );
+}
+
+function BotanicaCorners() {
+  const leaves = [28, 58, 88, 118, 148, 176].flatMap((x, i) => {
+    const y = 70 - 0.3125 * (x - 4);
+    const s = 1 - i * 0.08;
+    return [-67, 33].map((a) => ({ k: `${x}-${a}`, t: `translate(${x} ${y.toFixed(1)}) rotate(${a}) scale(${s.toFixed(2)})` }));
+  });
+  const sprig = (
+    <svg viewBox="0 0 200 80" className="h-28 w-72 max-md:w-48" fill="none" stroke="var(--ev-accent)" strokeWidth="1.4" strokeLinecap="round">
+      <path d="M4 70 C 50 60 110 40 196 10" />
+      {leaves.map((l) => <path key={l.k} d={LEAF} fill="var(--ev-accent)" stroke="none" transform={l.t} />)}
+      <path d={LEAF} fill="var(--ev-accent)" stroke="none" transform="translate(196 10) rotate(-17) scale(.7)" />
+    </svg>
+  );
+  return (
+    <>
+      <div className="absolute left-0 top-0 opacity-[0.16]" style={{ transform: "translate(-6%, 6%)" }}>{sprig}</div>
+      <div className="absolute bottom-0 right-0 opacity-[0.16]" style={{ transform: "translate(6%, -6%) scale(-1,-1)" }}>{sprig}</div>
+    </>
+  );
+}
+
+/* ---- Art Deco: khung đôi + quạt ở bốn góc ---- */
+function DecoFrame() {
+  const line = (inset: number, o: number): CSSProperties => ({ position: "absolute", inset, border: "1px solid var(--ev-accent)", opacity: o });
+  const corners: CSSProperties[] = [
+    { left: 12, top: 12 },
+    { right: 12, top: 12, transform: "scaleX(-1)" },
+    { left: 12, bottom: 12, transform: "scaleY(-1)" },
+    { right: 12, bottom: 12, transform: "scale(-1,-1)" },
+  ];
+  const rays: [number, number][] = [[56, 0], [51.74, 21.43], [39.6, 39.6], [21.43, 51.74], [0, 56]];
+  return (
+    <>
+      <div style={line(12, 0.9)} />
+      <div style={line(18, 0.35)} />
+      {corners.map((pos, i) => (
+        <svg key={i} viewBox="0 0 60 60" className="absolute size-14 max-md:size-10" style={pos} fill="none" stroke="var(--ev-accent)" strokeWidth="1.2" strokeLinecap="round">
+          {[14, 28, 42, 56].map((r) => <path key={r} d={`M${r} 0 A${r} ${r} 0 0 1 0 ${r}`} />)}
+          {rays.map(([x, y]) => <path key={`${x}-${y}`} d={`M0 0 L${x} ${y}`} />)}
+        </svg>
+      ))}
+    </>
+  );
+}
+
+function DecoDivider() {
+  return (
+    <svg viewBox="0 0 240 16" className="mx-auto mt-8 h-4 w-56" fill="var(--ev-accent)" stroke="var(--ev-accent)" strokeWidth="1.2" aria-hidden>
+      <path d="M0 8H84M156 8H240" fill="none" />
+      <path d="M120 1 L127 8 L120 15 L113 8Z" />
+      <path d="M96 4 L100 8 L96 12 L92 8Z M144 4 L148 8 L144 12 L140 8Z" />
+    </svg>
+  );
+}
+
+/* ---- Confetti: đốm màu cố định (không random lúc render để khỏi lệch giữa server và trình duyệt) ---- */
+// [trái %, trên %, kích thước px, hình (0 chấm · 1 vòng · 2 tam giác · 3 vuông), màu, góc xoay]
+const CONFETTI: [number, number, number, number, number, number][] = [
+  [3, 52, 8, 0, 0, 187], [9, 9, 10, 0, 0, 222], [89, 32, 8, 3, 0, 289], [4, 82, 18, 0, 3, 25], [88, 73, 10, 2, 3, 73],
+  [17, 5, 18, 1, 0, 297], [83, 4, 12, 0, 0, 288], [10, 28, 14, 3, 2, 238], [60, 6, 12, 1, 1, 124], [10, 40, 18, 3, 2, 229],
+  [10, 11, 8, 3, 1, 175], [95, 55, 8, 0, 2, 174], [46, 99, 18, 3, 0, 47], [8, 91, 8, 0, 2, 331], [89, 8, 12, 3, 2, 11],
+  [93, 23, 18, 0, 3, 30], [92, 18, 10, 3, 3, 254], [3, 59, 14, 2, 1, 220], [37, 7, 12, 3, 1, 77], [3, 21, 10, 1, 0, 248],
+  [25, 5, 12, 0, 1, 214], [49, 6, 10, 0, 3, 348], [52, 7, 14, 3, 0, 246], [53, 92, 10, 0, 1, 225], [89, 45, 18, 0, 0, 0],
+  [21, 9, 8, 2, 0, 36],
+];
+const CONFETTI_COLORS = ["var(--ev-accent)", "#F4B942", "#2EC4B6", "#FF6B8B"];
+
+function Confetti() {
+  return (
+    <>
+      {CONFETTI.map(([l, t, size, shape, c, rot], i) => {
+        const color = CONFETTI_COLORS[c];
+        const base: CSSProperties = { position: "absolute", left: `${l}%`, top: `${t}%`, width: size, height: size, transform: `rotate(${rot}deg)`, opacity: 0.85 };
+        if (shape === 0) return <i key={i} style={{ ...base, borderRadius: "50%", background: color }} />;
+        if (shape === 1) return <i key={i} style={{ ...base, borderRadius: "50%", border: `2px solid ${color}` }} />;
+        if (shape === 2) return <i key={i} style={{ ...base, background: color, clipPath: "polygon(50% 0, 100% 100%, 0 100%)" }} />;
+        return <i key={i} style={{ ...base, height: size * 0.5, borderRadius: 2, background: color }} />;
+      })}
+    </>
+  );
+}
+
+function Squiggle() {
+  return (
+    <svg viewBox="0 0 120 12" className="mx-auto mt-5 h-3 w-28" fill="none" stroke="var(--ev-accent)" strokeWidth="3" strokeLinecap="round" aria-hidden>
+      <path d="M3 6 q 7 -8 14 0 t 14 0 t 14 0 t 14 0 t 14 0 t 14 0 t 14 0" />
+    </svg>
+  );
+}
+
+/* ---- Blueprint: lưới ô vuông + dấu góc ---- */
+function BlueprintGrid() {
+  const brackets: CSSProperties[] = [
+    { left: 14, top: 14, borderWidth: "2px 0 0 2px" },
+    { right: 14, top: 14, borderWidth: "2px 2px 0 0" },
+    { left: 14, bottom: 14, borderWidth: "0 0 2px 2px" },
+    { right: 14, bottom: 14, borderWidth: "0 2px 2px 0" },
+  ];
+  return (
+    <>
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: `linear-gradient(${mix(14)} 1px, transparent 1px), linear-gradient(90deg, ${mix(14)} 1px, transparent 1px), linear-gradient(${mix(28)} 1px, transparent 1px), linear-gradient(90deg, ${mix(28)} 1px, transparent 1px)`,
+          backgroundSize: "24px 24px, 24px 24px, 120px 120px, 120px 120px",
+        }}
+      />
+      {brackets.map((b, i) => (
+        <div key={i} className="absolute size-6" style={{ ...b, borderStyle: "solid", borderColor: "var(--ev-accent)" }} />
+      ))}
+    </>
+  );
+}
+
+function Crosshair() {
+  return (
+    <svg viewBox="0 0 40 40" className="mx-auto mb-6 size-8" fill="none" stroke="var(--ev-accent)" strokeWidth="1.4" aria-hidden>
+      <circle cx="20" cy="20" r="9" />
+      <path d="M20 2 V12 M20 28 V38 M2 20 H12 M28 20 H38" />
+    </svg>
+  );
+}
+
+/* ---- Monogram: vòng tròn chữ cái đầu của hai tên ("Minh Anh & Quốc Bảo" -> A & B) ---- */
+function initials(title: string): { a: string; b: string; amp: boolean } {
+  const t = title.normalize("NFC").trim();
+  const up = (w?: string) => (w?.[0] ?? "").toLocaleUpperCase("vi");
+  const words = (p: string) => p.split(/\s+/).filter(Boolean);
+  const parts = t.split(/\s*&\s*|\s*\+\s*|\s+và\s+/i).map((p) => p.trim()).filter(Boolean);
+  if (parts.length >= 2) {
+    const a = words(parts[0]);
+    const b = words(parts[1]);
+    return { a: up(a[a.length - 1]), b: up(b[b.length - 1]), amp: true };   // tên riêng tiếng Việt là từ cuối
+  }
+  const w = words(t).filter((x) => x.length > 1);
+  return { a: up(w[0]) || "✦", b: up(w[1]), amp: false };
+}
+
+function Monogram({ title }: { title: string }) {
+  const { a, b, amp } = initials(title);
+  return (
+    <div
+      aria-hidden
+      className="mx-auto mb-8 grid size-24 place-items-center rounded-full"
+      style={{
+        border: "1px solid var(--ev-accent)",
+        boxShadow: `inset 0 0 0 5px var(--ev-bg), inset 0 0 0 6px ${mix(45)}`,
+        fontFamily: "var(--ev-serif), serif",
+        fontSize: "1.9rem",
+        color: "var(--ev-accent)",
+        letterSpacing: "0.04em",
+      }}
+    >
+      <span>
+        {a}
+        {amp && <span style={{ fontSize: "1rem", margin: "0 0.15em" }}>{"&"}</span>}
+        {b}
+      </span>
+    </div>
+  );
+}
+
+/* ---- Aurora: vệt sáng loang màu nhấn ---- */
+function AuroraGlow() {
+  const blob = (size: number, style: CSSProperties, c: string): CSSProperties => ({ position: "absolute", width: size, height: size, borderRadius: "50%", filter: "blur(70px)", background: c, ...style });
+  return (
+    <>
+      <div style={blob(460, { left: -140, top: -120, opacity: 0.42 }, "var(--ev-accent)")} />
+      <div style={blob(380, { right: -120, top: "28%", opacity: 0.3 }, "color-mix(in srgb, var(--ev-accent) 55%, #ffffff)")} />
+      <div style={blob(420, { left: "20%", bottom: -180, opacity: 0.28 }, "color-mix(in srgb, var(--ev-accent) 70%, #F4B942)")} />
+    </>
   );
 }

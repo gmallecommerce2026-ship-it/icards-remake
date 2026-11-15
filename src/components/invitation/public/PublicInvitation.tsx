@@ -4,7 +4,7 @@ import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { invitationsApi, wishesApi } from "@/lib/api";
 import { errorText, formatEventDate } from "@/lib/invitation-flow";
-import { EVENT_FONT_VARS, EventDetailsEditor, getPageStyle, normalizePage, pageTheme } from "@/components/invitation-send/EventDetailsEditor";
+import { EVENT_FONT_VARS, EventDetailsEditor, buttonStyle, getPageStyle, labelStyle, normalizePage, pageTheme } from "@/components/invitation-send/EventDetailsEditor";
 import { PublicEnvelopeIntro, type PublicDesign } from "./PublicEnvelopeIntro";
 
 type Guest = { name: string; status: "pending" | "attending" | "declined"; companions: number } | null;
@@ -35,25 +35,8 @@ const WISH_HEADING: Record<string, string> = {
   event: "Gửi lời nhắn tới ban tổ chức",
 };
 
-const LABEL: CSSProperties = {
-  fontFamily: "var(--ev-sans), sans-serif",
-  fontSize: 11,
-  fontWeight: 600,
-  letterSpacing: "0.2em",
-  textTransform: "uppercase",
-  opacity: 0.65,
-};
 const FIELD: CSSProperties = { borderBottom: "1px dotted var(--ev-accent)", background: "transparent", font: "inherit", color: "inherit" };
 const BOX: CSSProperties = { border: "1px solid color-mix(in srgb, var(--ev-ink) 25%, transparent)", background: "transparent", font: "inherit", color: "inherit" };
-const PILL: CSSProperties = {
-  background: "var(--ev-accent)",
-  color: "var(--ev-on-accent)",
-  border: "1px solid var(--ev-accent)",
-  fontFamily: "var(--ev-sans), sans-serif",
-  fontWeight: 600,
-  letterSpacing: "0.18em",
-  textTransform: "uppercase",
-};
 
 export function PublicInvitation() {
   const sp = useSearchParams();
@@ -92,9 +75,13 @@ export function PublicInvitation() {
   const st = getPageStyle(pg.styleId);
   const theme = pageTheme(pg.accent, pg.bg);
   const TITLE: CSSProperties = {
-    fontFamily: st.font, fontWeight: st.weight, letterSpacing: st.tracking, textTransform: st.upper ? "uppercase" : "none",
-    fontSize: "clamp(1.7rem,4.5vw,2.4rem)", lineHeight: 1.15,
+    fontFamily: st.font, fontWeight: st.weight, fontStyle: st.titleItalic ? "italic" : "normal", letterSpacing: st.tracking,
+    textTransform: st.upper ? "uppercase" : "none", color: st.titleColor === "accent" ? "var(--ev-accent)" : undefined,
+    fontSize: "clamp(1.7rem,4.5vw,2.4rem)", lineHeight: 1.2,
   };
+  const LABEL = labelStyle(st);
+  // nút xác nhận / gửi lời chúc cùng kiểu với nút của trang (vuông, bo tròn, viền, nền mờ...)
+  const PILL: CSSProperties = { ...buttonStyle(st), fontFamily: "var(--ev-sans), sans-serif", fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase" };
   const deadlinePassed = !!inv.settings.rsvpDeadline && new Date(inv.settings.rsvpDeadline) < new Date();
   const canRsvp = inv.settings.allowRsvp && !!guestId && !!inv.guest && !deadlinePassed;
   // nội dung thiệp hiển thị y như phần dưới của luồng gửi thiệp trong studio
