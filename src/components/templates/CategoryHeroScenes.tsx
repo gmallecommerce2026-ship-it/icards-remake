@@ -14,9 +14,11 @@ const SCRIPT = "var(--font-card-script), 'Great Vibes', cursive";
 const GOLD = "#c9a55c";
 const INK = "#2a2023";
 const MUTED = "#5b4d50";
+const CREAM_PAPER = "linear-gradient(160deg, #fffdf8 0%, #f2e8d5 100%)";
 const ease = cubicBezier(0.45, 0.05, 0.2, 1);
 const mix = (a: string, pct: number, b: string) => `color-mix(in srgb, ${a} ${pct}%, ${b})`;
 const slot = (images: string[], i: number) => (images.length ? images[i % images.length] || undefined : undefined);
+const hidden: CSSProperties = { backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" };
 
 /** Khung chung: tiêu đề phía trên, sân khấu 3D ở giữa, gợi ý cuộn bên dưới. Đơn vị cqw co giãn theo chiều rộng. */
 function Frame({ hero, categoryLabel, height, hint, p, children }: SceneProps & { height: number; hint: string; children: ReactNode }) {
@@ -72,6 +74,16 @@ function Art({ src, accent, i, text }: { src?: string; accent: string; i: number
   );
 }
 
+/** Trang giấy kem có dòng chữ ở giữa (trang trống hoặc trang không có ảnh). */
+function CreamText({ text, accent }: { text: string; accent: string }) {
+  return (
+    <div className="flex size-full flex-col items-center justify-center p-[2.4cqw] text-center">
+      <p style={{ fontFamily: SERIF, fontStyle: "italic", color: INK, fontSize: "2.2cqw", lineHeight: 1.3 }}>{text}</p>
+      <span style={{ color: accent, fontSize: "1.6cqw", marginTop: "0.8cqw" }} aria-hidden>♥</span>
+    </div>
+  );
+}
+
 /* ====================== 1. Xòe quạt 3D ====================== */
 
 const FAN_N = 7;
@@ -116,64 +128,68 @@ function FanCard({ i, e, src, accent }: { i: number; e: MotionValue<number>; src
   );
 }
 
-/* ====================== 2. Album lật trang 3D ====================== */
+/* ====================== 2. Album lật trang 3D (4 trang) ====================== */
 
-const LEAVES = 5;
-const LEAF_SPAN = 0.16;
-const LEAF_START = 0.08;
+/**
+ * Album 4 trang gồm 2 tờ, mỗi tờ hai mặt:
+ * - Tờ 1: mặt trước là trang 1 (bên phải lúc đầu), mặt sau là trang 2 (bên trái sau khi lật).
+ * - Tờ 2: mặt trước là trang 3 (nằm dưới tờ 1 ở bên phải), mặt sau là trang 4 (bên trái sau khi lật).
+ * Lúc đầu bên trái là trang trống, bên phải luôn có trang 1. Lật hết thì bên trái có trang 2 và 4, bên phải trống.
+ */
+const BOOK_WINDOWS: [number, number][] = [
+  [0.1, 0.4],
+  [0.5, 0.8],
+];
 
-/** Một quyển album mở: mỗi tờ có hai mặt ảnh, lật lần lượt từ phải sang trái. */
 export function BookScene(props: SceneProps) {
-  const { p, hero, categoryLabel } = props;
+  const { p, hero } = props;
   const accent = hero.accent;
-  const tilt = useTransform(p, [0, 1], [-16, -6]);
   return (
     <Frame {...props} height={50} hint="Cuộn để lật album">
-      <div className="absolute inset-0" style={{ perspective: 1800 }}>
-        <motion.div className="absolute" style={{ left: "26cqw", top: "7cqw", width: "48cqw", height: "32cqw", transformStyle: "preserve-3d", rotateX: tilt }}>
-          {/* Hai trang nền đứng yên: bìa bên trái, trang trống bên phải */}
-          <div className="absolute overflow-hidden rounded-l-[0.8cqw]" style={{ left: 0, top: 0, width: "24cqw", height: "32cqw", background: `linear-gradient(160deg, ${mix(accent, 70, "#fff")}, ${mix(accent, 60, "#000")})` }}>
-            <div className="flex size-full items-center justify-center p-[2cqw] text-center" style={{ color: "#fff", fontFamily: SCRIPT, fontSize: "4.6cqw", lineHeight: 1.1 }}>
-              {hero.title || categoryLabel}
-            </div>
-          </div>
-          <div className="absolute overflow-hidden rounded-r-[0.8cqw]" style={{ left: "24cqw", top: 0, width: "24cqw", height: "32cqw", background: "linear-gradient(160deg, #fffdf8, #f2e8d5)" }}>
-            <CreamText text={hero.subtitle || "Trân trọng kính mời"} accent={accent} />
-          </div>
-          {Array.from({ length: LEAVES }, (_, i) => (
-            <Leaf key={i} i={i} p={p} front={slot(hero.images, i * 2)} back={slot(hero.images, i * 2 + 1)} accent={accent} />
-          ))}
-        </motion.div>
-        <div aria-hidden className="absolute rounded-[50%]" style={{ left: "24cqw", top: "40cqw", width: "52cqw", height: "3cqw", background: "rgba(40,20,20,0.35)", filter: "blur(1.6cqw)" }} />
+      <div className="absolute" style={{ left: "26cqw", top: "6cqw", width: "48cqw", height: "32cqw", perspective: 1800 }}>
+        {/* Nền: trang trái trống lúc đầu, trang phải trống sau khi lật hết */}
+        <div className="absolute overflow-hidden rounded-l-[0.8cqw]" style={{ left: 0, top: 0, width: "24cqw", height: "32cqw", background: CREAM_PAPER, boxShadow: "inset -1cqw 0 2cqw -1.4cqw rgba(0,0,0,0.25)" }}>
+          <CreamText text="" accent={accent} />
+        </div>
+        <div className="absolute overflow-hidden rounded-r-[0.8cqw]" style={{ left: "24cqw", top: 0, width: "24cqw", height: "32cqw", background: CREAM_PAPER, boxShadow: "inset 1cqw 0 2cqw -1.4cqw rgba(0,0,0,0.25)" }} />
+        {BOOK_WINDOWS.map(([a, b], i) => (
+          <BookLeaf
+            key={i}
+            i={i}
+            from={a}
+            to={b}
+            p={p}
+            front={slot(hero.images, i * 2)}
+            back={slot(hero.images, i * 2 + 1)}
+            frontText={`Trang ${i * 2 + 1}`}
+            backText={`Trang ${i * 2 + 2}`}
+            accent={accent}
+          />
+        ))}
       </div>
     </Frame>
   );
 }
 
-function Leaf({ i, p, front, back, accent }: { i: number; p: MotionValue<number>; front?: string; back?: string; accent: string }) {
-  const a0 = LEAF_START + i * LEAF_SPAN;
-  const angle = useTransform(p, [a0, a0 + LEAF_SPAN], [0, -180], { ease });
-  // Tờ đang nằm bên phải thì xếp theo thứ tự; tờ đã lật sang trái thì xếp ngược lại để chồng đúng.
-  const z = useTransform(angle, (v) => (v > -90 ? LEAVES - i : i + 1) * 2);
-  const faceStyle: CSSProperties = { backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" };
+function BookLeaf({ i, from, to, p, front, back, frontText, backText, accent }: {
+  i: number; from: number; to: number; p: MotionValue<number>;
+  front?: string; back?: string; frontText: string; backText: string; accent: string;
+}) {
+  const angle = useTransform(p, [from, to], [0, -180], { ease });
+  // Tờ chưa lật nằm bên phải, xếp tờ 1 lên trên tờ 2. Tờ đã lật nằm bên trái, tờ lật sau xếp lên trên.
+  const z = useTransform(angle, (v) => (v > -90 ? 10 - i : 20 + i));
   return (
-    <motion.div className="absolute" style={{ left: "24cqw", top: 0, width: "24cqw", height: "32cqw", transformOrigin: "0% 50%", transformStyle: "preserve-3d", rotateY: angle, z }}>
-      <div className="absolute inset-0 overflow-hidden rounded-r-[0.8cqw]" style={{ ...faceStyle, boxShadow: "0 0.6cqw 1.6cqw -0.6cqw rgba(0,0,0,0.35)" }}>
-        <Art src={front} accent={accent} i={i} text="♥" />
+    <motion.div
+      className="absolute"
+      style={{ left: "24cqw", top: 0, width: "24cqw", height: "32cqw", transformOrigin: "0% 50%", transformStyle: "preserve-3d", rotateY: angle, zIndex: z }}
+    >
+      <div className="absolute inset-0 overflow-hidden rounded-r-[0.8cqw]" style={{ ...hidden, boxShadow: "0 0.6cqw 1.6cqw -0.6cqw rgba(0,0,0,0.35)" }}>
+        <Art src={front} accent={accent} i={i * 2} text={frontText} />
       </div>
-      <div className="absolute inset-0 overflow-hidden rounded-l-[0.8cqw]" style={{ ...faceStyle, transform: "rotateY(180deg)", background: "#fffdf8" }}>
-        {back ? <Art src={back} accent={accent} i={i + 1} /> : <CreamText text={`Kỷ niệm ${i + 1}`} accent={accent} />}
+      <div className="absolute inset-0 overflow-hidden rounded-l-[0.8cqw]" style={{ ...hidden, transform: "rotateY(180deg)" }}>
+        <Art src={back} accent={accent} i={i * 2 + 1} text={backText} />
       </div>
     </motion.div>
-  );
-}
-
-function CreamText({ text, accent }: { text: string; accent: string }) {
-  return (
-    <div className="flex size-full flex-col items-center justify-center p-[2.4cqw] text-center">
-      <p style={{ fontFamily: SERIF, fontStyle: "italic", color: INK, fontSize: "2.6cqw", lineHeight: 1.3 }}>{text}</p>
-      <span style={{ color: accent, fontSize: "1.8cqw", marginTop: "1cqw" }} aria-hidden>♥</span>
-    </div>
   );
 }
 
@@ -181,7 +197,10 @@ function CreamText({ text, accent }: { text: string; accent: string }) {
 
 const PETAL_N = 8;
 
-/** Tám cánh ảnh đang khép, mở dần ra quanh một tâm, rồi xoay nhẹ. */
+/**
+ * Tám cánh ảnh mở dần quanh một tâm, rồi xoay nhẹ.
+ * Mỗi cánh có độ sâu Z riêng (translateZ), nên lúc khép lại cánh nào nằm trên cánh nào được xác định rõ ràng.
+ */
 export function FlowerScene(props: SceneProps) {
   const { p, hero } = props;
   const accent = hero.accent;
@@ -194,24 +213,25 @@ export function FlowerScene(props: SceneProps) {
         {Array.from({ length: PETAL_N }, (_, i) => (
           <Petal key={i} i={i} open={open} src={slot(hero.images, i)} accent={accent} />
         ))}
-      </motion.div>
-      <motion.div
-        aria-hidden
-        className="absolute flex items-center justify-center rounded-full"
-        style={{
-          left: "calc(50% - 5cqw)",
-          top: "calc(50% - 5cqw)",
-          width: "10cqw",
-          height: "10cqw",
-          scale: core,
-          background: `radial-gradient(circle at 35% 30%, ${mix(GOLD, 60, "#fff")}, ${GOLD} 60%, ${mix(GOLD, 70, "#000")})`,
-          boxShadow: "0 0.8cqw 2cqw rgba(0,0,0,0.3)",
-          color: "#fff",
-          fontFamily: SCRIPT,
-          fontSize: "4.4cqw",
-        }}
-      >
-        ♥
+        <motion.div
+          aria-hidden
+          className="absolute flex items-center justify-center rounded-full"
+          style={{
+            left: "calc(50% - 5cqw)",
+            top: "calc(50% - 5cqw)",
+            width: "10cqw",
+            height: "10cqw",
+            z: 30,
+            scale: core,
+            background: `radial-gradient(circle at 35% 30%, ${mix(GOLD, 60, "#fff")}, ${GOLD} 60%, ${mix(GOLD, 70, "#000")})`,
+            boxShadow: "0 0.8cqw 2cqw rgba(0,0,0,0.3)",
+            color: "#fff",
+            fontFamily: SCRIPT,
+            fontSize: "4.4cqw",
+          }}
+        >
+          ♥
+        </motion.div>
       </motion.div>
     </Frame>
   );
@@ -219,9 +239,11 @@ export function FlowerScene(props: SceneProps) {
 
 function Petal({ i, open, src, accent }: { i: number; open: MotionValue<number>; src?: string; accent: string }) {
   const a = i * (360 / PETAL_N);
+  // Thứ tự lớp: cánh giữa dãy nằm gần tâm hơn, hai đầu lùi xa hơn; lớp Z khác nhau nên không cùng mặt phẳng.
+  const depth = (i - (PETAL_N - 1) / 2) * 4;
   const dist = useTransform(open, (v) => -(3 + v * 19));
   const tilt = useTransform(open, (v) => (1 - v) * 64);
-  const transform = useMotionTemplate`rotateZ(${a}deg) translateY(${dist}cqw) rotateX(${tilt}deg)`;
+  const transform = useMotionTemplate`translateZ(${depth}px) rotateZ(${a}deg) translateY(${dist}cqw) rotateX(${tilt}deg)`;
   return (
     <motion.div
       className="absolute"
