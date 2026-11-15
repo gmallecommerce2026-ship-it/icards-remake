@@ -59,9 +59,8 @@ function SectionHeader({ sub, title }: { sub: string; title: string }) {
 
 type OccasionItem = { key: string; title: string; href: string; template?: OccasionTemplate; img?: string; font?: string };
 
-/* Nút trước/sau: ẩn khi chưa rê chuột vào carousel, rê vào thì hiện cả hai nút hai bên.
-   Trên màn hình cảm ứng (không có hover) hoặc khi dùng bàn phím (focus) thì luôn hiện.
-   Đang ở mép cuối thì nút đó chỉ mờ đi, vẫn giữ vị trí để bố cục không nhảy. */
+/* Nút trước/sau: ẩn hoàn toàn, rê chuột vào cả khối (group/occ) thì mờ dần hiện lên (hoặc khi dùng bàn phím: focus).
+   Hình vuông, viền xanh của website; rê vào nút thì đổ xanh đặc, chữ trắng. Đang ở mép cuối thì nút chỉ mờ đi, giữ nguyên vị trí. */
 function ArrowButton({ direction, onClick, disabled }: { direction: "prev" | "next"; onClick: () => void; disabled: boolean }) {
   const Icon = direction === "prev" ? ChevronLeft : ChevronRight;
   return (
@@ -70,8 +69,8 @@ function ArrowButton({ direction, onClick, disabled }: { direction: "prev" | "ne
       onClick={onClick}
       disabled={disabled}
       aria-label={direction === "prev" ? "Xem các dịp trước" : "Xem các dịp tiếp theo"}
-      className={`absolute top-1/2 z-10 grid size-12 -translate-y-1/2 place-items-center rounded-full border border-[#27548A]/20 bg-white/95 text-[#27548A] shadow-[0_10px_24px_-10px_rgba(14,27,44,0.45)] backdrop-blur transition-all duration-200 hover:border-[#27548A] hover:bg-[#27548A] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#27548A] active:scale-95 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 max-[769px]:opacity-100 disabled:pointer-events-none disabled:opacity-40 group-hover:disabled:opacity-40 max-[769px]:disabled:opacity-40 max-[769px]:size-10 ${
-        direction === "prev" ? "left-2" : "right-2"
+      className={`pointer-events-none absolute top-1/2 z-10 grid size-12 -translate-y-1/2 place-items-center border border-[#27548A] bg-white text-[#27548A] opacity-0 transition-[opacity,background-color,color] duration-300 group-hover/occ:pointer-events-auto group-hover/occ:opacity-100 group-focus-within/occ:pointer-events-auto group-focus-within/occ:opacity-100 hover:bg-[#27548A] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#27548A] disabled:cursor-default group-hover/occ:disabled:opacity-40 group-focus-within/occ:disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-[#27548A] max-[769px]:size-10 ${
+        direction === "prev" ? "left-0" : "right-0"
       }`}
     >
       <Icon className="size-6 max-[769px]:size-5" strokeWidth={1.75} aria-hidden />
@@ -96,29 +95,31 @@ function Occasions({ items }: { items: OccasionItem[] }) {
 
   const scroll = (dir: 1 | -1) => {
     const el = ref.current;
-    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: "smooth" });
+    if (!el) return;
+    const gap = parseFloat(getComputedStyle(el).columnGap) || 0;
+    el.scrollBy({ left: dir * (el.clientWidth + gap), behavior: "smooth" });
   };
 
   return (
-    <div className="group relative mb-8 w-full">
+    <div className="group/occ relative mb-8 w-full">
       <ArrowButton direction="prev" onClick={() => scroll(-1)} disabled={edge.start} />
       <div
         ref={ref}
         onScroll={update}
-        className="flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-1 py-3 [-ms-overflow-style:none] [scrollbar-width:none] max-[769px]:gap-4 [&::-webkit-scrollbar]:hidden"
+        className="flex snap-x snap-mandatory gap-x-[var(--g)] overflow-x-auto scroll-smooth py-3 [--g:24px] [-ms-overflow-style:none] [scrollbar-width:none] max-[769px]:[--g:16px] [&::-webkit-scrollbar]:hidden"
       >
         {items.map((o) => (
           <Link
             key={o.key}
             href={o.href}
-            className="group block w-[clamp(160px,20vw,220px)] shrink-0 cursor-pointer snap-start transition-transform duration-300 hover:-translate-y-1"
+            className="group block w-[calc((100%-3*var(--g))/4)] shrink-0 cursor-pointer snap-start rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#27548A] max-[1200px]:w-[calc((100%-2*var(--g))/3)] max-[993px]:w-[calc((100%-var(--g))/2)] max-[577px]:w-full"
           >
             {/* Thẻ chữ nhật 3:4, không viền, không bóng, không nền để hòa vào nền trang: tên danh mục ở trên, ảnh vuông bên dưới, không đè lên nhau */}
             <div className="flex aspect-[3/4] w-full flex-col">
               <div className="grid min-h-0 flex-1 place-items-center px-3">
                 <p
                   style={{ fontFamily: occasionFontFamily(o.font) }}
-                  className="m-0 line-clamp-2 text-center text-[22px] font-semibold leading-[1.2] tracking-[0.01em] text-[#1a1a1a]"
+                  className="m-0 line-clamp-2 text-center text-[22px] font-semibold leading-[1.2] tracking-[0.01em] text-[#1a1a1a] group-hover:underline group-hover:underline-offset-4 group-focus-visible:underline group-focus-visible:underline-offset-4"
                 >
                   {o.title}
                 </p>
@@ -312,7 +313,7 @@ export function HomepageContent() {
           )}
           <Link
             href="/templates"
-            className="mt-2 flex h-12 w-fit cursor-pointer items-center justify-center border border-[#222] bg-transparent px-10 text-sm font-semibold uppercase leading-[1.3] tracking-[0.08em] text-[#222] transition-colors duration-300 hover:bg-[#222] hover:text-white"
+            className="mt-2 flex h-12 w-fit cursor-pointer items-center justify-center border border-[#222] bg-transparent px-10 text-sm font-semibold uppercase leading-[1.3] tracking-[0.08em] text-[#222] transition-colors duration-300 hover:border-[#27548A] hover:bg-[#27548A] hover:text-white focus-visible:border-[#27548A] focus-visible:bg-[#27548A] focus-visible:text-white"
           >
             XEM TẤT CẢ
           </Link>
