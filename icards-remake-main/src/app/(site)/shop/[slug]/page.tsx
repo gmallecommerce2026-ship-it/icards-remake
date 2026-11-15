@@ -1,0 +1,106 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ProductCard } from "@/components/shop/ProductCard";
+import { ProductThumb } from "@/components/shop/ProductThumb";
+import { getRelatedProducts, priceFrom } from "@/lib/shop";
+import { getProduct, getProducts, getShopCategories } from "@/lib/catalog";
+import { formatPrice } from "@/lib/format";
+import { SideAdsShell } from "@/components/ads/SideAdsShell";
+
+type Params = Promise<{ slug: string }>;
+
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
+  const { slug } = await params;
+  const product = await getProduct(slug);
+  if (!product) return {};
+  return {
+    title: `${product.name} | iCards`,
+    description: product.summary,
+    openGraph: { title: product.name, description: product.summary, type: "website" },
+  };
+}
+
+export default async function ProductPage({ params }: { params: Params }) {
+  const { slug } = await params;
+  const [product, all, categories] = await Promise.all([getProduct(slug), getProducts(), getShopCategories()]);
+  if (!product) notFound();
+
+  const cat = categories.find((c) => c.id === product.category);
+  const related = getRelatedProducts(all, product.slug);
+
+  return (
+    <SideAdsShell>
+    <div className="mx-auto max-w-7xl px-5 py-10 lg:py-14">
+      <nav aria-label="Breadcrumb" className="text-sm text-[#5B6B7F]">
+        <Link href="/shop" className="hover:text-[#27548A]">Cửa hàng</Link>
+        {cat && (
+          <>
+            {" / "}
+            <Link href={`/shop?category=${cat.id}`} className="font-medium hover:text-[#27548A]">{cat.label}</Link>
+          </>
+        )}
+      </nav>
+
+      <div className="mt-8 grid gap-10 lg:grid-cols-2 lg:gap-16">
+        <ProductThumb product={product} className="rounded-2xl ring-1 ring-[#0E1B2C]/10 lg:sticky lg:top-24 lg:self-start" />
+
+        <div>
+          {cat && <p className="text-sm font-semibold uppercase tracking-wide text-[#5B6B7F]">{cat.label}</p>}
+          <h1 className="mt-2 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">{product.name}</h1>
+          <p className="mt-4 text-lg font-semibold text-[#27548A]">Từ {formatPrice(priceFrom(product))}</p>
+          <p className="mt-4 leading-relaxed text-[#3D4C61]">{product.description}</p>
+
+          <ul className="mt-6 space-y-2.5 text-[#3D4C61]">
+            {product.highlights.map((h) => (
+              <li key={h} className="flex items-start gap-3">
+                <span aria-hidden className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-bold" style={{ background: product.tone.bg, color: product.tone.ink }}>✓</span>
+                {h}
+              </li>
+            ))}
+          </ul>
+
+          <dl className="mt-6 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 border-t border-[#DDE4EE] pt-6 text-sm">
+            <dt className="text-[#5B6B7F]">{product.shipping === "digital" ? "Nhận hàng" : "Thời gian làm"}</dt>
+            <dd className="font-medium">{product.leadTime}</dd>
+            {product.specs.map((s) => (
+              <div key={s.label} className="contents">
+                <dt className="text-[#5B6B7F]">{s.label}</dt>
+                <dd className="font-medium">{s.value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <div className="mt-8 rounded-xl border border-[#DDE4EE] bg-white p-5 sm:p-6">
+            <h2 className="text-sm font-semibold">Bảng giá các gói</h2>
+            <ul className="mt-3 divide-y divide-[#EEF2F7]">
+              {product.variants.map((v) => (
+                <li key={v.id} className="flex items-center justify-between py-3 text-sm">
+                  <span className="font-medium">{v.label}</span>
+                  <span className="text-[#3D4C61]">{formatPrice(v.price)}</span>
+                </li>
+              ))}
+            </ul>
+            <Link
+              href="/contact"
+              className="mt-5 flex h-12 w-full items-center justify-center rounded-lg bg-[#27548A] text-base font-semibold text-white transition-colors hover:bg-[#1F4573] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#27548A]"
+            >
+              Liên hệ để đặt sản phẩm
+            </Link>
+            <p className="mt-3 text-center text-sm text-[#5B6B7F]">Đội ngũ iCards sẽ báo giá và xác nhận đơn cho bạn.</p>
+          </div>
+        </div>
+      </div>
+
+      {related.length > 0 && (
+        <section aria-label="Sản phẩm liên quan" className="mt-20 border-t border-[#DDE4EE] pt-12">
+          <h2 className="text-2xl font-bold">Có thể bạn cũng thích</h2>
+          <div className="mt-8 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            {related.map((p) => <ProductCard key={p.slug} product={p} />)}
+          </div>
+        </section>
+      )}
+    </div>
+    </SideAdsShell>
+  );
+}

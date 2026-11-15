@@ -469,7 +469,7 @@ const FLAP_CLIP = "polygon(0 0, 100% 0, 50% 62%)";
 
 function EnvLayer({ children, y, scale, opacity, z }: { children: ReactNode; y: MotionValue<string>; scale: MotionValue<number>; opacity: MotionValue<number>; z: number | MotionValue<number> }) {
   return (
-    <motion.div className="absolute left-1/2 top-[54%]" style={{ width: "calc(var(--cw) * var(--ratio) * 1.035)", height: "calc(var(--cw) * 1.1)", x: "-50%", y, scale, opacity, z, perspective: 1200 }}>
+    <motion.div className="absolute left-1/2 top-[54%]" style={{ width: "max(calc(var(--cw) * var(--ratio) * 1.035), calc(var(--cw) * 1.265))", height: "calc(var(--cw) * 1.1)", x: "-50%", y, scale, opacity, z, perspective: 1200 }}>
       {children}
     </motion.div>
   );
