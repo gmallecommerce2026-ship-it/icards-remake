@@ -30,6 +30,17 @@ export function WishesPanel({ id }: { id: string }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // Lời chúc mới do khách gửi từ tab khác: tải lại khi quay lại tab này (không cần F5)
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") load(); };
+    window.addEventListener("focus", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [load]);
+
   const approved = items.filter((w) => w.isApproved).length;
   const shown = useMemo(
     () => items.filter((w) => filter === "all" || (filter === "approved" ? w.isApproved : !w.isApproved)),
@@ -56,7 +67,8 @@ export function WishesPanel({ id }: { id: string }) {
             {f === "all" ? "Tất cả" : f === "pending" ? "Chờ duyệt" : "Đang hiển thị"}
           </button>
         ))}
-        <a href="https://icards.com.vn/invitations/category/thiep-cam-on" target="_blank" rel="noreferrer" className={`${btnGhost} ml-auto`}>Tạo thiệp cảm ơn</a>
+        <button type="button" className={`${btnGhost} ml-auto`} onClick={load}>Tải lại</button>
+        <a href="https://icards.com.vn/invitations/category/thiep-cam-on" target="_blank" rel="noreferrer" className={btnGhost}>Tạo thiệp cảm ơn</a>
       </div>
 
       {loading ? <p className="text-sm text-muted">Đang tải lời chúc…</p> : shown.length === 0 ? (

@@ -4,6 +4,7 @@ import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { invitationsApi, wishesApi } from "@/lib/api";
 import { errorText, formatEventDate } from "@/lib/invitation-flow";
+import { asList } from "@/components/invitation-management/shared";
 import { EVENT_FONT_VARS, EventDetailsEditor, buttonStyle, getPageStyle, labelStyle, normalizePage, pageTheme } from "@/components/invitation-send/EventDetailsEditor";
 import { PublicEnvelopeIntro, type PublicDesign } from "./PublicEnvelopeIntro";
 
@@ -55,7 +56,7 @@ export function PublicInvitation() {
     invitationsApi.getPublicInvitation(id, { guestId })
       .then((r) => { if (alive) { setInv(r.data as PublicInv); setState("ready"); } })
       .catch(() => { if (alive) setState("missing"); });
-    wishesApi.getPublicWishes(id).then((r) => { if (alive) setWishes(r.data.items ?? r.data ?? []); }).catch(() => {});
+    wishesApi.getPublicWishes(id).then((r) => { if (alive) setWishes(asList<Wish>(r.data)); }).catch(() => {});
     return () => { alive = false; };
   }, [id, guestId]);
 
@@ -116,18 +117,30 @@ export function PublicInvitation() {
 
   async function onWish(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const f = new FormData(e.currentTarget);
+    // React nulls e.currentTarget sau khi handler chạy xong -> phải giữ lại form TRƯỚC mọi `await`.
+    // (Trước đây gọi e.currentTarget.reset() sau await => TypeError => báo "Không gửi được" dù lời chúc đã lưu.)
+    const form = e.currentTarget;
+    const f = new FormData(form);
+    const name = String(f.get("name") ?? "").trim();
+    const message = String(f.get("message") ?? "").trim();
+    if (!name || !message) { setWishMsg("Vui lòng nhập tên và lời chúc."); return; }
     setBusy(true);
     setWishMsg("");
     try {
-      await wishesApi.createPublicWish(inv!.slug, { name: String(f.get("name") ?? ""), message: String(f.get("message") ?? ""), guestId });
-      e.currentTarget.reset();
-      setWishMsg(inv!.settings.moderateWishes ? "Cảm ơn bạn! Lời chúc sẽ hiện sau khi chủ thiệp duyệt." : "Cảm ơn bạn đã gửi lời chúc.");
+      await wishesApi.createPublicWish(inv!.slug, { name, message, guestId });
     } catch (err) {
-      setWishMsg(errorText(err, "Không gửi được lời chúc."));
-    } finally {
+      setWishMsg(errorText(err, "Không gửi được lời chúc. Vui lòng thử lại."));
       setBusy(false);
+      return;
     }
+    // Từ đây lời chúc đã được lưu; các bước hiển thị phụ không được làm hỏng thông báo thành công.
+    form.reset();
+    setWishMsg(inv!.settings.moderateWishes ? "Cảm ơn bạn! Lời chúc sẽ hiện sau khi chủ thiệp duyệt." : "Cảm ơn bạn đã gửi lời chúc.");
+    try {
+      const r = await wishesApi.getPublicWishes(inv!.slug);
+      setWishes(asList<Wish>(r.data));
+    } catch { /* bỏ qua: danh sách sẽ tải lại ở lần mở sau */ }
+    setBusy(false);
   }
 
   return (

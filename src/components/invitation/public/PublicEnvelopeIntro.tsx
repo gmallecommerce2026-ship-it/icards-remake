@@ -197,11 +197,15 @@ export function PublicEnvelopeIntro({ info, design, guestName }: { info: IntroIn
   const envZFront = useTransform(envPush, (v) => v + 3);
   const flapRot = useTransform(p, [0.08, 0.2], [0, 180], E);
   const flapZ = useTransform([p, envPush], ([pp, e]: number[]) => (pp < 0.17 ? 5 : 1) + e);
-  // mặt trước (có tem + tên người nhận) xoay đi ở đầu, để lộ mặt sau có nắp và dấu sáp
+  // ĐẦU CHUỖI: cả phong bì (kèm thiệp bên trong) XOAY 180° quanh trục dọc để chuyển từ mặt trước (tem + tên người nhận)
+  // sang mặt sau (nắp + dấu sáp). Không còn fade: hai mặt đứng lưng nhau trong một khối 3D, chỉ đổi mặt hiển thị đúng lúc
+  // khối đứng cạnh (90°) - lúc đó phong bì chỉ còn là một đường mảnh nên không thấy "nhảy".
   const sealDone = useMotionValue(1);   // dấu sáp đã đóng xong (trạng thái của studio)
-  const frontRot = useTransform(p, [0, 0.07], [0, -90], E);
-  const frontOpacity = useTransform(p, [0.05, 0.07], [1, 0]);
-  const sealOpacity = useTransform(p, [0.03, 0.08], [1, 0]);
+  const envFlip = useTransform(p, [0, 0.075], [0, 180], E);
+  const flipLift = useTransform(p, [0, 0.0375, 0.075], [0, 70, 0]);   // nhấc nhẹ về phía người xem khi xoay để không bị cắt mép
+  const frontVis = useTransform(envFlip, (v): "visible" | "hidden" => (v < 90 ? "visible" : "hidden"));
+  const backVis = useTransform(envFlip, (v): "visible" | "hidden" => (v < 90 ? "hidden" : "visible"));
+  const sealOpacity = useTransform(p, [0.075, 0.1], [1, 0]);
 
   /* thiệp rút ra */
   const cardY = useTransform(p, [0, 0.2, 0.42, 0.54, 1], ["-48.5%", "-48.5%", "-133%", "-53%", "-53%"], E);
@@ -270,59 +274,66 @@ export function PublicEnvelopeIntro({ info, design, guestName }: { info: IntroIn
           <div className="absolute inset-0" style={{ perspective: 1400 }}>
             <motion.div className="absolute inset-0" style={{ rotateX: stageRotX, rotateY: tiltY, transformStyle: "preserve-3d" }}>
               <motion.div className="absolute inset-0" style={{ x: rigX, y: rigY, z: rigZ, rotateY: yaw, transformStyle: "preserve-3d" }}>
-                {/* phong bì - lưng */}
-                <EnvLayer y={envY} scale={envScale} opacity={envOpacity} z={envPush}>
-                  <div className="absolute inset-0 rounded-[4px]" style={{ background: `linear-gradient(180deg, rgba(0,0,0,.22), transparent 42%), ${liner}`, boxShadow: "0 40px 70px -28px rgba(0,0,0,.25)" }} />
-                </EnvLayer>
+                {/* KHỐI PHONG BÌ XOAY: mặt trước + mặt sau (kèm thiệp) cùng quay quanh trục dọc */}
+                <motion.div className="absolute inset-0" style={{ rotateY: envFlip, z: flipLift, transformStyle: "preserve-3d" }}>
+                  <motion.div className="absolute inset-0" style={{ visibility: frontVis, transformStyle: "preserve-3d" }}>
+                    {/* mặt trước phong bì: tem + tên người nhận. Là một mặt của khối xoay (hiện khi góc xoay < 90°) */}
+                    <EnvLayer y={envY} scale={envScale} opacity={envOpacity} z={30}>
+                      <div className="absolute inset-0 rounded-[4px] overflow-hidden" style={{ background: `linear-gradient(180deg, rgba(255,255,255,.16), transparent 40%), ${envColor}`, boxShadow: "0 40px 70px -28px rgba(0,0,0,.35)", ...HIDE_BACK }}>
+                        <div className="absolute right-[6%] top-[6%]" style={{ width: "calc(var(--cw) * 0.2)", height: "calc(var(--cw) * 0.24)" }}>
+                          <Stamp id={stampId} />
+                        </div>
+                        <div className="absolute left-1/2 top-[58%] -translate-x-1/2 whitespace-nowrap" style={{ ...fs(0.05), fontFamily: SERIF, color: INK }}>
+                          {recipientName}
+                        </div>
+                      </div>
+                    </EnvLayer>
+                  </motion.div>
+                  {/* mặt sau: đặt sẵn xoay 180° nên khi khối xoay xong (180°) nó quay đúng chiều về phía người xem */}
+                  <motion.div className="absolute inset-0" style={{ visibility: backVis, rotateY: 180, transformStyle: "preserve-3d" }}>
+                    {/* phong bì - lưng */}
+                    <EnvLayer y={envY} scale={envScale} opacity={envOpacity} z={envPush}>
+                      <div className="absolute inset-0 rounded-[4px]" style={{ background: `linear-gradient(180deg, rgba(0,0,0,.22), transparent 42%), ${liner}`, boxShadow: "0 40px 70px -28px rgba(0,0,0,.25)" }} />
+                    </EnvLayer>
 
-                {/* thiệp: thiệp 4 mặt = FoldingCard của studio; thiệp 2 mặt = hai mặt lật qua lại (cùng khung, cùng chuyển động) */}
-                <motion.div
-                  className="absolute left-1/2 top-[54%]"
-                  style={{ width: "var(--cw)", height: "calc(var(--cw) * var(--ratio))", x: "-50%", y: cardY, scale: cardScale, rotateX: cardRotX, rotateY: isCard ? 0 : cardRotY, rotateZ: cardRotZ, z: cardZ, transformStyle: isCard ? "preserve-3d" : undefined }}
-                >
-                  <motion.div className="h-full w-full" style={{ y: floatY, rotateZ: floatRot, transformStyle: isCard ? "preserve-3d" : undefined }}>
-                    <motion.div className="relative h-full w-full" style={{ scale: focusK, x: focusX, y: focusY, boxShadow: shadow, transformStyle: isCard ? "preserve-3d" : undefined, ["--k" as string]: focusK } as MotionStyle}>
-                      {isCard ? (
-                        <motion.div className="absolute inset-0" style={{ rotateY: cardFlipY, transformStyle: "preserve-3d" }}>
-                          <CardSide pageId="cover" />
-                          <CardSide pageId="back" back />
+                    {/* thiệp: thiệp 4 mặt = FoldingCard của studio; thiệp 2 mặt = hai mặt lật qua lại (cùng khung, cùng chuyển động) */}
+                    <motion.div
+                      className="absolute left-1/2 top-[54%]"
+                      style={{ width: "var(--cw)", height: "calc(var(--cw) * var(--ratio))", x: "-50%", y: cardY, scale: cardScale, rotateX: cardRotX, rotateY: isCard ? 0 : cardRotY, rotateZ: cardRotZ, z: cardZ, transformStyle: isCard ? "preserve-3d" : undefined }}
+                    >
+                      <motion.div className="h-full w-full" style={{ y: floatY, rotateZ: floatRot, transformStyle: isCard ? "preserve-3d" : undefined }}>
+                        <motion.div className="relative h-full w-full" style={{ scale: focusK, x: focusX, y: focusY, boxShadow: shadow, transformStyle: isCard ? "preserve-3d" : undefined, ["--k" as string]: focusK } as MotionStyle}>
+                          {isCard ? (
+                            <motion.div className="absolute inset-0" style={{ rotateY: cardFlipY, transformStyle: "preserve-3d" }}>
+                              <CardSide pageId="cover" />
+                              <CardSide pageId="back" back />
+                            </motion.div>
+                          ) : (
+                            <FoldingCard cm={cm} view="cover" editable={false} />
+                          )}
                         </motion.div>
-                      ) : (
-                        <FoldingCard cm={cm} view="cover" editable={false} />
-                      )}
+                      </motion.div>
                     </motion.div>
+
+                    {/* phong bì - mặt sau: thân (màu phong bì) */}
+                    <EnvLayer y={envY} scale={envScale} opacity={envOpacity} z={envZFront}>
+                      <Tri clip="polygon(0 0, 50% 62%, 0 100%)" bg={`linear-gradient(90deg, rgba(0,0,0,.10), transparent), ${envColor}`} />
+                      <Tri clip="polygon(100% 0, 50% 62%, 100% 100%)" bg={`linear-gradient(270deg, rgba(0,0,0,.10), transparent), ${envColor}`} />
+                      <Tri clip="polygon(0 100%, 50% 62%, 100% 100%)" bg={`linear-gradient(180deg, rgba(255,255,255,.12), transparent), ${envColor}`} />
+                    </EnvLayer>
+
+                    {/* nắp phong bì: mặt ngoài = màu thiết kế, mặt trong = lớp lót */}
+                    <EnvLayer y={envY} scale={envScale} opacity={envOpacity} z={flapZ}>
+                      <motion.div className="absolute inset-0" style={{ rotateX: flapRot, transformOrigin: "50% 0%", transformStyle: "preserve-3d" }}>
+                        <Tri clip={FLAP_CLIP} bg={`linear-gradient(180deg, rgba(255,255,255,.18), transparent), ${envColor}`} face="front" />
+                        <Tri clip={FLAP_CLIP} bg={liner} face="back" />
+                        <motion.div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ top: "55%", width: "calc(var(--cw) * 0.22)", height: "calc(var(--cw) * 0.22)", opacity: sealOpacity, filter: "drop-shadow(0 5px 6px rgba(90,10,30,.45))", ...HIDE_BACK }}>
+                          <WaxSeal p={sealDone} color={CRIMSON} />
+                        </motion.div>
+                      </motion.div>
+                    </EnvLayer>
                   </motion.div>
                 </motion.div>
-
-                {/* phong bì - mặt sau: thân (màu phong bì) */}
-                <EnvLayer y={envY} scale={envScale} opacity={envOpacity} z={envZFront}>
-                  <Tri clip="polygon(0 0, 50% 62%, 0 100%)" bg={`linear-gradient(90deg, rgba(0,0,0,.10), transparent), ${envColor}`} />
-                  <Tri clip="polygon(100% 0, 50% 62%, 100% 100%)" bg={`linear-gradient(270deg, rgba(0,0,0,.10), transparent), ${envColor}`} />
-                  <Tri clip="polygon(0 100%, 50% 62%, 100% 100%)" bg={`linear-gradient(180deg, rgba(255,255,255,.12), transparent), ${envColor}`} />
-                </EnvLayer>
-
-                {/* mặt trước phong bì: tem + tên người nhận (xoay đi khi mở đầu) */}
-                <EnvLayer y={envY} scale={envScale} opacity={envOpacity} z={30}>
-                  <motion.div className="absolute inset-0 rounded-[4px] overflow-hidden" style={{ rotateY: frontRot, opacity: frontOpacity, transformOrigin: "left center", transformStyle: "preserve-3d", background: `linear-gradient(180deg, rgba(255,255,255,.16), transparent 40%), ${envColor}`, boxShadow: "0 40px 70px -28px rgba(0,0,0,.35)", ...HIDE_BACK }}>
-                    <div className="absolute right-[6%] top-[6%]" style={{ width: "calc(var(--cw) * 0.2)", height: "calc(var(--cw) * 0.24)" }}>
-                      <Stamp id={stampId} />
-                    </div>
-                    <div className="absolute left-1/2 top-[58%] -translate-x-1/2 whitespace-nowrap" style={{ ...fs(0.05), fontFamily: SERIF, color: INK }}>
-                      {recipientName}
-                    </div>
-                  </motion.div>
-                </EnvLayer>
-
-                {/* nắp phong bì: mặt ngoài = màu thiết kế, mặt trong = lớp lót */}
-                <EnvLayer y={envY} scale={envScale} opacity={envOpacity} z={flapZ}>
-                  <motion.div className="absolute inset-0" style={{ rotateX: flapRot, transformOrigin: "50% 0%", transformStyle: "preserve-3d" }}>
-                    <Tri clip={FLAP_CLIP} bg={`linear-gradient(180deg, rgba(255,255,255,.18), transparent), ${envColor}`} face="front" />
-                    <Tri clip={FLAP_CLIP} bg={liner} face="back" />
-                    <motion.div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ top: "55%", width: "calc(var(--cw) * 0.22)", height: "calc(var(--cw) * 0.22)", opacity: sealOpacity, filter: "drop-shadow(0 5px 6px rgba(90,10,30,.45))", ...HIDE_BACK }}>
-                      <WaxSeal p={sealDone} color={CRIMSON} />
-                    </motion.div>
-                  </motion.div>
-                </EnvLayer>
               </motion.div>
             </motion.div>
           </div>
