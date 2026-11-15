@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, type ComponentType, type CSSProperties, type ReactNode, type RefObject } from "react";
-import { cubicBezier, motion, useMotionValue, useReducedMotion, useScroll, useSpring, useTime, useTransform, useVelocity, type MotionValue } from "motion/react";
+import { useEffect, useRef, type ComponentType, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { animate, cubicBezier, motion, useMotionValue, useReducedMotion, useSpring, useTime, useTransform, useVelocity, type AnimationPlaybackControls, type MotionValue } from "motion/react";
 import type { HeroPreset, TemplateHero } from "@/lib/template-heroes";
 import { CubeScene, BookScene, FanScene, FlowerScene, type SceneProps } from "./CategoryHeroScenes";
 
@@ -31,18 +31,84 @@ const SCENES: Record<Exclude<HeroPreset, "envelope">, ComponentType<SceneProps>>
 /** Chiều cao banner (svh): để phần dưới màn hình cho group filter. */
 export const HERO_HEIGHT = "75svh";
 
-/** Tiến trình cuộn của banner: 0 khi banner nằm đầu màn hình, 1 khi đã đi qua hết. Speed nhân tiến trình, tối đa 1. */
-export function useHeroProgress(ref: RefObject<HTMLElement | null>, speed: number) {
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
-  const eased = useSpring(scrollYProgress, { stiffness: 70, damping: 24, mass: 0.7 }); // làm mượt như trước
+const WHEEL_PX = 1000; // một lần lăn chuột (px) đi hết animation khi speed = 1
+const TOUCH_PX = 700; // một lần vuốt (px) đi hết animation khi speed = 1
+const SMOOTH = { stiffness: 70, damping: 24, mass: 0.7 }; // làm mượt tiến trình, cùng thông số với phong bì
+const ALIGN_TOP = 4; // banner nằm đầu màn hình khi mép trên <= 4px
+const ALIGN_BOTTOM = 60; // banner còn đang hiện khi mép dưới > 60px
+
+/**
+ * Tiến trình animation của banner, từ 0 đến 1.
+ * - Khi banner nằm đúng đầu màn hình, lăn chuột hoặc vuốt sẽ điều khiển tiến trình, và trang không cuộn tiếp cho đến khi xong.
+ *   Nhờ vậy animation luôn hết trước khi trang đi qua.
+ * - Trang vẫn cuộn bình thường khi banner chưa tới đầu màn hình, hoặc sau khi animation đã hết.
+ * - Nếu banner đã trôi qua mà animation chưa hết (ví dụ kéo thanh cuộn), tự chạy nốt. Cuộn ngược lên đầu sẽ phát lại.
+ * - speed do admin đặt: lớn hơn 1 thì một lần cuộn đi được nhiều tiến trình hơn.
+ */
+export function useHeroProgress(ref: RefObject<HTMLElement | null>, speed: number): MotionValue<number> {
+  const prog = useMotionValue(0);
   const k = Math.max(1, Number.isFinite(speed) ? speed : 1);
-  return useTransform(eased, (v) => Math.min(1, v * k));
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let ctl: AnimationPlaybackControls | null = null;
+    const aligned = () => {
+      const r = el.getBoundingClientRect();
+      return r.top <= ALIGN_TOP && r.bottom > ALIGN_BOTTOM;
+    };
+    const glide = (to: number) => {
+      ctl?.stop();
+      ctl = animate(prog, to, { duration: 0.6, ease: "easeOut" });
+    };
+    // Trả về true nếu đã dùng cú cuộn để điều khiển animation (khi đó phải chặn cuộn trang)
+    const step = (dy: number, px: number) => {
+      const cur = prog.get();
+      if ((dy > 0 && cur >= 1) || (dy < 0 && cur <= 0)) return false;
+      ctl?.stop();
+      prog.set(Math.min(1, Math.max(0, cur + dy / (px / k))));
+      return true;
+    };
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.deltaY === 0 || !aligned()) return;
+      const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * window.innerHeight : e.deltaY;
+      if (step(dy, WHEEL_PX)) e.preventDefault();
+    };
+    let lastY = 0;
+    const onTouchStart = (e: TouchEvent) => {
+      lastY = e.touches[0]?.clientY ?? 0;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      const y = e.touches[0]?.clientY ?? lastY;
+      const dy = lastY - y;
+      lastY = y;
+      if (aligned() && step(dy, TOUCH_PX)) e.preventDefault();
+    };
+    const onScroll = () => {
+      const r = el.getBoundingClientRect();
+      if (r.bottom <= ALIGN_BOTTOM && prog.get() < 1) glide(1);
+      else if (r.top > ALIGN_TOP && prog.get() > 0) glide(0);
+    };
+    window.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      ctl?.stop();
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [ref, prog, k]);
+
+  return prog;
 }
 
 /** Khung banner dùng chung cho các kiểu mới: một cảnh, cao 75svh, không ghim. */
 function HeroSection({ hero, categoryLabel, Scene }: Props & { Scene: ComponentType<SceneProps> }) {
   const ref = useRef<HTMLElement>(null);
-  const p = useHeroProgress(ref, hero.speed);
+  const p = useSpring(useHeroProgress(ref, hero.speed), SMOOTH);
   return (
     <section
       ref={ref}
@@ -64,7 +130,7 @@ function EnvelopeHero({ hero, categoryLabel }: Props) {
   const ref = useRef<HTMLElement>(null);
   const reduce = !!useReducedMotion();
   // Cùng thông số làm mượt với trang xem thiệp mời (PublicEnvelopeIntro), và cùng cách tính tiến trình như các kiểu khác
-  const p = useHeroProgress(ref, hero.speed);
+  const p = useSpring(useHeroProgress(ref, hero.speed), SMOOTH);
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
   const look = { x: useSpring(mx, { stiffness: 60, damping: 18 }), y: useSpring(my, { stiffness: 60, damping: 18 }) };
