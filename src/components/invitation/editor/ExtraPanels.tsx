@@ -15,6 +15,9 @@ import { bankQrArt, buildVietQR, cleanAccount, cleanMessage, stripDiacritics, va
 import { useBrandStore } from './useBrandStore';
 import { PAGES, useEditorStore, type AlignTo, type CardEl } from './useEditorStore';
 import p from './CardPanel.module.css';
+import ap from './AppsPanel.module.css';
+import { api } from '@/lib/api';
+import { errorText } from '@/lib/invitation-flow';
 
 const selectedEl = (s: ReturnType<typeof useEditorStore.getState>): CardEl | null => {
   for (const pg of PAGES) {
@@ -551,59 +554,130 @@ export function AppsPanel() {
   const open = APPS.find((a) => a.id === openId) ?? null;
 
   if (open) {
+    const ready = open.kind === 'builtin' || open.id === 'ai-text';
     return (
-      <>
-        <button type="button" className={p.back} onClick={() => setOpenId(null)}>
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 5l-7 7 7 7" /></svg>
-          {open.name}
+      <div className={ap.wrap}>
+        <button type="button" className={ap.back} onClick={() => setOpenId(null)}>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 5l-7 7 7 7" /></svg>
+          Tất cả ứng dụng
         </button>
-        {open.kind === 'builtin' ? (
-          open.id === 'qr' ? <QrApp /> : <AppEmoji />
-        ) : (
-          <div className={p.notice}>
-            <p style={{ marginTop: 0 }}>{open.desc}.</p>
-            <p><b>Chưa bật.</b> {open.needs}</p>
-            <button type="button" className={p.ghost} disabled style={{ width: '100%' }}>Kết nối (chưa cấu hình)</button>
+        <div className={ap.hero}>
+          <span className={ap.icon} style={{ background: open.color }} aria-hidden>{open.glyph}</span>
+          <div className={ap.heroText}>
+            <span className={`${ap.name}`} style={{ fontSize: 15 }}>{open.name}</span>
+            <p>{open.desc}</p>
+            <span className={`${ap.pill} ${ready ? ap.pillReady : ap.pillSetup}`}>{ready ? 'Sẵn sàng' : 'Cần cấu hình'}</span>
+          </div>
+        </div>
+        {open.id === 'qr' && <QrApp />}
+        {open.id === 'emoji' && <AppEmoji />}
+        {open.id === 'ai-text' && <AppAiText />}
+        {open.kind === 'pending' && open.id !== 'ai-text' && (
+          <div className={`${ap.box} ${ap.boxInfo}`}>
+            <b>Chưa bật trên máy chủ.</b>
+            <p style={{ margin: '6px 0 0' }}>{open.needs}</p>
+            <p style={{ margin: '8px 0 0' }}>Xem hướng dẫn cấu hình trong tài liệu triển khai. Khi đã có khóa, quản trị viên bật tính năng này trên máy chủ.</p>
           </div>
         )}
-      </>
+      </div>
     );
   }
 
   const shown = tab === 'mine' ? APPS.filter((a) => a.kind === 'builtin' && matches(a)) : APPS.filter(matches);
   return (
-    <>
-      <div className={p.searchWrap}>
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
-        <input className={p.search} type="search" value={q} placeholder="Tìm ứng dụng" aria-label="Tìm ứng dụng" onChange={(ev) => setQ(ev.target.value)} />
+    <div className={ap.wrap}>
+      <div className={ap.search}>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
+        <input type="search" value={q} placeholder="Tìm ứng dụng" aria-label="Tìm ứng dụng" onChange={(ev) => setQ(ev.target.value)} />
       </div>
-      <div className={p.seg2} role="tablist" aria-label="Phạm vi ứng dụng" style={{ marginBottom: 14 }}>
-        <button type="button" role="tab" aria-selected={tab === 'explore'} aria-pressed={tab === 'explore'} onClick={() => setTab('explore')}>Khám phá</button>
-        <button type="button" role="tab" aria-selected={tab === 'mine'} aria-pressed={tab === 'mine'} onClick={() => setTab('mine')}>Ứng dụng của bạn</button>
+      <div className={ap.tabs} role="tablist" aria-label="Phạm vi ứng dụng">
+        <button type="button" role="tab" aria-selected={tab === 'explore'} onClick={() => setTab('explore')}>Khám phá</button>
+        <button type="button" role="tab" aria-selected={tab === 'mine'} onClick={() => setTab('mine')}>Ứng dụng của bạn</button>
       </div>
 
-      {tab === 'mine' && shown.length === 0 && <p className={p.empty}>Chưa có ứng dụng nào được dùng.</p>}
+      {tab === 'mine' && shown.length === 0 && <p className={ap.empty}>Chưa có ứng dụng nào được dùng.</p>}
 
       {APP_CATS.map((c) => {
         const list = shown.filter((a) => a.cat === c.id);
         if (list.length === 0) return null;
         return (
-          <section key={c.id} className={p.section}>
-            <header className={p.sectionHead}><h3>{c.label}</h3></header>
-            <div className={p.grid}>
-              {list.map((a) => (
-                <button key={a.id} type="button" className={p.item} aria-label={a.name} title={a.desc} onClick={() => setOpenId(a.id)} style={{ textAlign: 'left' }}>
-                  <span className={p.tileArt} style={{ background: a.color, display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 700, fontSize: 18, aspectRatio: '1' }}>{a.glyph}</span>
-                  <span style={{ display: 'block', fontSize: 12, marginTop: 4 }}>{a.name}</span>
-                  {a.kind === 'pending' && <span style={{ display: 'block', fontSize: 11, color: '#8a5a00' }}>Chưa bật</span>}
-                </button>
-              ))}
+          <section key={c.id}>
+            <div className={ap.sectionTitle}><h3>{c.label}</h3><span>{list.length} ứng dụng</span></div>
+            <div className={ap.grid}>
+              {list.map((a) => {
+                const ready = a.kind === 'builtin' || a.id === 'ai-text';
+                return (
+                  <button key={a.id} type="button" className={ap.card} onClick={() => setOpenId(a.id)} aria-label={a.name}>
+                    <span className={ap.icon} style={{ background: a.color }} aria-hidden>{a.glyph}</span>
+                    <span className={ap.name}>{a.name}</span>
+                    <span className={ap.desc}>{a.desc}</span>
+                    <span className={`${ap.pill} ${ready ? ap.pillReady : ap.pillSetup}`}>{ready ? 'Sẵn sàng' : 'Cần cấu hình'}</span>
+                  </button>
+                );
+              })}
             </div>
           </section>
         );
       })}
-      {tab === 'explore' && shown.length === 0 && <p className={p.empty}>Không tìm thấy ứng dụng phù hợp</p>}
-    </>
+      {tab === 'explore' && shown.length === 0 && <p className={ap.empty}>Không tìm thấy ứng dụng phù hợp</p>}
+    </div>
+  );
+}
+
+/* AI viết lời chúc: gọi API của máy chủ (khóa nằm trên server), chèn gợi ý vào thiệp. */
+function AppAiText() {
+  const [occasion, setOccasion] = useState('Đám cưới');
+  const [recipient, setRecipient] = useState('');
+  const [tone, setTone] = useState('trang-trong');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [items, setItems] = useState<string[]>([]);
+
+  const run = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      const r = await api.post<{ suggestions: string[] }>('/apps/ai/text', { occasion, recipient: recipient || undefined, tone, count: 3 });
+      setItems(r.data.suggestions);
+      if (r.data.suggestions.length === 0) setError('AI chưa trả về gợi ý, thử lại với dịp khác.');
+    } catch (err) {
+      setError(errorText(err, 'Không tạo được gợi ý. Thử lại sau.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className={ap.wrap}>
+      <label className={ap.field}>Dịp
+        <input value={occasion} maxLength={120} onChange={(ev) => setOccasion(ev.target.value)} />
+      </label>
+      <label className={ap.field}>Người nhận (không bắt buộc)
+        <input value={recipient} maxLength={80} onChange={(ev) => setRecipient(ev.target.value)} placeholder="vd: Anh Minh và chị Lan" />
+      </label>
+      <label className={ap.field}>Giọng văn
+        <select value={tone} onChange={(ev) => setTone(ev.target.value)}>
+          <option value="trang-trong">Trang trọng</option>
+          <option value="vui-ve">Vui vẻ</option>
+          <option value="lang-man">Lãng mạn</option>
+          <option value="ngan-gon">Ngắn gọn</option>
+        </select>
+      </label>
+      <button type="button" className={ap.primary} onClick={run} disabled={busy || !occasion.trim()}>
+        {busy ? 'Đang tạo…' : items.length ? 'Tạo gợi ý khác' : 'Tạo gợi ý'}
+      </button>
+      {error && <p className={ap.error} role="alert">{error}</p>}
+      {items.length > 0 && (
+        <div className={ap.suggest}>
+          {items.map((t, i) => (
+            <div key={i} className={ap.suggestItem}>
+              <span>{t}</span>
+              <button type="button" className={ap.insert} onClick={() => useEditorStore.getState().addText({ text: t, size: 30, w: 360, font: 'Be Vietnam Pro' })}>Chèn</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
