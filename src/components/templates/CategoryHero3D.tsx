@@ -313,9 +313,12 @@ function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: Moti
   const haloTop = useTransform(cardTop, (v) => `${v - 8}cqw`);
 
   // Camera: dolly + xoay nhẹ theo tiến độ, cộng thêm nghiêng theo con trỏ
-  const camY = useTransform([p, look.x], ([pv, x]: number[]) => -9 + pv * 14 + x * 9);
-  const camX = useTransform([p, look.y, lean], ([pv, y, l]: number[]) => 7 - pv * 4 - y * 6 + l); // lean: ngả theo tốc độ cuộn
-  const camScale = useTransform(p, [0, 0.5, 0.8, 1], [0.95, 1, 1.04, 1.02]); // cuối cảnh đẩy camera vào nhẹ
+  // Đầu cảnh camera nhìn thẳng (0°) để phong bì phẳng, vuông vức; chỉ nghiêng dần khi thiệp đã rút ra.
+  const tiltY = useTransform(p, [0, 0.3, 0.6, 1], [0, -6, 2, 5]);
+  const tiltX = useTransform(p, [0, 0.3, 1], [0, 5, 3]);
+  const camY = useTransform([tiltY, look.x], ([t, x]: number[]) => t + x * 6);
+  const camX = useTransform([tiltX, look.y, lean], ([t, y, l]: number[]) => t - y * 4 + l); // lean: ngả theo tốc độ cuộn
+  const camScale = useTransform(p, [0, 0.5, 0.8, 1], [1, 1, 1.04, 1.02]); // cuối cảnh đẩy camera vào nhẹ
   const textShift = useTransform(look.x, (x) => `${-x * 1.6}cqw`);
 
   const rightOpacity = useTransform(p, [0, 0.1, 0.34, 0.42], [1, 1, 1, 0]);
@@ -380,14 +383,15 @@ function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: Moti
 
           {/* Túi phía trước: ba mảnh gấp chéo hình chữ V, mỗi mảnh một sắc độ */}
           {[
-            { clip: "polygon(0 0, 50% 54.5%, 0 100%)", bg: creamShade(100) },
-            { clip: "polygon(100% 0, 50% 54.5%, 100% 100%)", bg: creamShade(80) },
-            { clip: "polygon(0 100%, 50% 54.5%, 100% 100%)", bg: cream },
+            { clip: "polygon(0 0, 50.6% 54.5%, 0 100%)", bg: creamShade(100) },
+            { clip: "polygon(100% 0, 49.4% 54.5%, 100% 100%)", bg: creamShade(80) },
+            { clip: "polygon(-0.2% 100.2%, 50% 54%, 100.2% 100.2%)", bg: cream },
           ].map((f, i) => (
             <motion.div key={i} aria-hidden className="absolute" style={{ left: envLeftCss, top: envTopCss, width: W, height: H, background: f.bg, clipPath: f.clip, opacity: envOpacity, z: zPocket }} />
           ))}
           <motion.svg aria-hidden viewBox="0 0 48 33" className="absolute" style={{ left: envLeftCss, top: envTopCss, width: W, height: H, opacity: envOpacity, z: zFold }}>
-            <path d="M0 0 L24 18 L48 0 M0 33 L24 18 L48 33" fill="none" stroke="rgba(120,90,50,0.22)" strokeWidth="0.12" />
+            <rect x="0.06" y="0.06" width="47.88" height="32.88" rx="0.3" fill="none" stroke="rgba(120,90,50,0.28)" strokeWidth="0.12" />
+            <path d="M0 0 L24 17.9 L48 0 M0 33 L24 17.9 L48 33" fill="none" stroke="rgba(120,90,50,0.3)" strokeWidth="0.12" />
           </motion.svg>
 
           {/* Nắp: hai mặt (ngoài kem, trong màu nhấn), bản lề ở mép trên. Độ mờ đặt lên từng mặt để không làm phẳng cảnh 3D */}
