@@ -144,9 +144,16 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
   const hoverRoot = hover ? rootOfId(hover.id) : undefined;
 
   return (
-    <SideAdsShell hero={<PageHero title={currentLabel ?? "Khám Phá Các Mẫu Thiệp"} description="Thiết kế ấn tượng, thao tác dễ dàng chỉ trong vài phút" />}>
+    <SideAdsShell
+      hero={
+        heroKey && hero ? (
+          <CategoryHero3D hero={hero} categoryLabel={HERO_CATEGORY_LABELS[heroKey]} />
+        ) : (
+          <PageHero title={currentLabel ?? "Khám Phá Các Mẫu Thiệp"} description="Thiết kế ấn tượng, thao tác dễ dàng chỉ trong vài phút" />
+        )
+      }
+    >
     <div className="bg-[#FEFDFD] font-inter text-[#333]">
-      {hero && heroKey && <CategoryHero3D hero={hero} categoryLabel={HERO_CATEGORY_LABELS[heroKey]} />}
       <div className="mx-auto w-full max-w-[1520px] px-5 py-[20px]">
         {/* Bộ lọc danh mục: nền xanh, chữ trắng như bản src */}
         <div ref={wrapRef} className="relative" onMouseLeave={scheduleClose}>

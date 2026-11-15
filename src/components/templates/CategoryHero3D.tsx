@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useMotionValue, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
+import { animate, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useTransform, type AnimationPlaybackControls, type MotionValue } from "motion/react";
 import type { TemplateHero } from "@/lib/template-heroes";
 
 type Props = { hero: TemplateHero; categoryLabel: string };
@@ -20,9 +20,26 @@ export function CategoryHero3D({ hero, categoryLabel }: Props) {
   const ref = useRef<HTMLElement>(null);
   const reduce = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  // Trạng thái cuối cùng dùng khi tắt chuyển động: không cần cuộn vẫn thấy đủ nội dung
-  const finalP = useMotionValue(0.8);
-  const p = reduce ? finalP : scrollYProgress;
+  // p là nguồn chung cho mọi kiểu 3D. Mặc định lấy theo vị trí cuộn; khi đặt chuột lên thì tự chạy.
+  const p = useMotionValue(0.8);
+  const hovering = useRef(false);
+  const run = useRef<AnimationPlaybackControls | null>(null);
+  useMotionValueEvent(scrollYProgress, "change", (v) => {
+    if (!hovering.current && !reduce) p.set(v);
+  });
+  const onEnter = () => {
+    if (reduce) return;
+    hovering.current = true;
+    run.current?.stop();
+    // thời lượng tỉ lệ nghịch với tốc độ admin cài: tốc độ cao thì chạy nhanh hơn
+    run.current = animate(p, 1, { duration: 6 / Math.max(hero.speed, 0.2), ease: "linear" });
+  };
+  const onLeave = () => {
+    if (reduce) return;
+    hovering.current = false;
+    run.current?.stop();
+    run.current = animate(p, scrollYProgress.get(), { duration: 0.8, ease: "easeOut" });
+  };
   const k = reduce ? 0 : hero.speed;
   const accent = hero.accent;
   const title = hero.title || categoryLabel;
@@ -30,6 +47,8 @@ export function CategoryHero3D({ hero, categoryLabel }: Props) {
   return (
     <section
       ref={ref}
+      onPointerEnter={onEnter}
+      onPointerLeave={onLeave}
       aria-label={`Giới thiệu danh mục ${categoryLabel}`}
       className="relative overflow-hidden border-b border-black/5"
       style={{ background: `linear-gradient(180deg, ${accent}1f 0%, #FEFDFD 85%)` }}
