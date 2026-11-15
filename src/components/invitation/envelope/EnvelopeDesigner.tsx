@@ -78,13 +78,16 @@ type Props = {
   templateSlug?: string | null;
   invitationId?: string | null;
   adminTemplate?: AdminTemplateTarget;
+  /** Nơi nút "Thoát" đưa về. Mặc định: quản lý thiệp của người dùng. Trang admin truyền /admin/templates. */
+  exitHref?: string;
+  exitLabel?: string;
 };
 
 const DOTS: PageId[] = ['cover', 'inside', 'back'];
 const CARD_PAGES: PageId[] = ['cover', 'back'];
 const draftKey = (slug?: string | null) => `icards:draft:${slug ?? 'blank'}`;
 
-export function EnvelopeDesigner({ recipientName: recipientProp, editable = false, templateSlug, invitationId, adminTemplate }: Props) {
+export function EnvelopeDesigner({ recipientName: recipientProp, editable = false, templateSlug, invitationId, adminTemplate, exitHref, exitLabel }: Props) {
   const catalog = useEnvelopeCatalog();
   const [recipientName, setRecipientName] = useState(recipientProp);
   // Thiệp đã lưu trên máy chủ (mở lại bằng ?invitation=). Khi có, nội dung lấy từ server thay vì mẫu.
@@ -562,7 +565,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
         </p>
       )}
       <header className={d.top}>
-        <Link href={ROUTES.invitationManagement} className={d.back} aria-label="Quay lại quản lý thiệp mời">
+        <Link href={exitHref ?? ROUTES.invitationManagement} className={d.back} aria-label={exitLabel ?? 'Quay lại quản lý thiệp mời'}>
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 5l-7 7 7 7" /></svg>
           <span>Thoát</span>
         </Link>

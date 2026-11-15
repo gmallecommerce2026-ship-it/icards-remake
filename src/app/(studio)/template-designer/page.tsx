@@ -3,7 +3,6 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { EnvelopeDesigner } from '@/components/invitation/envelope/EnvelopeDesigner';
 import { getAdminTemplate } from '@/lib/api/admin';
@@ -31,17 +30,8 @@ function Designer() {
   if (!target) {
     return <div className="grid h-dvh place-items-center text-sm text-[#5B6B7F]">Đang tải mẫu…</div>;
   }
-  return (
-    <>
-      <Link
-        href="/admin/templates"
-        className="fixed left-2 top-2 z-[200] rounded-md bg-white/90 px-3 py-1.5 text-xs font-semibold text-[#27548A] shadow ring-1 ring-black/10 hover:bg-white"
-      >
-        ← Quản trị mẫu
-      </Link>
-      <EnvelopeDesigner key={target.id} editable templateSlug={target.template.slug} adminTemplate={target} />
-    </>
-  );
+  // Cùng một màn hình thiết kế với trang thiệp của người dùng; chỉ khác đích lưu (mẫu) và nút Thoát (về quản trị).
+  return <EnvelopeDesigner key={target.id} editable templateSlug={target.template.slug} adminTemplate={target} exitHref="/admin/templates" exitLabel="Quay lại quản trị mẫu" />;
 }
 
 export default function TemplateDesignerPage() {
