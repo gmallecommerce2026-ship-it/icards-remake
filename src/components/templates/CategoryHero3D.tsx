@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { animate, cubicBezier, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTime, useTransform, useVelocity, type AnimationPlaybackControls, type MotionValue } from "motion/react";
 import type { TemplateHero } from "@/lib/template-heroes";
 
@@ -24,7 +24,7 @@ export function CategoryHero3D(props: Props) {
 /* ====================== Phong bì: cảnh ghim + cuộn ====================== */
 
 /** Chiều cao vùng ghim (svh). Quãng cuộn để chạy hết animation = (PIN_VH − 100) svh. Tăng để chậm hơn, giảm để nhanh hơn. */
-const PIN_VH = 300;
+const PIN_VH = 360;
 
 function EnvelopeHero({ hero, categoryLabel }: Props) {
   const ref = useRef<HTMLElement>(null);
@@ -254,93 +254,123 @@ function WallColumn({ p, k, hero, items, up, depth }: PresetProps & { items: str
 }
 
 /* ---------- Phong bì 3D cho thiệp cưới ----------
-   0.00–0.08  phong bì kem đóng kín, con dấu sáp ở giữa nắp, chữ ở bên PHẢI
-   0.08–0.26  con dấu mờ đi, nắp lật mở (mặt trong nắp màu nhấn)
-   0.24–0.42  thiệp trượt lên khỏi phong bì, hơi nghiêng rồi thẳng lại
-   0.42–0.58  phong bì + thiệp lướt sang PHẢI theo đường cung, chữ chuyển sang TRÁI
-   0.58–0.84  thiệp bay sang TRÁI, nhấc lên khỏi mặt phẳng và lật 180° (có đà, nảy nhẹ), phong bì chìm xuống mờ đi
-   0.60–1.00  hào quang vàng sau thiệp; bụi vàng lấp lánh khi hạ cánh (0.78–0.88)
-   0.80–0.99  chữ mặt sau hiện lần lượt ở bên PHẢI: nhãn, tiêu đề, đường kẻ, gợi ý cuộn tiếp
+   Kịch bản (p = tiến độ cuộn, 0 → 1):
+   0.00–0.05  phong bì kem nằm giữa khung, đang ở MẶT TRƯỚC (tên + tem), nhấp nhô nhẹ, gợi ý "Cuộn để mở thiệp"
+   0.05–0.23  phong bì nhấc lên gần camera và lật 180° (lắc nhẹ) để lộ MẶT SAU: nếp gấp chữ V, nắp đóng, dấu sáp
+   0.23–0.31  đổi sang cảnh chi tiết (hai bên giống hệt nhau nên không giật); dấu sáp nảy lên rồi tan
+   0.28–0.44  nắp lật mở (mặt trong nắp màu nhấn)
+   0.36–0.56  thiệp trượt lên khỏi phong bì, hơi nghiêng rồi thẳng lại
+   0.56–0.68  phong bì rơi xuống và mờ dần; hiện dòng "Mời bạn xem thiệp"
+   0.62–0.80  thiệp nhấc lên gần camera, bay sang TRÁI
+   0.72–0.90  thiệp lật 180° có đà; hào quang vàng + bụi lấp lánh khi hạ cánh
+   0.82–0.99  chữ mặt sau hiện lần lượt ở bên PHẢI
    Vị trí tính theo % chiều rộng sân khấu; kích thước dùng cqw để co giãn theo khung. */
+const SWAP = 0.23; // lúc đổi từ "phong bì đang lật" sang "phong bì chi tiết"
 const L = 22;
-const R = 78;
 const ease = cubicBezier(0.45, 0.05, 0.2, 1);
 const SERIF = "var(--font-display-raw), 'Cormorant Garamond', Georgia, serif";
 const SCRIPT = "var(--font-card-script), 'Great Vibes', cursive";
 const mix = (a: string, pct: number, b: string) => `color-mix(in srgb, ${a} ${pct}%, ${b})`;
+const c01 = (x: number) => Math.min(1, Math.max(0, x));
+
+const CREAM = "linear-gradient(160deg, #fbf6ec 0%, #f1e7d3 100%)";
+const creamShade = (a: number) => `linear-gradient(${a}deg, #f6eddc 0%, #e9dcc3 100%)`;
+const FLAP_BG = "linear-gradient(180deg, #fbf6ec 0%, #eadfc8 100%)";
+const ENV_SHADOW = "0 1.4cqw 3cqw -1cqw rgba(0,0,0,0.45)";
+/** Ba mảnh gấp chữ V ở mặt sau phong bì (dùng chung cho cảnh lật và cảnh chi tiết). Chồng nhẹ lên nhau để không hở đường may. */
+const POCKET = [
+  { clip: "polygon(0 0, 50.6% 54.5%, 0 100%)", bg: creamShade(100) },
+  { clip: "polygon(100% 0, 49.4% 54.5%, 100% 100%)", bg: creamShade(80) },
+  { clip: "polygon(-0.2% 100.2%, 50% 54%, 100.2% 100.2%)", bg: CREAM },
+];
+const FOLD = (
+  <>
+    <rect x="0.06" y="0.06" width="47.88" height="32.88" fill="none" stroke="rgba(120,90,50,0.28)" strokeWidth="0.12" />
+    <path d="M0 0 L24 17.9 L48 0 M0 33 L24 17.9 L48 33" fill="none" stroke="rgba(120,90,50,0.3)" strokeWidth="0.12" />
+  </>
+);
+const sealStyle = (accent: string): CSSProperties => ({
+  width: "6.4cqw",
+  height: "6.4cqw",
+  background: `radial-gradient(circle at 35% 30%, ${mix(accent, 75, "#fff")}, ${accent} 55%, ${mix(accent, 60, "#000")})`,
+  boxShadow: "0 0.5cqw 1cqw rgba(0,0,0,0.4), inset 0 0 0 0.45cqw rgba(255,255,255,0.14), inset 0 -0.3cqw 0.6cqw rgba(0,0,0,0.3)",
+  color: "rgba(255,255,255,0.9)",
+  fontFamily: SCRIPT,
+  fontSize: "3.6cqw",
+  lineHeight: 1,
+});
 
 type Look = { x: MotionValue<number>; y: MotionValue<number> };
 
 function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: MotionValue<number>; look: Look; lean: MotionValue<number>; reduce: boolean; hero: TemplateHero; categoryLabel: string }) {
   const accent = hero.accent;
+  const title = hero.title || categoryLabel;
   const tr = (input: number[], output: number[]) => useTransform(p, input, output, { ease });
-
-  // Các chặng chồng lên nhau một phần để chuyển động liền mạch, không dừng–chạy–dừng
-  const envLeft = tr([0, 0.36, 0.58], [L, L, R]);
-  const envOpacity = useTransform(p, [0.62, 0.76], [1, 0]);
-  const envZ = tr([0.46, 0.72], [0, -420]); // phong bì lùi ra sau trước khi mờ đi, nên không lộ các lớp khi trong suốt
-  const envDrop = tr([0.56, 0.8], [0, 5]);
-  const sealOpacity = useTransform(p, [0.04, 0.12], [1, 0]);
-  const flapDeg = tr([0.07, 0.25], [0, -125]);
-  const flapZ = useTransform([flapDeg, envZ], ([d, z]: number[]) => (d < -80 ? -6 : 34) + z); // nắp mở thì ra sau thiệp, đóng thì ở trước
-  const zPocket = useTransform(envZ, (z) => z + 20);
-  const zFold = useTransform(envZ, (z) => z + 20.5);
-  const zSeal = useTransform(envZ, (z) => z + 38);
-
-  const cardLeft = tr([0, 0.36, 0.58, 0.84], [L, L, R, L]);
-  const cardTop = tr([0, 0.2, 0.4, 0.56, 0.84], [14.5, 14.5, 4, 4, 14.5]);
-  const cardArc = useTransform(p, [0.36, 0.47, 0.58, 0.58, 0.7, 0.84], [0, -2.5, 0, 0, -3, 0]);
-  const cardLeftCss = useTransform(cardLeft, (v) => `calc(${v}% - 21cqw)`);
   const time = useTime();
-  const floatAmp = useTransform(p, [0.4, 0.5], [0, 1]);
+
+  /* --- Giai đoạn 1: mặt trước → lật sang mặt sau (phong bì "đang lật" là một tấm hai mặt) --- */
+  const flipEnv = tr([0.05, SWAP], [0, 180]);
+  const flipZ = tr([0.05, 0.14, SWAP], [20, 170, 20]); // nhấc lại gần camera rồi hạ về đúng độ sâu của cảnh chi tiết
+  const flipLift = tr([0.05, 0.14, SWAP], [0, 3, 0]);
+  const flipRotZ = tr([0.05, 0.11, 0.17, SWAP], [0, -3.5, 2.5, 0]);
+  const flipRotX = tr([0.05, 0.14, SWAP], [0, -8, 0]);
+  const flipOpacity = useTransform(p, (v) => (v < SWAP ? 1 : 0));
+  const asmOpacity = useTransform(p, (v) => (v < SWAP ? 0 : 1 - c01((v - 0.56) / 0.12))); // cảnh chi tiết: chỉ hiện sau SWAP, mờ dần khi phong bì rơi
+  const cardOpacity = useTransform(p, (v) => (v < SWAP ? 0 : 1));
+  const envShine = useTransform(flipEnv, [0, 90, 180], ["130%", "40%", "-30%"]);
+  const envBob = useTransform([time, p], ([t, pv]: number[]) => (reduce ? 0 : Math.sin(t / 1100) * 0.4 * (1 - c01(pv / 0.06)))); // nhấp nhô lúc nằm yên
+
+  /* --- Giai đoạn 2: dấu sáp tan, mở nắp, rút thiệp --- */
+  const envLeft = tr([0, 0.56, 0.7], [50, 50, 56]);
+  const envDrop = tr([0.56, 0.7], [0, 6]);
+  const envOpacity = useTransform(p, [0.56, 0.68], [1, 0]);
+  const sealOpacity = useTransform(p, (v) => (v < SWAP ? 0 : 1 - c01((v - 0.25) / 0.06)));
+  const sealScale = useTransform(p, [0.25, 0.29, 0.31], [1, 1.2, 0.6]);
+  const flapDeg = tr([0.28, 0.44], [0, -150]);
+  const flapZ = useTransform(flapDeg, (d) => (d < -80 ? -6 : 34)); // nắp mở thì ra sau thiệp, đóng thì ở trước
+
+  const cardLeft = tr([0, 0.62, 0.8], [50, 50, L]);
+  const cardTop = tr([0, 0.36, 0.56, 0.74, 0.9], [14.5, 14.5, 4, 4, 14.5]);
+  const cardArc = useTransform(p, [0.62, 0.72, 0.8, 1], [0, -3, 0, 0]);
+  const cardLeftCss = useTransform(cardLeft, (v) => `calc(${v}% - 21cqw)`);
+  const floatAmp = useTransform(p, [0.5, 0.58], [0, 1]);
   const floatY = useTransform([time, floatAmp], ([t, a]: number[]) => (reduce ? 0 : Math.sin(t / 1200) * 0.5 * a)); // thiệp lơ lửng nhẹ khi đã rút ra
   const cardTopCss = useTransform([cardTop, cardArc, floatY], ([t, a, f]: number[]) => `${t + a + f}cqw`);
-  // Nghiêng Z như giấy thật khi bay và khi hạ cánh
-  const cardTilt = useTransform(p, [0.2, 0.32, 0.4, 0.56, 0.7, 0.84, 0.92], [-2.5, -1, 0, 0, 3, -1.5, 0]);
-  const cardScale = useTransform(p, [0.2, 0.4, 0.46, 0.58, 0.72, 0.84], [1, 1.03, 1.03, 0.82, 0.82, 1]); // bù lại phối cảnh khi thiệp nhấc gần camera
-  const cardZ = useTransform(p, [0.44, 0.56, 0.72, 0.84], [10, 320, 320, 10]); // nhấc thiệp cao khỏi phong bì rồi mới lật, để hai mặt phẳng không cắt nhau
-  // Lật có đà: vượt nhẹ rồi rung về 180° (số cuối 1.22: 1.1 là nhẹ, 1.4 là nảy rõ)
-  const flipEase = cubicBezier(0.4, 0, 0.2, 1.22);
-  const flipDeg = useTransform(p, [0.56, 0.84], [0, 180], { ease: flipEase });
-  const flipTilt = useTransform(p, [0.56, 0.7, 0.84], [0, -10, 0]);
+  const cardTilt = useTransform(p, [0.3, 0.4, 0.5, 0.58, 0.72, 0.82, 0.9, 0.95], [0, -2.5, -1, 0, 0, 3, -1.5, 0]);
+  const cardScale = useTransform(p, [0.38, 0.5, 0.66, 0.74, 0.8, 0.9], [1, 1.03, 1.03, 0.82, 0.82, 1]); // bù lại phối cảnh khi thiệp nhấc gần camera
+  const cardZ = useTransform(p, [0.66, 0.74, 0.8, 0.9], [10, 320, 320, 10]); // chỉ nhấc cao sau khi phong bì đã mờ hẳn, nên không bị đổi lớp giật
+  const flipEase = cubicBezier(0.4, 0, 0.2, 1.22); // lật có đà: vượt nhẹ rồi rung về 180° (1.1 nhẹ, 1.4 nảy rõ)
+  const flipDeg = useTransform(p, [0.72, 0.9], [0, 180], { ease: flipEase });
+  const flipTilt = useTransform(p, [0.72, 0.8, 0.9], [0, -10, 0]);
   const cardShadowScale = useTransform(cardZ, [10, 320], [1, 0.75]);
   const shine = useTransform(flipDeg, [0, 90, 180], ["130%", "40%", "-30%"]);
 
   // Hào quang vàng sau thiệp
-  const haloOpacity = useTransform(p, [0.6, 0.78, 0.92, 1], [0, 0.5, 0.85, 0.75]);
-  const haloScale = useTransform(p, [0.6, 1], [0.6, 1.1]);
+  const haloOpacity = useTransform(p, [0.7, 0.84, 0.95, 1], [0, 0.5, 0.85, 0.75]);
+  const haloScale = useTransform(p, [0.7, 1], [0.6, 1.1]);
   const haloLeft = useTransform(cardLeft, (v) => `calc(${v}% - 30cqw)`);
   const haloTop = useTransform(cardTop, (v) => `${v - 8}cqw`);
 
-  // Camera: dolly + xoay nhẹ theo tiến độ, cộng thêm nghiêng theo con trỏ
-  // Đầu cảnh camera nhìn thẳng (0°) để phong bì phẳng, vuông vức; chỉ nghiêng dần khi thiệp đã rút ra.
-  const tiltY = useTransform(p, [0, 0.3, 0.6, 1], [0, -6, 2, 5]);
-  const tiltX = useTransform(p, [0, 0.3, 1], [0, 5, 3]);
+  // Camera: đầu cảnh nhìn thẳng để phong bì vuông vức, chỉ nghiêng dần khi thiệp đã rút ra
+  const tiltY = useTransform(p, [0, 0.3, 0.55, 0.8, 1], [0, 0, -5, 2, 5]);
+  const tiltX = useTransform(p, [0, 0.3, 0.55, 1], [0, 0, 5, 3]);
   const camY = useTransform([tiltY, look.x], ([t, x]: number[]) => t + x * 6);
   const camX = useTransform([tiltX, look.y, lean], ([t, y, l]: number[]) => t - y * 4 + l); // lean: ngả theo tốc độ cuộn
-  const camScale = useTransform(p, [0, 0.5, 0.8, 1], [1, 1, 1.04, 1.02]); // cuối cảnh đẩy camera vào nhẹ
+  const camScale = useTransform(p, [0, 0.5, 0.8, 1], [1, 1, 1.04, 1.02]);
   const textShift = useTransform(look.x, (x) => `${-x * 1.6}cqw`);
 
-  const rightOpacity = useTransform(p, [0, 0.1, 0.34, 0.42], [1, 1, 1, 0]);
-  const rightY = useTransform(p, [0.34, 0.42], [0, -2]);
-  const leftOpacity = useTransform(p, [0.4, 0.5, 0.62, 0.7], [0, 1, 1, 0]);
-  const leftY = useTransform(p, [0.4, 0.5, 0.62, 0.7], [2, 0, 0, -2]);
-
   const envLeftCss = useTransform(envLeft, (v) => `calc(${v}% - 24cqw)`);
-  const envTopCss = useTransform(envDrop, (d) => `${12.5 + d}cqw`);
+  const envTopCss = useTransform([envDrop, flipLift, envBob], ([d, l, b]: number[]) => `${12.5 + d - l + b}cqw`);
   const sealLeft = useTransform(envLeft, (v) => `calc(${v}% - 3.2cqw)`);
-  const sealTop = useTransform(envDrop, (d) => `${12.5 + 18 - 3.6 + d}cqw`);
+  const sealTop = useTransform(envDrop, (d) => `${12.5 + 18 - 3.2 + d}cqw`); // tâm dấu sáp nằm đúng đỉnh nắp
   const envShadowLeft = useTransform(envLeft, (v) => `calc(${v}% - 22cqw)`);
   const envShadowOp = useTransform(envOpacity, (o) => o * 0.55);
+  const envShadowScale = useTransform(flipZ, [20, 170], [1, 0.8]);
   const cardShadowLeft = useTransform(cardLeft, (v) => `calc(${v}% - 19cqw)`);
-  const cardShadowOp = useTransform(p, [0.4, 0.56, 0.72, 0.84], [0, 0.35, 0.18, 0.4]);
-  const rightY2 = useTransform(rightY, (v) => `calc(-50% + ${v}cqw)`);
-  const leftY2 = useTransform(leftY, (v) => `calc(-50% + ${v}cqw)`);
+  const cardShadowOp = useTransform(p, [0.4, 0.56, 0.74, 0.9], [0, 0.35, 0.18, 0.4]);
 
   const front = hero.images[0];
   const back = hero.images[1] ?? hero.images[0];
-  const cream = "linear-gradient(160deg, #fbf6ec 0%, #f1e7d3 100%)";
-  const creamShade = (a: number) => `linear-gradient(${a}deg, #f6eddc 0%, #e9dcc3 100%)`;
   const liner = `linear-gradient(170deg, ${mix(accent, 88, "#fff")} 0%, ${mix(accent, 70, "#000")} 100%)`;
   const W = "48cqw";
   const H = "33cqw";
@@ -351,10 +381,10 @@ function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: Moti
         {/* Cánh hoa rơi chậm (phẳng, nằm sau cảnh) */}
         {!reduce && PETALS.map((pt, i) => <Petal key={i} p={p} {...pt} accent={accent} />)}
 
-        {/* Camera: mọi lớp bên trong được sắp theo độ sâu thật (translateZ), không còn chồng phẳng bằng z-index */}
+        {/* Camera: mọi lớp bên trong được sắp theo độ sâu thật (translateZ), không chồng phẳng bằng z-index */}
         <motion.div className="absolute inset-0" style={{ transformStyle: "preserve-3d", rotateX: camX, rotateY: camY, scale: camScale }}>
           {/* Bóng đổ trên nền: của phong bì và của thiệp (nhạt đi khi thiệp bay cao) */}
-          <motion.div aria-hidden className="absolute rounded-[50%]" style={{ left: envShadowLeft, top: "43.5cqw", width: "44cqw", height: "4cqw", background: "rgba(40,20,20,0.35)", filter: "blur(2.2cqw)", opacity: envShadowOp, z: -40 }} />
+          <motion.div aria-hidden className="absolute rounded-[50%]" style={{ left: envShadowLeft, top: "43.5cqw", width: "44cqw", height: "4cqw", background: "rgba(40,20,20,0.35)", filter: "blur(2.2cqw)", opacity: envShadowOp, scale: envShadowScale, z: -40 }} />
           <motion.div aria-hidden className="absolute rounded-[50%]" style={{ left: cardShadowLeft, top: "44cqw", width: "38cqw", height: "3.4cqw", background: "rgba(40,20,20,0.45)", filter: "blur(2.4cqw)", opacity: cardShadowOp, scale: cardShadowScale, z: -38 }} />
 
           {/* Hào quang vàng + bụi lấp lánh (sau thiệp) */}
@@ -369,62 +399,66 @@ function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: Moti
           />
           {!reduce && SPARKS.map((s, i) => <Spark key={i} p={p} {...s} />)}
 
-          {/* Mặt trong phong bì */}
-          <motion.div aria-hidden className="absolute" style={{ left: envLeftCss, top: envTopCss, width: W, height: H, background: liner, borderRadius: 4, opacity: envOpacity, z: envZ, boxShadow: "0 1.4cqw 3cqw -1cqw rgba(0,0,0,0.45)" }} />
+          {/* Phong bì đang lật: một tấm dày vài px, mặt trước (tên + tem) và mặt sau (nếp gấp + nắp đóng + dấu sáp) */}
+          <motion.div
+            aria-hidden
+            className="absolute"
+            style={{ left: envLeftCss, top: envTopCss, width: W, height: H, transformStyle: "preserve-3d", rotateY: flipEnv, rotateX: flipRotX, rotateZ: flipRotZ, z: flipZ, opacity: flipOpacity }}
+          >
+            <div className="absolute inset-0" style={{ background: "#d9c9a8", transform: "translateZ(-0.8px)" }} />
+            <div className="absolute inset-0" style={{ background: "#d9c9a8", transform: "translateZ(0.8px)" }} />
+            <EnvFront label={categoryLabel} title={title} accent={accent} shine={envShine} />
+            <EnvBack accent={accent} shine={envShine} />
+          </motion.div>
+
+          {/* Mặt trong phong bì (cảnh chi tiết, hiện sau khi lật xong) */}
+          <motion.div aria-hidden className="absolute" style={{ left: envLeftCss, top: envTopCss, width: W, height: H, background: liner, opacity: asmOpacity, z: 0, boxShadow: ENV_SHADOW }} />
 
           {/* Thiệp */}
           <motion.div
             className="absolute"
-            style={{ left: cardLeftCss, top: cardTopCss, width: "42cqw", height: "29cqw", transformStyle: "preserve-3d", rotateZ: cardTilt, scale: cardScale, z: cardZ, rotateX: flipTilt, rotateY: flipDeg }}
+            style={{ left: cardLeftCss, top: cardTopCss, width: "42cqw", height: "29cqw", transformStyle: "preserve-3d", rotateZ: cardTilt, scale: cardScale, z: cardZ, rotateX: flipTilt, rotateY: flipDeg, opacity: cardOpacity }}
           >
-            <CardFace src={front} label={categoryLabel} text={hero.title || categoryLabel} accent={accent} shine={shine} />
-            <CardFace src={back} label="" text={hero.subtitle || hero.title || categoryLabel} accent={accent} shine={shine} back />
+            <CardFace src={front} label={categoryLabel} text={title} accent={accent} shine={shine} />
+            <CardFace src={back} label="" text={hero.subtitle || title} accent={accent} shine={shine} back />
           </motion.div>
 
           {/* Túi phía trước: ba mảnh gấp chéo hình chữ V, mỗi mảnh một sắc độ */}
-          {[
-            { clip: "polygon(0 0, 50.6% 54.5%, 0 100%)", bg: creamShade(100) },
-            { clip: "polygon(100% 0, 49.4% 54.5%, 100% 100%)", bg: creamShade(80) },
-            { clip: "polygon(-0.2% 100.2%, 50% 54%, 100.2% 100.2%)", bg: cream },
-          ].map((f, i) => (
-            <motion.div key={i} aria-hidden className="absolute" style={{ left: envLeftCss, top: envTopCss, width: W, height: H, background: f.bg, clipPath: f.clip, opacity: envOpacity, z: zPocket }} />
+          {POCKET.map((f, i) => (
+            <motion.div key={i} aria-hidden className="absolute" style={{ left: envLeftCss, top: envTopCss, width: W, height: H, background: f.bg, clipPath: f.clip, opacity: asmOpacity, z: 20 }} />
           ))}
-          <motion.svg aria-hidden viewBox="0 0 48 33" className="absolute" style={{ left: envLeftCss, top: envTopCss, width: W, height: H, opacity: envOpacity, z: zFold }}>
-            <rect x="0.06" y="0.06" width="47.88" height="32.88" rx="0.3" fill="none" stroke="rgba(120,90,50,0.28)" strokeWidth="0.12" />
-            <path d="M0 0 L24 17.9 L48 0 M0 33 L24 17.9 L48 33" fill="none" stroke="rgba(120,90,50,0.3)" strokeWidth="0.12" />
+          <motion.svg aria-hidden viewBox="0 0 48 33" className="absolute" style={{ left: envLeftCss, top: envTopCss, width: W, height: H, opacity: asmOpacity, z: 20.5 }}>
+            {FOLD}
           </motion.svg>
 
           {/* Nắp: hai mặt (ngoài kem, trong màu nhấn), bản lề ở mép trên. Độ mờ đặt lên từng mặt để không làm phẳng cảnh 3D */}
           <motion.div aria-hidden className="absolute" style={{ left: envLeftCss, top: envTopCss, width: W, height: "18cqw", transformOrigin: "50% 0%", transformStyle: "preserve-3d", rotateX: flapDeg, z: flapZ }}>
-            <motion.div className="absolute inset-0" style={{ background: "linear-gradient(180deg, #fbf6ec 0%, #eadfc8 100%)", clipPath: "polygon(0 0, 100% 0, 50% 100%)", backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", opacity: envOpacity }} />
-            <motion.div className="absolute inset-0" style={{ background: mix(accent, 62, "#000"), clipPath: "polygon(0 100%, 100% 100%, 50% 0)", transform: "rotateX(180deg)", backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", opacity: envOpacity }} />
+            <motion.div className="absolute inset-0" style={{ background: FLAP_BG, clipPath: "polygon(0 0, 100% 0, 50% 100%)", backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", opacity: asmOpacity }} />
+            <motion.div className="absolute inset-0" style={{ background: mix(accent, 62, "#000"), clipPath: "polygon(0 100%, 100% 100%, 50% 0)", transform: "rotateX(180deg)", backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", opacity: asmOpacity }} />
           </motion.div>
 
-          {/* Con dấu sáp ở đầu nắp */}
+          {/* Con dấu sáp ở đầu nắp: nảy lên rồi tan khi bắt đầu mở */}
           <motion.div
             aria-hidden
             className="absolute flex items-center justify-center rounded-full"
-            style={{
-              left: sealLeft, top: sealTop, width: "6.4cqw", height: "6.4cqw", z: zSeal, opacity: sealOpacity,
-              background: `radial-gradient(circle at 35% 30%, ${mix(accent, 75, "#fff")}, ${accent} 55%, ${mix(accent, 60, "#000")})`,
-              boxShadow: "0 0.5cqw 1cqw rgba(0,0,0,0.4), inset 0 0 0 0.45cqw rgba(255,255,255,0.14), inset 0 -0.3cqw 0.6cqw rgba(0,0,0,0.3)",
-              color: "rgba(255,255,255,0.9)", fontFamily: SCRIPT, fontSize: "3.6cqw", lineHeight: 1,
-            }}
+            style={{ ...sealStyle(accent), left: sealLeft, top: sealTop, z: 38, opacity: sealOpacity, scale: sealScale }}
           >
             &amp;
           </motion.div>
         </motion.div>
 
-        {/* Chữ: nằm ngoài camera để luôn rõ nét, trượt ngược nhẹ theo con trỏ cho có chiều sâu */}
-        <motion.div className="absolute" style={{ right: "4cqw", top: "58%", width: "42cqw", y: rightY2, x: textShift, opacity: rightOpacity, zIndex: 6 }}>
-          <Heading label={categoryLabel} title={hero.title || categoryLabel} subtitle={hero.subtitle} accent={accent} />
-        </motion.div>
-        <motion.div className="absolute" style={{ left: "4cqw", top: "58%", width: "40cqw", y: leftY2, x: textShift, opacity: leftOpacity, zIndex: 6 }}>
-          <Heading label={categoryLabel} title={hero.title || categoryLabel} accent={accent} />
-        </motion.div>
+        {/* Gợi ý đầu cảnh và dòng giữa cảnh: nằm ngoài camera để luôn rõ nét */}
+        <Caption p={p} input={[0, 0.05]} output={[1, 0]}>
+          Cuộn để mở thiệp <Bob accent={accent} />
+        </Caption>
+        <Caption p={p} input={[0.5, 0.56, 0.66, 0.72]} output={[0, 1, 1, 0]}>
+          Mời bạn xem thiệp
+        </Caption>
+
+        {/* Chữ mặt sau: hiện lần lượt ở bên phải, trượt ngược nhẹ theo con trỏ cho có chiều sâu */}
         <div className="absolute" style={{ right: "4cqw", top: "58%", width: "42cqw", transform: "translateY(-50%)", zIndex: 6 }}>
           <motion.div style={{ x: textShift }}>
-            <BackReveal p={p} title={hero.subtitle || hero.title || categoryLabel} label={categoryLabel} accent={accent} />
+            <BackReveal p={p} title={hero.subtitle || title} label={categoryLabel} accent={accent} />
           </motion.div>
         </div>
       </div>
@@ -432,23 +466,82 @@ function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: Moti
   );
 }
 
-/** Khối chữ: nhãn nhỏ, tiêu đề serif, đường kẻ vàng mảnh và phụ đề. */
-function Heading({ label, title, subtitle, accent, small = false }: { label?: string; title: string; subtitle?: string; accent: string; small?: boolean }) {
+/** Dòng chữ nhỏ dưới phong bì, mờ vào/ra theo tiến độ cuộn. */
+function Caption({ p, input, output, children }: { p: MotionValue<number>; input: number[]; output: number[]; children: ReactNode }) {
+  const opacity = useTransform(p, input, output);
   return (
-    <div>
-      {label && (
-        <p className="font-semibold uppercase" style={{ color: accent, fontSize: "1.9cqw", letterSpacing: "0.32em" }}>
-          {label}
-        </p>
-      )}
-      <h2 className="font-semibold" style={{ fontFamily: SERIF, color: "#2a2023", fontSize: small ? "4.4cqw" : "5.2cqw", lineHeight: 1.12, marginTop: label ? "1.2cqw" : 0 }}>
-        {title}
-      </h2>
-      <div className="flex items-center" style={{ gap: "1cqw", margin: "1.6cqw 0" }} aria-hidden>
-        <span style={{ height: 1, width: "7cqw", background: "linear-gradient(90deg, #c9a55c, transparent)" }} />
-        <span style={{ color: "#c9a55c", fontSize: "1.6cqw" }}>♥</span>
+    <motion.p className="pointer-events-none absolute inset-x-0 text-center" style={{ top: "47.5cqw", opacity, color: "#5b4d50", fontSize: "2cqw", letterSpacing: "0.12em", zIndex: 6 }}>
+      {children}
+    </motion.p>
+  );
+}
+
+function Bob({ accent }: { accent: string }) {
+  const time = useTime();
+  const y = useTransform(time, (t) => `${Math.sin(t / 380) * 0.5}cqw`);
+  return (
+    <motion.span aria-hidden style={{ y, color: accent, display: "inline-block" }}>
+      ↓
+    </motion.span>
+  );
+}
+
+/** Ánh sáng lướt nhẹ trên mặt giấy, chạy theo góc lật. */
+function Sheen({ shine }: { shine: MotionValue<string> }) {
+  return (
+    <motion.div
+      aria-hidden
+      className="pointer-events-none absolute inset-0"
+      style={{ background: "linear-gradient(115deg, rgba(255,255,255,0) 35%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 65%)", backgroundSize: "300% 100%", backgroundPositionX: shine, mixBlendMode: "soft-light" }}
+    />
+  );
+}
+
+/** Mặt trước phong bì: giấy kem trơn, khung vàng mảnh, tên ở giữa, tem ở góc phải trên. */
+function EnvFront({ label, title, accent, shine }: { label: string; title: string; accent: string; shine: MotionValue<string> }) {
+  return (
+    <div
+      className="absolute inset-0 overflow-hidden"
+      style={{ background: CREAM, backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "translateZ(1.6px)", boxShadow: ENV_SHADOW }}
+    >
+      <div className="absolute flex flex-col items-center justify-center text-center" style={{ inset: "1.8cqw", border: "0.15cqw solid rgba(201,165,92,0.75)", padding: "2cqw 7cqw" }}>
+        {label && <p className="font-semibold uppercase" style={{ color: accent, fontSize: "1.5cqw", letterSpacing: "0.36em" }}>{label}</p>}
+        <p style={{ fontFamily: SCRIPT, color: "#3a2a2e", fontSize: "6cqw", lineHeight: 1.15, marginTop: label ? "1.2cqw" : 0 }}>{title}</p>
+        <div className="flex items-center" style={{ gap: "1cqw", marginTop: "1.2cqw" }} aria-hidden>
+          <span style={{ height: 1, width: "6cqw", background: "linear-gradient(90deg, transparent, #c9a55c)" }} />
+          <span style={{ color: "#c9a55c", fontSize: "1.6cqw" }}>♥</span>
+          <span style={{ height: 1, width: "6cqw", background: "linear-gradient(270deg, transparent, #c9a55c)" }} />
+        </div>
       </div>
-      {subtitle && <p style={{ color: "#5b4d50", fontSize: "2.3cqw", lineHeight: 1.5 }}>{subtitle}</p>}
+      {/* tem */}
+      <div
+        aria-hidden
+        className="absolute flex items-center justify-center"
+        style={{ right: "3.6cqw", top: "3.4cqw", width: "5cqw", height: "6cqw", background: `linear-gradient(150deg, ${mix(accent, 75, "#fff")}, ${accent})`, border: "0.35cqw dotted rgba(255,255,255,0.8)", color: "rgba(255,255,255,0.92)", fontSize: "2.2cqw" }}
+      >
+        ♥
+      </div>
+      <Sheen shine={shine} />
+    </div>
+  );
+}
+
+/** Mặt sau phong bì lúc đóng: giống hệt cảnh chi tiết (ba nếp gấp, nắp, dấu sáp). Xoay sẵn 180° để khi lật xong nhìn đúng chiều. */
+function EnvBack({ accent, shine }: { accent: string; shine: MotionValue<string> }) {
+  return (
+    <div
+      className="absolute inset-0 overflow-hidden"
+      style={{ background: "#efe3cb", backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg) translateZ(1.6px)", boxShadow: ENV_SHADOW }}
+    >
+      {POCKET.map((f, i) => (
+        <div key={i} className="absolute inset-0" style={{ background: f.bg, clipPath: f.clip }} />
+      ))}
+      <svg aria-hidden viewBox="0 0 48 33" className="absolute inset-0 size-full">{FOLD}</svg>
+      <div className="absolute left-0 top-0 w-full" style={{ height: "18cqw", background: FLAP_BG, clipPath: "polygon(0 0, 100% 0, 50% 100%)" }} />
+      <div className="absolute flex items-center justify-center rounded-full" style={{ ...sealStyle(accent), left: "calc(50% - 3.2cqw)", top: "calc(18cqw - 3.2cqw)" }}>
+        &amp;
+      </div>
+      <Sheen shine={shine} />
     </div>
   );
 }
@@ -472,16 +565,16 @@ function Petal({ p, x, y0, y1, s, r, accent }: { p: MotionValue<number>; x: numb
 
 /* ---------- Bụi vàng lấp lánh khi thiệp hạ cánh ---------- */
 const SPARKS = [
-  { dx: -17, y: 16, s: 2.2, t: 0.78 }, { dx: 15, y: 20, s: 1.6, t: 0.8 }, { dx: -9, y: 36, s: 1.4, t: 0.82 },
-  { dx: 18, y: 34, s: 2.0, t: 0.83 }, { dx: 2, y: 12, s: 1.2, t: 0.85 }, { dx: -19, y: 28, s: 1.5, t: 0.86 },
-  { dx: 11, y: 42, s: 1.3, t: 0.87 }, { dx: -4, y: 40, s: 1.8, t: 0.88 },
+  { dx: -17, y: 16, s: 2.2, t: 0.82 }, { dx: 15, y: 20, s: 1.6, t: 0.84 }, { dx: -9, y: 36, s: 1.4, t: 0.85 },
+  { dx: 18, y: 34, s: 2.0, t: 0.86 }, { dx: 2, y: 12, s: 1.2, t: 0.87 }, { dx: -19, y: 28, s: 1.5, t: 0.88 },
+  { dx: 11, y: 42, s: 1.3, t: 0.89 }, { dx: -4, y: 40, s: 1.8, t: 0.9 },
 ];
 
 function Spark({ p, dx, y, s, t }: { p: MotionValue<number>; dx: number; y: number; s: number; t: number }) {
-  const opacity = useTransform(p, [t, t + 0.04, t + 0.13], [0, 1, 0]);
-  const scale = useTransform(p, [t, t + 0.05, t + 0.13], [0, 1, 0.3]);
-  const rotate = useTransform(p, [t, t + 0.13], [0, 90]);
-  const rise = useTransform(p, [t, t + 0.13], [0, -4], { ease });
+  const opacity = useTransform(p, [t, t + 0.03, t + 0.1], [0, 1, 0]);
+  const scale = useTransform(p, [t, t + 0.04, t + 0.1], [0, 1, 0.3]);
+  const rotate = useTransform(p, [t, t + 0.1], [0, 90]);
+  const rise = useTransform(p, [t, t + 0.1], [0, -4], { ease });
   const yCss = useTransform(rise, (v) => `${v}cqw`);
   return (
     <motion.span
@@ -506,10 +599,10 @@ function useReveal(p: MotionValue<number>, a: number, b: number) {
 }
 
 function BackReveal({ p, title, label, accent }: { p: MotionValue<number>; title: string; label: string; accent: string }) {
-  const a = useReveal(p, 0.8, 0.87);
-  const b = useReveal(p, 0.83, 0.91);
-  const c = useReveal(p, 0.87, 0.95);
-  const d = useReveal(p, 0.91, 0.99);
+  const a = useReveal(p, 0.82, 0.88);
+  const b = useReveal(p, 0.85, 0.92);
+  const c = useReveal(p, 0.88, 0.95);
+  const d = useReveal(p, 0.92, 0.99);
   const time = useTime();
   const bob = useTransform(time, (t) => `${Math.sin(t / 380) * 0.5}cqw`);
   return (
