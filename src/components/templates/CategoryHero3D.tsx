@@ -70,7 +70,8 @@ export function useHeroProgress(ref: RefObject<HTMLElement | null>, speed: numbe
     }
 
     let ctl: AnimationPlaybackControls | null = null;
-    let hovering = false;
+    // Chuột có thể đã nằm sẵn trên banner trước khi effect chạy (không có sự kiện pointerenter), nên kiểm tra ngay
+    let hovering = el.matches(":hover");
     const glide = (to: number) => {
       ctl?.stop();
       ctl = animate(prog, to, { duration: 0.6, ease: "easeOut" });
@@ -267,7 +268,7 @@ function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: Moti
   /* --- Phong bì: lật, nâng lên khi lật, nhấp nhô lúc nằm yên, mờ dần ở cuối --- */
   const envRot = useTransform(p, [0.08, 0.24], [0, 180], { ease });
   const envLift = useTransform(p, [0.08, 0.16, 0.24], [0, 14, 0]);
-  const envFade = useTransform(p, [0.72, 0.8], [1, 0]);
+  const envFade = useTransform(p, [0.66, 0.76], [1, 0]);
   const bob = useTransform([time, p], ([t, pv]: number[]) => (reduce ? 0 : Math.sin(t / 1100) * 0.4 * (1 - c01(pv / 0.06))));
   const envTop = useTransform(bob, (b) => `${ENV_TOP + b}cqw`);
   const envTopN = useTransform(bob, (b) => ENV_TOP + b);
@@ -276,7 +277,7 @@ function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: Moti
   /* --- Nắp: mở sau khi đã lật xong. Lúc đóng thì nằm trước thiệp, lúc mở thì lùi ra sau thiệp --- */
   const flapDeg = useTransform(p, [0.24, 0.36], [0, -150], { ease: E_RISE });
   const flapZ = useTransform(flapDeg, (d) => (d < -75 ? -2 : 2));
-  const flapOp = useTransform(p, [0.2, 0.24], [0, 1]);
+  const flapOp = useTransform(p, [0.2, 0.24, 0.66, 0.76], [0, 1, 1, 0]); // hiện sau khi lật, mờ cùng phong bì
 
   /* --- Dấu sáp: nằm trên nắp lúc đóng, tan khi nắp bắt đầu mở --- */
   const sealOp = useTransform(p, [0.2, 0.24, 0.28], [0, 1, 0]);
@@ -310,10 +311,10 @@ function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: Moti
           <motion.div
             aria-hidden
             className="absolute"
-            style={{ left: `calc(50% - ${ENV_W / 2}cqw)`, top: envTop, width: `${ENV_W}cqw`, height: `${ENV_H}cqw`, transformStyle: "preserve-3d", rotateY: envRot, z: envLift, opacity: envFade }}
+            style={{ left: `calc(50% - ${ENV_W / 2}cqw)`, top: envTop, width: `${ENV_W}cqw`, height: `${ENV_H}cqw`, transformStyle: "preserve-3d", rotateY: envRot, z: envLift }}
           >
-            <EnvFront label={categoryLabel} title={title} accent={accent} shine={shine} />
-            <EnvPlateBack shine={shine} />
+            <EnvFront label={categoryLabel} title={title} accent={accent} shine={shine} opacity={envFade} />
+            <EnvPlateBack shine={shine} opacity={envFade} />
           </motion.div>
 
           {/* Nắp: nằm ngoài mặt lật, mép trên là bản lề. Đóng thì ở trước, mở thì ở sau */}
@@ -323,7 +324,7 @@ function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: Moti
             style={{ left: `calc(50% - ${ENV_W / 2}cqw)`, top: envTop, width: `${ENV_W}cqw`, height: "18cqw", transformOrigin: "50% 0%", transformStyle: "preserve-3d", rotateX: flapDeg, z: flapZ, opacity: flapOp }}
           >
             <div className="absolute inset-0" style={{ background: FLAP_BG, clipPath: "polygon(0 0, 100% 0, 50% 100%)", ...hidden }} />
-            <div className="absolute inset-0" style={{ background: mix(accent, 62, "#000"), clipPath: "polygon(0 100%, 100% 100%, 50% 0)", transform: "rotateX(180deg)", ...hidden }} />
+            <div className="absolute inset-0" style={{ background: mix(accent, 80, "#fff"), clipPath: "polygon(0 100%, 100% 100%, 50% 0)", transform: "rotateX(180deg)", ...hidden }} />
           </motion.div>
 
           {/* Dấu sáp ở đầu nắp */}
@@ -358,15 +359,15 @@ function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: Moti
 }
 
 /** Mặt sau của phong bì: giấy kem, ba nếp gấp. Xoay sẵn 180° để khi lật xong nhìn đúng chiều. */
-function EnvPlateBack({ shine }: { shine: MotionValue<string> }) {
+function EnvPlateBack({ shine, opacity }: { shine: MotionValue<string>; opacity: MotionValue<number> }) {
   return (
-    <div
+    <motion.div
       className="absolute inset-0 overflow-hidden"
-      style={{ background: "#efe3cb", ...hidden, transform: "rotateY(180deg) translateZ(1.6px)", boxShadow: ENV_SHADOW }}
+      style={{ background: "#efe3cb", ...hidden, transform: "rotateY(180deg) translateZ(1.6px)", boxShadow: ENV_SHADOW, opacity }}
     >
       <svg aria-hidden viewBox="0 0 48 33" className="absolute inset-0 size-full">{FOLD}</svg>
       <Sheen shine={shine} />
-    </div>
+    </motion.div>
   );
 }
 
@@ -402,11 +403,11 @@ function Sheen({ shine }: { shine: MotionValue<string> }) {
 }
 
 /** Mặt trước phong bì: giấy kem trơn, khung vàng mảnh, tên ở giữa, tem ở góc phải trên. */
-function EnvFront({ label, title, accent, shine }: { label: string; title: string; accent: string; shine: MotionValue<string> }) {
+function EnvFront({ label, title, accent, shine, opacity }: { label: string; title: string; accent: string; shine: MotionValue<string>; opacity: MotionValue<number> }) {
   return (
-    <div
+    <motion.div
       className="absolute inset-0 overflow-hidden"
-      style={{ background: CREAM, backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "translateZ(1.6px)", boxShadow: ENV_SHADOW }}
+      style={{ opacity, background: CREAM, backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "translateZ(1.6px)", boxShadow: ENV_SHADOW }}
     >
       <div className="absolute flex flex-col items-center justify-center text-center" style={{ inset: "1.8cqw", border: "0.15cqw solid rgba(201,165,92,0.75)", padding: "2cqw 7cqw" }}>
         {label && <p className="font-semibold uppercase" style={{ color: accent, fontSize: "1.5cqw", letterSpacing: "0.36em" }}>{label}</p>}
@@ -426,7 +427,7 @@ function EnvFront({ label, title, accent, shine }: { label: string; title: strin
         ♥
       </div>
       <Sheen shine={shine} />
-    </div>
+    </motion.div>
   );
 }
 

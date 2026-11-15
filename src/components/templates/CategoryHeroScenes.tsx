@@ -217,10 +217,10 @@ export function FlowerScene(props: SceneProps) {
           aria-hidden
           className="absolute flex items-center justify-center rounded-full"
           style={{
-            left: "calc(50% - 5cqw)",
-            top: "calc(50% - 5cqw)",
-            width: "10cqw",
-            height: "10cqw",
+            left: "calc(50% - 4.5cqw)",
+            top: "calc(50% - 4.5cqw)",
+            width: "9cqw",
+            height: "9cqw",
             z: 30,
             scale: core,
             background: `radial-gradient(circle at 35% 30%, ${mix(GOLD, 60, "#fff")}, ${GOLD} 60%, ${mix(GOLD, 70, "#000")})`,
@@ -241,13 +241,13 @@ function Petal({ i, open, src, accent }: { i: number; open: MotionValue<number>;
   const a = i * (360 / PETAL_N);
   // Thứ tự lớp: cánh giữa dãy nằm gần tâm hơn, hai đầu lùi xa hơn; lớp Z khác nhau nên không cùng mặt phẳng.
   const depth = (i - (PETAL_N - 1) / 2) * 4;
-  const dist = useTransform(open, (v) => -(3 + v * 19));
+  const dist = useTransform(open, (v) => -(2 + v * 12)); // tâm cánh đi tối đa 14cqw; nửa chiều cao cánh 9cqw: không vượt khung
   const tilt = useTransform(open, (v) => (1 - v) * 64);
   const transform = useMotionTemplate`translateZ(${depth}px) rotateZ(${a}deg) translateY(${dist}cqw) rotateX(${tilt}deg)`;
   return (
     <motion.div
       className="absolute"
-      style={{ left: "calc(50% - 8cqw)", top: "calc(50% - 10cqw)", width: "16cqw", height: "20cqw", transform }}
+      style={{ left: "calc(50% - 7cqw)", top: "calc(50% - 9cqw)", width: "14cqw", height: "18cqw", transform }}
     >
       <div className="absolute inset-0 overflow-hidden rounded-[1cqw] p-[0.7cqw]" style={{ background: "#fffdf8", boxShadow: "0 1.2cqw 2.2cqw -0.8cqw rgba(0,0,0,0.4)" }}>
         <div className="size-full overflow-hidden rounded-[0.5cqw]">
