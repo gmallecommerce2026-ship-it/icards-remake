@@ -7,8 +7,9 @@ import { templatesApi } from "@/lib/api";
 import type { DesignAssetsData } from "@/lib/api/admin";
 
 export type { DesignAssetsData, DesignFontItem, DesignBackdropItem } from "@/lib/api/admin";
+import { registerDesignAssets } from "@/components/invitation/editor/design-assets.registry";
 
-const EMPTY: DesignAssetsData = { fonts: [], colors: [], backdrops: [] };
+const EMPTY: DesignAssetsData = { fonts: [], colors: [], backdrops: [], elements: [], frames: [], grids: [] };
 
 let cache: Promise<DesignAssetsData> | null = null;
 
@@ -19,7 +20,16 @@ export function loadDesignAssets(): Promise<DesignAssetsData> {
       .getDesignAssetsPublic()
       .then((r) => {
         const d = r.data as Partial<DesignAssetsData>;
-        return { fonts: d.fonts ?? [], colors: d.colors ?? [], backdrops: d.backdrops ?? [] };
+        const data: DesignAssetsData = {
+          fonts: d.fonts ?? [],
+          colors: d.colors ?? [],
+          backdrops: d.backdrops ?? [],
+          elements: d.elements ?? [],
+          frames: d.frames ?? [],
+          grids: d.grids ?? [],
+        };
+        registerDesignAssets(data);
+        return data;
       })
       .catch(() => {
         cache = null;

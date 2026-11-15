@@ -212,9 +212,28 @@ export const saveAdminEnvelopePresets = (body: EnvelopePresetsData) => api.put<E
 
 export type DesignFontItem = { id: string; name: string };
 export type DesignBackdropItem = { id: string; name: string; type: "color" | "gradient" | "image"; value: string };
-export type DesignAssetsData = { fonts: DesignFontItem[]; colors: string[]; backdrops: DesignBackdropItem[] };
+export type DesignElementItem = {
+  id: string;
+  name: string;
+  category: "shape" | "graphic" | "3d";
+  group: string;
+  color: string;
+  stroke?: boolean;
+  parts: { d: string; tone?: "main" | "light" | "dark" | "white" }[];
+};
+export type DesignFrameItem = { id: string; name: string; ratio: number; d?: string; radius?: string };
+export type DesignGridItem = { id: string; name: string; cells: number[][] };
+export type DesignAssetsData = {
+  fonts: DesignFontItem[];
+  colors: string[];
+  backdrops: DesignBackdropItem[];
+  elements: DesignElementItem[];
+  frames: DesignFrameItem[];
+  grids: DesignGridItem[];
+};
+export type DesignCategory = { id: string; label: string };
 
-export const getAdminDesignAssets = () => api.get<DesignAssetsData>("/admin/design-assets");
+export const getAdminDesignAssets = () => api.get<DesignAssetsData & { categories: DesignCategory[] }>("/admin/design-assets");
 export const saveAdminDesignAssets = (body: DesignAssetsData) => api.put<DesignAssetsData>("/admin/design-assets", body);
 export const uploadAdminDesignAsset = (file: File) => {
   const fd = new FormData();

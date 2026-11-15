@@ -1,7 +1,7 @@
 "use client";
 
-// Tab "Tài nguyên thiết kế": phông chữ, bảng màu và hình nền bổ sung cho trình thiết kế (studio và admin).
-// Các mục có sẵn trong mã nguồn vẫn hiển thị trong trình thiết kế; ở đây chỉ thêm mục mới.
+// Tab "Tài nguyên thiết kế": phông chữ, bảng màu, hình nền, phần tử (hình khối / đồ hoạ / 3D), khung và lưới.
+// Các mục có sẵn trong mã nguồn FE vẫn hiển thị trong trình thiết kế; dữ liệu ở đây được BỔ SUNG vào.
 import { useEffect, useState } from "react";
 import { ImagePlus, Plus, Trash2 } from "lucide-react";
 import {
@@ -10,6 +10,8 @@ import {
   uploadAdminDesignAsset,
   type DesignAssetsData,
   type DesignBackdropItem,
+  type DesignCategory,
+  type DesignElementItem,
 } from "@/lib/api/admin";
 import { ErrorBox, PageTitle, btnCls, btnGhostCls, errorMessage, inputCls } from "@/components/admin/ui";
 import { toSlug } from "./forms";
@@ -19,7 +21,10 @@ const TYPES: { value: DesignBackdropItem["type"]; label: string }[] = [
   { value: "gradient", label: "Gradient" },
   { value: "image", label: "Ảnh" },
 ];
+const TONE_FILL: Record<string, string> = { main: "currentColor", light: "#ffffff", dark: "#000000", white: "#ffffff" };
+const TONE_OPACITY: Record<string, number> = { light: 0.35, dark: 0.22 };
 const HEX = /^#[0-9a-fA-F]{6}$/;
+const EMPTY: DesignAssetsData = { fonts: [], colors: [], backdrops: [], elements: [], frames: [], grids: [] };
 
 /** Mã mục: lấy từ tên, thêm số nếu trùng. */
 function nextId(base: string, taken: string[]) {
@@ -30,9 +35,28 @@ function nextId(base: string, taken: string[]) {
   return `${root}-${i}`;
 }
 
+function ElementThumb({ e }: { e: DesignElementItem }) {
+  return (
+    <svg viewBox="0 0 100 100" width="40" height="40" aria-hidden style={{ color: e.color }} className="shrink-0 rounded bg-[#F4F6FA] ring-1 ring-black/10">
+      {e.parts.map((p, i) => (
+        <path
+          key={i}
+          d={p.d}
+          fill={e.stroke ? "none" : TONE_FILL[p.tone ?? "main"]}
+          fillOpacity={e.stroke ? undefined : TONE_OPACITY[p.tone ?? "main"]}
+          stroke={e.stroke ? "currentColor" : undefined}
+          strokeWidth={e.stroke ? 6 : undefined}
+          strokeLinecap={e.stroke ? "round" : undefined}
+        />
+      ))}
+    </svg>
+  );
+}
+
 export default function DesignAssetAdmin() {
-  const [data, setData] = useState<DesignAssetsData>({ fonts: [], colors: [], backdrops: [] });
-  const [saved, setSaved] = useState<DesignAssetsData>({ fonts: [], colors: [], backdrops: [] });
+  const [data, setData] = useState<DesignAssetsData>(EMPTY);
+  const [saved, setSaved] = useState<DesignAssetsData>(EMPTY);
+  const [categories, setCategories] = useState<DesignCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
@@ -45,8 +69,10 @@ export default function DesignAssetAdmin() {
     getAdminDesignAssets()
       .then((r) => {
         if (!alive) return;
-        setData(r.data);
-        setSaved(r.data);
+        const { categories: cats, ...rest } = r.data;
+        setData(rest);
+        setSaved(rest);
+        setCategories(cats ?? []);
       })
       .catch((e) => alive && setError(errorMessage(e, "Không tải được tài nguyên thiết kế.")))
       .finally(() => alive && setLoading(false));
@@ -139,11 +165,19 @@ export default function DesignAssetAdmin() {
     );
   };
 
+  /* ----- Thống kê theo danh mục Canva ----- */
+  const countOf = (id: string) => {
+    if (id === "shape" || id === "graphic" || id === "3d") return data.elements.filter((e) => e.category === id).length;
+    if (id === "frame") return data.frames.length;
+    if (id === "grid") return data.grids.length;
+    return 0;
+  };
+
   return (
     <div>
       <PageTitle
         title="Tài nguyên thiết kế"
-        description="Phông chữ, bảng màu và hình nền bổ sung cho trình thiết kế. Các mục này xuất hiện cùng mục có sẵn trong studio và trình thiết kế mẫu."
+        description="Phông chữ, bảng màu, hình nền, phần tử, khung và lưới bổ sung cho trình thiết kế. Các mục này xuất hiện cùng mục có sẵn trong studio và trình thiết kế mẫu."
         action={
           <button type="button" className={btnCls} onClick={save} disabled={busy || loading || !dirty}>
             {busy ? "Đang lưu…" : "Lưu thay đổi"}
@@ -156,6 +190,24 @@ export default function DesignAssetAdmin() {
 
       {!loading && (
         <>
+          {/* Danh mục */}
+          {categories.length > 0 && (
+            <section className="mb-8 rounded-md border border-[#D9E1EC] bg-white p-5">
+              <h2 className="mb-1 text-base font-semibold">Danh mục</h2>
+              <p className="mb-4 text-xs text-[#5B6B7F]">Các mục chưa có nội dung (Ảnh, Video, Âm thanh, Biểu đồ, Hiệu ứng động, Mockup) cần tải tài nguyên hoặc tính năng riêng.</p>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((c) => {
+                  const n = countOf(c.id);
+                  return (
+                    <span key={c.id} className={`rounded-full px-3 py-1 text-xs font-medium ${n ? "bg-[#E7F5EC] text-[#1F7A3D]" : "bg-[#F1F3F7] text-[#5B6B7F]"}`}>
+                      {c.label} · {n}
+                    </span>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
           {/* Phông chữ */}
           <section className="mb-8 rounded-md border border-[#D9E1EC] bg-white p-5">
             <h2 className="mb-1 text-base font-semibold">Phông chữ</h2>
@@ -229,6 +281,59 @@ export default function DesignAssetAdmin() {
                     <Trash2 className="size-4" aria-hidden />
                   </button>
                 </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Phần tử */}
+          <section className="mb-8 rounded-md border border-[#D9E1EC] bg-white p-5">
+            <h2 className="mb-1 text-base font-semibold">Phần tử · Hình khối, Đồ họa, 3D</h2>
+            <p className="mb-4 text-xs text-[#5B6B7F]">Sửa nội dung phần tử bằng cách cập nhật seed và chạy lại seed. Ở đây có thể xóa các mục không dùng nữa.</p>
+            {data.elements.length === 0 && <p className="text-sm text-[#5B6B7F]">Chưa có phần tử bổ sung.</p>}
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+              {data.elements.map((e) => (
+                <div key={e.id} className="flex items-center gap-3 rounded-md border border-[#EEF2F7] p-2">
+                  <ElementThumb e={e} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{e.name}</p>
+                    <p className="truncate text-xs text-[#5B6B7F]">{e.group}</p>
+                  </div>
+                  <button type="button" className="grid size-9 place-items-center rounded-md text-[#A33B3B] hover:bg-[#FBEAEA]" aria-label={`Xóa ${e.name}`} onClick={() => setData((d) => ({ ...d, elements: d.elements.filter((x) => x.id !== e.id) }))}>
+                    <Trash2 className="size-4" aria-hidden />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Khung */}
+          <section className="mb-8 rounded-md border border-[#D9E1EC] bg-white p-5">
+            <h2 className="mb-1 text-base font-semibold">Khung</h2>
+            <p className="mb-4 text-xs text-[#5B6B7F]">Khung ảnh bổ sung cho trình thiết kế.</p>
+            <div className="flex flex-wrap gap-2">
+              {data.frames.map((f) => (
+                <span key={f.id} className="inline-flex items-center gap-2 rounded-md border border-[#EEF2F7] py-1 pl-3 pr-1 text-sm">
+                  {f.name} <span className="text-xs text-[#5B6B7F]">{f.ratio}</span>
+                  <button type="button" className="grid size-7 place-items-center rounded text-[#A33B3B] hover:bg-[#FBEAEA]" aria-label={`Xóa khung ${f.name}`} onClick={() => setData((d) => ({ ...d, frames: d.frames.filter((x) => x.id !== f.id) }))}>
+                    <Trash2 className="size-3.5" aria-hidden />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </section>
+
+          {/* Lưới */}
+          <section className="mb-8 rounded-md border border-[#D9E1EC] bg-white p-5">
+            <h2 className="mb-1 text-base font-semibold">Lưới</h2>
+            <p className="mb-4 text-xs text-[#5B6B7F]">Bố cục nhiều ô ảnh bổ sung cho trình thiết kế.</p>
+            <div className="flex flex-wrap gap-2">
+              {data.grids.map((g) => (
+                <span key={g.id} className="inline-flex items-center gap-2 rounded-md border border-[#EEF2F7] py-1 pl-3 pr-1 text-sm">
+                  {g.name} <span className="text-xs text-[#5B6B7F]">{g.cells.length} ô</span>
+                  <button type="button" className="grid size-7 place-items-center rounded text-[#A33B3B] hover:bg-[#FBEAEA]" aria-label={`Xóa lưới ${g.name}`} onClick={() => setData((d) => ({ ...d, grids: d.grids.filter((x) => x.id !== g.id) }))}>
+                    <Trash2 className="size-3.5" aria-hidden />
+                  </button>
+                </span>
               ))}
             </div>
           </section>

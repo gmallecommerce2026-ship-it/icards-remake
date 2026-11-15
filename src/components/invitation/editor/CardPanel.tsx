@@ -115,6 +115,7 @@ function ArtButton({ a }: { a: Art }) {
 }
 
 function FrameGrid() {
+  useDesignAssets();
   const addFrame = useEditorStore.getState().addFrame;
   return (
     <div className={p.grid}>
@@ -130,6 +131,7 @@ function FrameGrid() {
 }
 
 function GridGrid() {
+  useDesignAssets();
   const addGrid = useEditorStore.getState().addGrid;
   return (
     <div className={p.grid}>
@@ -147,6 +149,7 @@ function GridGrid() {
 }
 
 function ElementsPanel() {
+  useDesignAssets();
   const [q, setQ] = useState('');
   const [cat, setCat] = useState<ElCat | null>(null);
   const needle = q.trim().toLowerCase();
