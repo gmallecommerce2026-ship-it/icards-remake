@@ -24,7 +24,7 @@ export function CategoryHero3D(props: Props) {
 /* ====================== Phong bì: cảnh ghim + cuộn ====================== */
 
 /** Chiều cao vùng ghim (svh). Quãng cuộn để chạy hết animation = (PIN_VH − 100) svh. Tăng để chậm hơn, giảm để nhanh hơn. */
-const PIN_VH = 260;
+const PIN_VH = 300;
 
 function EnvelopeHero({ hero, categoryLabel }: Props) {
   const ref = useRef<HTMLElement>(null);
@@ -258,8 +258,9 @@ function WallColumn({ p, k, hero, items, up, depth }: PresetProps & { items: str
    0.08–0.26  con dấu mờ đi, nắp lật mở (mặt trong nắp màu nhấn)
    0.24–0.42  thiệp trượt lên khỏi phong bì, hơi nghiêng rồi thẳng lại
    0.42–0.58  phong bì + thiệp lướt sang PHẢI theo đường cung, chữ chuyển sang TRÁI
-   0.58–0.80  thiệp bay sang TRÁI, nhấc lên khỏi mặt phẳng và lật 180°, phong bì chìm xuống mờ đi
-   0.78–0.92  chữ mặt sau hiện ở bên PHẢI
+   0.58–0.84  thiệp bay sang TRÁI, nhấc lên khỏi mặt phẳng và lật 180° (có đà, nảy nhẹ), phong bì chìm xuống mờ đi
+   0.60–1.00  hào quang vàng sau thiệp; bụi vàng lấp lánh khi hạ cánh (0.78–0.88)
+   0.80–0.99  chữ mặt sau hiện lần lượt ở bên PHẢI: nhãn, tiêu đề, đường kẻ, gợi ý cuộn tiếp
    Vị trí tính theo % chiều rộng sân khấu; kích thước dùng cqw để co giãn theo khung. */
 const L = 22;
 const R = 78;
@@ -294,26 +295,33 @@ function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: Moti
   const floatAmp = useTransform(p, [0.4, 0.5], [0, 1]);
   const floatY = useTransform([time, floatAmp], ([t, a]: number[]) => (reduce ? 0 : Math.sin(t / 1200) * 0.5 * a)); // thiệp lơ lửng nhẹ khi đã rút ra
   const cardTopCss = useTransform([cardTop, cardArc, floatY], ([t, a, f]: number[]) => `${t + a + f}cqw`);
-  const cardTilt = useTransform(p, [0.2, 0.32, 0.4], [-2.5, -1, 0]);
+  // Nghiêng Z như giấy thật khi bay và khi hạ cánh
+  const cardTilt = useTransform(p, [0.2, 0.32, 0.4, 0.56, 0.7, 0.84, 0.92], [-2.5, -1, 0, 0, 3, -1.5, 0]);
   const cardScale = useTransform(p, [0.2, 0.4, 0.46, 0.58, 0.72, 0.84], [1, 1.03, 1.03, 0.82, 0.82, 1]); // bù lại phối cảnh khi thiệp nhấc gần camera
   const cardZ = useTransform(p, [0.44, 0.56, 0.72, 0.84], [10, 320, 320, 10]); // nhấc thiệp cao khỏi phong bì rồi mới lật, để hai mặt phẳng không cắt nhau
-  const flipDeg = tr([0.56, 0.84], [0, 180]);
+  // Lật có đà: vượt nhẹ rồi rung về 180° (số cuối 1.22: 1.1 là nhẹ, 1.4 là nảy rõ)
+  const flipEase = cubicBezier(0.4, 0, 0.2, 1.22);
+  const flipDeg = useTransform(p, [0.56, 0.84], [0, 180], { ease: flipEase });
   const flipTilt = useTransform(p, [0.56, 0.7, 0.84], [0, -10, 0]);
-  const cardShadow = useTransform(cardZ, [10, 320], [0.5, 0.2]);
+  const cardShadowScale = useTransform(cardZ, [10, 320], [1, 0.75]);
   const shine = useTransform(flipDeg, [0, 90, 180], ["130%", "40%", "-30%"]);
+
+  // Hào quang vàng sau thiệp
+  const haloOpacity = useTransform(p, [0.6, 0.78, 0.92, 1], [0, 0.5, 0.85, 0.75]);
+  const haloScale = useTransform(p, [0.6, 1], [0.6, 1.1]);
+  const haloLeft = useTransform(cardLeft, (v) => `calc(${v}% - 30cqw)`);
+  const haloTop = useTransform(cardTop, (v) => `${v - 8}cqw`);
 
   // Camera: dolly + xoay nhẹ theo tiến độ, cộng thêm nghiêng theo con trỏ
   const camY = useTransform([p, look.x], ([pv, x]: number[]) => -9 + pv * 14 + x * 9);
   const camX = useTransform([p, look.y, lean], ([pv, y, l]: number[]) => 7 - pv * 4 - y * 6 + l); // lean: ngả theo tốc độ cuộn
-  const camScale = useTransform(p, [0, 0.5, 0.8, 1], [0.95, 1, 1.04, 1]);
+  const camScale = useTransform(p, [0, 0.5, 0.8, 1], [0.95, 1, 1.04, 1.02]); // cuối cảnh đẩy camera vào nhẹ
   const textShift = useTransform(look.x, (x) => `${-x * 1.6}cqw`);
 
   const rightOpacity = useTransform(p, [0, 0.1, 0.34, 0.42], [1, 1, 1, 0]);
   const rightY = useTransform(p, [0.34, 0.42], [0, -2]);
   const leftOpacity = useTransform(p, [0.4, 0.5, 0.62, 0.7], [0, 1, 1, 0]);
   const leftY = useTransform(p, [0.4, 0.5, 0.62, 0.7], [2, 0, 0, -2]);
-  const backOpacity = useTransform(p, [0.8, 0.92], [0, 1]);
-  const backY = useTransform(p, [0.8, 0.92], [2, 0]);
 
   const envLeftCss = useTransform(envLeft, (v) => `calc(${v}% - 24cqw)`);
   const envTopCss = useTransform(envDrop, (d) => `${12.5 + d}cqw`);
@@ -325,7 +333,6 @@ function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: Moti
   const cardShadowOp = useTransform(p, [0.4, 0.56, 0.72, 0.84], [0, 0.35, 0.18, 0.4]);
   const rightY2 = useTransform(rightY, (v) => `calc(-50% + ${v}cqw)`);
   const leftY2 = useTransform(leftY, (v) => `calc(-50% + ${v}cqw)`);
-  const backY2 = useTransform(backY, (v) => `calc(-50% + ${v}cqw)`);
 
   const front = hero.images[0];
   const back = hero.images[1] ?? hero.images[0];
@@ -345,7 +352,19 @@ function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: Moti
         <motion.div className="absolute inset-0" style={{ transformStyle: "preserve-3d", rotateX: camX, rotateY: camY, scale: camScale }}>
           {/* Bóng đổ trên nền: của phong bì và của thiệp (nhạt đi khi thiệp bay cao) */}
           <motion.div aria-hidden className="absolute rounded-[50%]" style={{ left: envShadowLeft, top: "43.5cqw", width: "44cqw", height: "4cqw", background: "rgba(40,20,20,0.35)", filter: "blur(2.2cqw)", opacity: envShadowOp, z: -40 }} />
-          <motion.div aria-hidden className="absolute rounded-[50%]" style={{ left: cardShadowLeft, top: "44cqw", width: "38cqw", height: "3.4cqw", background: "rgba(40,20,20,0.45)", filter: "blur(2.4cqw)", opacity: cardShadowOp, scale: useTransform(cardZ, [10, 320], [1, 0.75]), z: -38 }} />
+          <motion.div aria-hidden className="absolute rounded-[50%]" style={{ left: cardShadowLeft, top: "44cqw", width: "38cqw", height: "3.4cqw", background: "rgba(40,20,20,0.45)", filter: "blur(2.4cqw)", opacity: cardShadowOp, scale: cardShadowScale, z: -38 }} />
+
+          {/* Hào quang vàng + bụi lấp lánh (sau thiệp) */}
+          <motion.div
+            aria-hidden
+            className="absolute rounded-full"
+            style={{
+              left: haloLeft, top: haloTop, width: "60cqw", height: "45cqw", opacity: haloOpacity, scale: haloScale, z: -20,
+              background: `radial-gradient(closest-side, ${mix("#e8c97a", 70, "#fff")}88, ${accent}22 55%, transparent 75%)`,
+              filter: "blur(2cqw)",
+            }}
+          />
+          {!reduce && SPARKS.map((s, i) => <Spark key={i} p={p} {...s} />)}
 
           {/* Mặt trong phong bì */}
           <motion.div aria-hidden className="absolute" style={{ left: envLeftCss, top: envTopCss, width: W, height: H, background: liner, borderRadius: 4, opacity: envOpacity, z: envZ, boxShadow: "0 1.4cqw 3cqw -1cqw rgba(0,0,0,0.45)" }} />
@@ -399,9 +418,11 @@ function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: Moti
         <motion.div className="absolute" style={{ left: "4cqw", top: "58%", width: "40cqw", y: leftY2, x: textShift, opacity: leftOpacity, zIndex: 6 }}>
           <Heading label={categoryLabel} title={hero.title || categoryLabel} accent={accent} />
         </motion.div>
-        <motion.div className="absolute" style={{ right: "4cqw", top: "58%", width: "42cqw", y: backY2, x: textShift, opacity: backOpacity, zIndex: 6 }}>
-          <Heading title={hero.subtitle || hero.title || categoryLabel} accent={accent} small />
-        </motion.div>
+        <div className="absolute" style={{ right: "4cqw", top: "58%", width: "42cqw", transform: "translateY(-50%)", zIndex: 6 }}>
+          <motion.div style={{ x: textShift }}>
+            <BackReveal p={p} title={hero.subtitle || hero.title || categoryLabel} label={categoryLabel} accent={accent} />
+          </motion.div>
+        </div>
       </div>
     </div>
   );
@@ -442,6 +463,68 @@ function Petal({ p, x, y0, y1, s, r, accent }: { p: MotionValue<number>; x: numb
       className="absolute"
       style={{ left: `${x}%`, top, rotate: rot, width: `${s * 1.6}cqw`, height: `${s * 1.1}cqw`, borderRadius: "70% 0 70% 0", background: `linear-gradient(135deg, ${mix(accent, 35, "#fff")}, ${mix(accent, 70, "#fff")})`, opacity: 0.55, zIndex: 0 }}
     />
+  );
+}
+
+/* ---------- Bụi vàng lấp lánh khi thiệp hạ cánh ---------- */
+const SPARKS = [
+  { dx: -17, y: 16, s: 2.2, t: 0.78 }, { dx: 15, y: 20, s: 1.6, t: 0.8 }, { dx: -9, y: 36, s: 1.4, t: 0.82 },
+  { dx: 18, y: 34, s: 2.0, t: 0.83 }, { dx: 2, y: 12, s: 1.2, t: 0.85 }, { dx: -19, y: 28, s: 1.5, t: 0.86 },
+  { dx: 11, y: 42, s: 1.3, t: 0.87 }, { dx: -4, y: 40, s: 1.8, t: 0.88 },
+];
+
+function Spark({ p, dx, y, s, t }: { p: MotionValue<number>; dx: number; y: number; s: number; t: number }) {
+  const opacity = useTransform(p, [t, t + 0.04, t + 0.13], [0, 1, 0]);
+  const scale = useTransform(p, [t, t + 0.05, t + 0.13], [0, 1, 0.3]);
+  const rotate = useTransform(p, [t, t + 0.13], [0, 90]);
+  const rise = useTransform(p, [t, t + 0.13], [0, -4], { ease });
+  const yCss = useTransform(rise, (v) => `${v}cqw`);
+  return (
+    <motion.span
+      aria-hidden
+      className="absolute"
+      style={{
+        left: `calc(${L}% + ${dx}cqw)`, top: `${y}cqw`, width: `${s}cqw`, height: `${s}cqw`,
+        opacity, scale, rotate, y: yCss, z: 60,
+        background: "linear-gradient(135deg, #fff3c9, #d9b45f)",
+        clipPath: "polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%)",
+      }}
+    />
+  );
+}
+
+/* ---------- Chữ mặt sau hiện lần lượt: mờ → nét, trượt lên ---------- */
+function useReveal(p: MotionValue<number>, a: number, b: number) {
+  const v = useTransform(p, [a, b], [0, 1], { ease });
+  const y = useTransform(v, (t) => `${(1 - t) * 1.8}cqw`);
+  const filter = useTransform(v, (t) => `blur(${(1 - t) * 6}px)`);
+  return { v, style: { opacity: v, y, filter } };
+}
+
+function BackReveal({ p, title, label, accent }: { p: MotionValue<number>; title: string; label: string; accent: string }) {
+  const a = useReveal(p, 0.8, 0.87);
+  const b = useReveal(p, 0.83, 0.91);
+  const c = useReveal(p, 0.87, 0.95);
+  const d = useReveal(p, 0.91, 0.99);
+  const time = useTime();
+  const bob = useTransform(time, (t) => `${Math.sin(t / 380) * 0.5}cqw`);
+  return (
+    <div>
+      <motion.p className="font-semibold uppercase" style={{ ...a.style, color: accent, fontSize: "1.9cqw", letterSpacing: "0.32em" }}>
+        {label}
+      </motion.p>
+      <motion.h2 className="font-semibold" style={{ ...b.style, fontFamily: SERIF, color: "#2a2023", fontSize: "4.4cqw", lineHeight: 1.12, marginTop: "1.2cqw" }}>
+        {title}
+      </motion.h2>
+      <motion.div aria-hidden className="flex items-center" style={{ opacity: c.v, gap: "1cqw", margin: "1.6cqw 0" }}>
+        <motion.span style={{ height: 1, width: "9cqw", scaleX: c.v, transformOrigin: "left", background: "linear-gradient(90deg, #c9a55c, transparent)" }} />
+        <span style={{ color: "#c9a55c", fontSize: "1.6cqw" }}>♥</span>
+      </motion.div>
+      <motion.p className="flex items-center" style={{ ...d.style, color: "#5b4d50", fontSize: "2cqw", gap: "0.8cqw" }}>
+        Khám phá mẫu thiệp
+        <motion.span aria-hidden style={{ y: bob, color: accent }}>↓</motion.span>
+      </motion.p>
+    </div>
   );
 }
 
