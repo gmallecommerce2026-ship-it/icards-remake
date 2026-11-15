@@ -20,8 +20,6 @@ import { ArrowDown } from "lucide-react";
 import { Cormorant_Garamond, Be_Vietnam_Pro } from "@/lib/fonts";
 import { FoldingCard } from "@/components/invitation/editor/FoldingCard";
 import { CardFaceStatic } from "@/components/invitation/editor/CardFaceStatic";
-import { cardCluster } from "@/components/invitation/envelope/envelope.geometry";
-import { orientationRatio, type TemplateOrientation } from "@/lib/templates";
 import { useCardMotion } from "@/components/invitation/editor/useCardMotion";
 import { useEditorStore, type PageId, type Snap } from "@/components/invitation/editor/useEditorStore";
 import { ENVELOPES, LINERS } from "@/components/invitation/envelope/envelope.data";
@@ -213,6 +211,10 @@ export function PublicEnvelopeIntro({ info, design, guestName }: { info: IntroIn
   const cardRotX = useTransform(p, RX_STOPS, RX_VALS, E);
   const cardZ = useTransform(p, [0, 0.415, 0.43, 1], [2, 2, 40, 40]);
   const isCard = design?.format === "card";
+  // tỉ lệ cao / rộng của thiệp: 1.4 (gập 5:7) hoặc khổ thiệp 2 mặt. Phong bì và khung thiệp đều theo tỉ lệ này
+  const ratioHW = useEditorStore((s) => s.dims.h / s.dims.w);
+  // thiệp 2 mặt: sau khi rút ra thì lật 0° → 180° (mặt sau) → 360° (mặt trước)
+  const cardFlipY = useTransform(p, CARD_FLIP_STOPS, CARD_FLIP_VALS, E);
 
   const shX = useTransform(sx, [-1, 1], [18, -18]);
   const shY = useTransform(p, [0.42, 0.54], [22, 46]);
@@ -232,7 +234,7 @@ export function PublicEnvelopeIntro({ info, design, guestName }: { info: IntroIn
   const hintOpacity = useTransform(p, [0, 0.04], [1, 0]);
   const blendOpacity = useTransform(p, [0.9, 1], [0, 1]);
 
-  const vars = { ["--cw" as string]: "min(62vw, 300px, 30svh)" } as CSSProperties;
+  const vars = { ["--cw" as string]: "min(62vw, 300px, 30svh)", ["--ratio" as string]: String(ratioHW) } as CSSProperties;
 
   const goTo = (i: number) => {
     const el = containerRef.current;
@@ -267,24 +269,26 @@ export function PublicEnvelopeIntro({ info, design, guestName }: { info: IntroIn
           <div className="absolute inset-0" style={{ perspective: 1400 }}>
             <motion.div className="absolute inset-0" style={{ rotateX: stageRotX, rotateY: tiltY, transformStyle: "preserve-3d" }}>
               <motion.div className="absolute inset-0" style={{ x: rigX, y: rigY, z: rigZ, rotateY: yaw, transformStyle: "preserve-3d" }}>
-                {isCard ? (
-                  /* thiệp 2 mặt: phong bì khít thiệp, thiệp rút ra rồi lật qua lại */
-                  <CardIntroStage p={p} orientation={design?.orientation ?? "portrait"} envelopeColor={envColor} liner={liner} />
-                ) : (
-                <>
                 {/* phong bì - lưng */}
                 <EnvLayer y={envY} scale={envScale} opacity={envOpacity} z={envPush}>
                   <div className="absolute inset-0 rounded-[4px]" style={{ background: `linear-gradient(180deg, rgba(0,0,0,.22), transparent 42%), ${liner}`, boxShadow: "0 40px 70px -28px rgba(0,0,0,.25)" }} />
                 </EnvLayer>
 
-                {/* thiệp 4 mặt (gập): FoldingCard của studio */}
+                {/* thiệp: thiệp 4 mặt = FoldingCard của studio; thiệp 2 mặt = hai mặt lật qua lại (cùng khung, cùng chuyển động) */}
                 <motion.div
                   className="absolute left-1/2 top-[54%]"
-                  style={{ width: "var(--cw)", height: "calc(var(--cw) * 1.4)", x: "-50%", y: cardY, scale: cardScale, rotateX: cardRotX, rotateY: cardRotY, rotateZ: cardRotZ, z: cardZ }}
+                  style={{ width: "var(--cw)", height: "calc(var(--cw) * var(--ratio))", x: "-50%", y: cardY, scale: cardScale, rotateX: cardRotX, rotateY: isCard ? 0 : cardRotY, rotateZ: cardRotZ, z: cardZ }}
                 >
                   <motion.div className="h-full w-full" style={{ y: floatY, rotateZ: floatRot }}>
                     <motion.div className="relative h-full w-full" style={{ scale: focusK, x: focusX, y: focusY, boxShadow: shadow, ["--k" as string]: focusK } as MotionStyle}>
-                      <FoldingCard cm={cm} view="cover" editable={false} />
+                      {isCard ? (
+                        <motion.div className="absolute inset-0" style={{ rotateY: cardFlipY, transformStyle: "preserve-3d" }}>
+                          <CardSide pageId="cover" />
+                          <CardSide pageId="back" back />
+                        </motion.div>
+                      ) : (
+                        <FoldingCard cm={cm} view="cover" editable={false} />
+                      )}
                     </motion.div>
                   </motion.div>
                 </motion.div>
@@ -318,8 +322,6 @@ export function PublicEnvelopeIntro({ info, design, guestName }: { info: IntroIn
                     </motion.div>
                   </motion.div>
                 </EnvLayer>
-                </>
-                )}
               </motion.div>
             </motion.div>
           </div>
@@ -467,30 +469,17 @@ const FLAP_CLIP = "polygon(0 0, 100% 0, 50% 62%)";
 
 function EnvLayer({ children, y, scale, opacity, z }: { children: ReactNode; y: MotionValue<string>; scale: MotionValue<number>; opacity: MotionValue<number>; z: number | MotionValue<number> }) {
   return (
-    <motion.div className="absolute left-1/2 top-[54%]" style={{ width: "calc(var(--cw) * 1.45)", height: "calc(var(--cw) * 1.1)", x: "-50%", y, scale, opacity, z, perspective: 1200 }}>
+    <motion.div className="absolute left-1/2 top-[54%]" style={{ width: "calc(var(--cw) * var(--ratio) * 1.035)", height: "calc(var(--cw) * 1.1)", x: "-50%", y, scale, opacity, z, perspective: 1200 }}>
       {children}
     </motion.div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Thiệp 2 mặt: phong bì CÙNG HƯỚNG với thiệp và khít thiệp              */
-/*  Hình học lấy từ envelope.geometry (như trang mẫu và luồng gửi).      */
-/*  Nắp mở → thiệp trồi lên thẳng (không xoay trục Z) → lật 0° → 180° → 360°. */
+/*  Thiệp 2 mặt: mốc lật (sau khi thiệp đã rút ra và đứng thẳng)          */
 /* ------------------------------------------------------------------ */
-const CARD_FLAP_CLIP = "polygon(0% 100%, 100% 100%, 50% 0%)";
-const CARD_LINER_CLIP = "polygon(4% 0%, 96% 0%, 50% 36%)";
-const CARD_POCKET_CLIP = "polygon(0% 0%, 50% 58%, 100% 0%, 100% 100%, 0% 100%)";
-// mốc tiến độ cuộn cho thiệp 2 mặt
-const CARD_FLAP_STOPS = [0, 0.03, 0.16];
-const CARD_RISE_STOPS = [0.05, 0.2];
-const CARD_FLIP_STOPS = [0, 0.28, 0.38, 0.48, 0.58, 1];
+const CARD_FLIP_STOPS = [0, 0.56, 0.68, 0.8, 0.9, 1];
 const CARD_FLIP_VALS = [0, 0, 180, 180, 360, 360];
-const CARD_FADE_STOPS = [0.24, 0.32];
-
-const pct = (l: number, t: number, w: number, h: number): CSSProperties => ({
-  position: "absolute", left: `${l}%`, top: `${t}%`, width: `${w}%`, height: `${h}%`,
-});
 
 /* một mặt của thiệp 2 mặt: chỉ hiện khi đang hướng về người xem (mặt sau xoay sẵn 180°) */
 function CardSide({ pageId, back = false }: { pageId: PageId; back?: boolean }) {
@@ -505,71 +494,6 @@ function CardSide({ pageId, back = false }: { pageId: PageId; back?: boolean }) 
     >
       <CardFaceStatic pageId={pageId} />
     </div>
-  );
-}
-
-function CardIntroStage({ p, orientation, envelopeColor, liner }: { p: MotionValue<number>; orientation: TemplateOrientation; envelopeColor: string; liner: string }) {
-  const g = cardCluster(orientation);
-  const ratio = orientationRatio(orientation);
-  // khung vuông: cạnh thiệp (chiều rộng) đúng bằng --cw, mọi số đo phong bì tính theo % của khung này
-  const side = `calc(var(--cw) * ${(100 / g.cardW).toFixed(3)})`;
-  const flapDeg = useTransform(p, CARD_FLAP_STOPS, [180, 180, 0], E);   // 180 = nắp đóng, 0 = nắp mở
-  const flapZ = useTransform(flapDeg, (d) => (d > 90 ? 10 : 2));       // đóng: đè lên thiệp; mở: nằm sau thiệp
-  const cardRise = useTransform(p, CARD_RISE_STOPS, ["0%", "-130%"], E); // trồi lên khỏi túi (theo chiều cao thiệp)
-  const cardFlip = useTransform(p, CARD_FLIP_STOPS, CARD_FLIP_VALS, E);
-  const sealOpacity = useTransform(p, [0, 0.03], [1, 0]);
-  const stageOpacity = useTransform(p, CARD_FADE_STOPS, [1, 0]);
-  const sealSize = g.envW * 0.26;
-
-  return (
-    <motion.div
-      className="absolute left-1/2 top-[54%]"
-      style={{ width: side, height: side, x: "-50%", y: "-50%", perspective: 1400, opacity: stageOpacity }}
-    >
-      {/* thân phong bì */}
-      <div style={{ ...pct(g.originX, g.originY, g.envW, g.envH), background: envelopeColor, borderRadius: 2, boxShadow: "0 12px 24px -12px rgba(0,0,0,0.5)", zIndex: 1 }} />
-      {/* lớp lót nhìn qua miệng */}
-      <div style={{ ...pct(g.originX, g.originY, g.envW, g.envH), background: liner, clipPath: CARD_LINER_CLIP, zIndex: 2 }} />
-      {/* nắp: bản lề ở mép trên thân */}
-      {/* nắp: CÙNG MÀU phong bì (không phủ lớp lót lên nắp; lớp lót chỉ nhìn thấy qua miệng túi) */}
-      <motion.div style={{ ...pct(g.originX, g.originY - g.flapH, g.envW, g.flapH), background: `linear-gradient(180deg, rgba(255,255,255,.18), transparent), ${envelopeColor}`, clipPath: CARD_FLAP_CLIP, transformOrigin: "50% 100%", rotateX: flapDeg, zIndex: flapZ }} />
-      {/* thiệp: hai mặt, lật 3D quanh trục giữa */}
-      <motion.div
-        style={{
-          position: "absolute",
-          left: `${g.originX + g.cardX}%`,
-          top: `${g.originY + g.cardY}%`,
-          width: `${g.cardW}%`,
-          aspectRatio: ratio,
-          y: cardRise,
-          rotateY: cardFlip,
-          transformStyle: "preserve-3d",
-          zIndex: 5,
-        }}
-      >
-        <CardSide pageId="cover" />
-        <CardSide pageId="back" back />
-      </motion.div>
-      {/* phần trước của túi: che đáy thiệp khi còn nằm trong túi */}
-      <div style={{ ...pct(g.originX, g.originY, g.envW, g.envH), background: envelopeColor, clipPath: CARD_POCKET_CLIP, zIndex: 8 }} />
-      {/* dấu sáp ở mép nắp */}
-      <motion.div
-        style={{
-          position: "absolute",
-          left: `${g.originX + g.envW / 2}%`,
-          top: `${g.originY + g.flapH}%`,
-          width: `${sealSize}%`,
-          aspectRatio: "1 / 1",
-          marginLeft: `-${sealSize / 2}%`,
-          marginTop: `-${sealSize / 2}%`,
-          borderRadius: "50%",
-          background: CRIMSON,
-          opacity: sealOpacity,
-          zIndex: 12,
-          boxShadow: "0 4px 10px rgba(0,0,0,0.35)",
-        }}
-      />
-    </motion.div>
   );
 }
 
