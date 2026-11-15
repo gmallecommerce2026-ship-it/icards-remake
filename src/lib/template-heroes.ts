@@ -1,23 +1,32 @@
 // Cấu hình hero 3D theo danh mục trên trang /templates. Kiểu dữ liệu dùng chung cho trang công khai và admin.
+// Nhãn danh mục khớp với cây danh mục gốc trên site (backend: src/seed/data/template-tree.seed.ts).
 
-export const HERO_CATEGORIES = ["wedding", "birthday", "baby", "event"] as const;
-export type HeroCategory = (typeof HERO_CATEGORIES)[number];
-
-export const HERO_CATEGORY_LABELS: Record<HeroCategory, string> = {
-  wedding: "Cưới hỏi",
+export const HERO_CATEGORY_LABELS = {
+  wedding: "Thiệp cưới",
+  engagement: "Lễ hỏi - Đính hôn",
   birthday: "Sinh nhật",
-  baby: "Đầy tháng & em bé",
+  baby: "Đầy tháng, thôi nôi",
   event: "Sự kiện",
-};
+  opening: "Khai trương",
+  housewarming: "Tân gia",
+  graduation: "Tốt nghiệp",
+  anniversary: "Kỷ niệm - Mừng thọ",
+  festive: "Tết - Lễ hội",
+} as const;
 
-export const HERO_PRESETS = ["ribbon", "cylinder", "wall", "envelope"] as const;
+export type HeroCategory = keyof typeof HERO_CATEGORY_LABELS;
+export const HERO_CATEGORIES = Object.keys(HERO_CATEGORY_LABELS) as HeroCategory[];
+
+/** Chỉ còn các kiểu 3D này. Kiểu cũ (dải, trụ, tường) đã bỏ và tự chuyển sang phong bì. */
+export const HERO_PRESETS = ["envelope", "fan", "book", "flower", "cube"] as const;
 export type HeroPreset = (typeof HERO_PRESETS)[number];
 
 export const HERO_PRESET_LABELS: Record<HeroPreset, string> = {
-  ribbon: "Dải nghiêng chạy ngang",
-  cylinder: "Vòng trụ quay theo cuộn",
-  wall: "Tường thẻ 3D",
   envelope: "Phong bì 3D: lấy thiệp ra và lật",
+  fan: "Xòe quạt 3D: các thiệp xòe ra theo cuộn",
+  book: "Album lật trang 3D: ảnh lật từng trang",
+  flower: "Hoa nở 3D: cánh thiệp xòe quanh tâm",
+  cube: "Khối xoay 3D: sáu mặt ảnh xoay theo cuộn",
 };
 
 export type TemplateHero = {
@@ -37,7 +46,7 @@ export type TemplateHeroes = Partial<Record<HeroCategory, TemplateHero>>;
 export const MAX_HERO_IMAGES = 12;
 
 export const emptyHero = (): TemplateHero => ({
-  preset: "ribbon",
+  preset: "envelope",
   title: "",
   subtitle: "",
   accent: "#A3152F",

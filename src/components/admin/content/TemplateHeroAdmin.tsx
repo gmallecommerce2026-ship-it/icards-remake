@@ -19,7 +19,7 @@ import {
 } from "@/lib/template-heroes";
 import { ErrorBox, PageTitle, btnCls, btnGhostCls, errorMessage, inputCls } from "@/components/admin/ui";
 
-/** Admin chọn preset và nhập nội dung cho hero 3D từng danh mục. Không nhập code tùy ý. */
+/** Admin chọn kiểu 3D và nhập nội dung cho hero từng danh mục. Không nhập code tùy ý. */
 export default function TemplateHeroAdmin() {
   const [data, setData] = useState<AdminTemplateHeroes>({});
   const [loading, setLoading] = useState(true);
@@ -100,7 +100,7 @@ export default function TemplateHeroAdmin() {
     <div className="space-y-6">
       <PageTitle
         title="Hero 3D theo danh mục"
-        description="Phần giới thiệu chạy 3D ở đầu trang danh mục mẫu thiệp. Chọn kiểu có sẵn, nhập tiêu đề và ảnh. Tắt một danh mục thì trang đó không hiện hero."
+        description="Phần giới thiệu 3D ở đầu trang danh mục mẫu thiệp. Chọn kiểu có sẵn, nhập tiêu đề và ảnh. Tắt một danh mục thì trang đó không hiện hero. Ảnh nên dùng cho hero: đặt link https hoặc tải lên ở mỗi danh mục."
         action={<button type="button" className={btnCls} onClick={save} disabled={saving}>{saving ? "Đang lưu…" : "Lưu thay đổi"}</button>}
       />
       {error && <ErrorBox>{error}</ErrorBox>}

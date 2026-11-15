@@ -1,24 +1,67 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
-import { animate, cubicBezier, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTime, useTransform, useVelocity, type AnimationPlaybackControls, type MotionValue } from "motion/react";
-import type { TemplateHero } from "@/lib/template-heroes";
+import { useRef, type ComponentType, type CSSProperties, type ReactNode } from "react";
+import { cubicBezier, motion, useMotionValue, useReducedMotion, useScroll, useSpring, useTime, useTransform, useVelocity, type MotionValue } from "motion/react";
+import type { HeroPreset, TemplateHero } from "@/lib/template-heroes";
+import { CubeScene, BookScene, FanScene, FlowerScene, type SceneProps } from "./CategoryHeroScenes";
 
 type Props = { hero: TemplateHero; categoryLabel: string };
 
-/** Phần đuôi của v*k theo vòng lặp 0..1: dùng để chạy băng chuyền liền mạch khi nội dung được nhân đôi. */
-const loop01 = (v: number, k: number) => {
-  const x = v * k;
-  return x - Math.floor(x);
-};
-
 /**
- * Hero 3D cho trang danh mục mẫu thiệp. Bố cục do preset quyết định, nội dung do admin nhập.
- * - envelope: cảnh "ghim" (sticky) dài vài màn hình như trang xem thiệp mời; cuộn trang điều khiển animation, có lò xo làm mượt.
- * - ribbon / cylinder / wall: chạy theo cuộn trang bằng CSS 3D.
+ * Hero 3D cho trang danh mục mẫu thiệp. Kiểu do admin chọn, nội dung do admin nhập.
+ * Mọi kiểu đều là cảnh "ghim" (sticky): cuộn trang điều khiển animation. Tốc độ do admin đặt (speed): lớn hơn thì chạy nhanh hơn.
+ * - envelope: phong bì lật lấy thiệp (EnvelopeHero).
+ * - fan / book / flower / cube: các cảnh 3D trong CategoryHeroScenes.
  */
 export function CategoryHero3D(props: Props) {
-  return props.hero.preset === "envelope" ? <EnvelopeHero {...props} /> : <FlowHero {...props} />;
+  const preset = props.hero.preset;
+  if (preset === "envelope") return <EnvelopeHero {...props} />;
+  const Scene = SCENES[preset as Exclude<HeroPreset, "envelope">];
+  return <PinnedScene {...props} Scene={Scene} />;
+}
+
+const SCENES: Record<Exclude<HeroPreset, "envelope">, ComponentType<SceneProps>> = {
+  fan: FanScene,
+  book: BookScene,
+  flower: FlowerScene,
+  cube: CubeScene,
+};
+
+/** Chiều cao vùng ghim (svh) theo tốc độ: speed 1 giữ nguyên base; speed lớn thì ngắn lại. Quãng cuộn = chiều cao − 100 svh. */
+export function pinHeight(speed: number, base: number): number {
+  const s = Number.isFinite(speed) && speed > 0 ? speed : 1;
+  return Math.round(100 + (base - 100) / s);
+}
+
+/** Chiều cao ghim cho các kiểu mới (svh). Tăng để chậm hơn. */
+const SCENE_PIN_VH = 360;
+
+/** Khung ghim dùng chung cho các kiểu mới: nhận một cảnh và truyền tiến độ cuộn xuống. */
+function PinnedScene({ hero, categoryLabel, Scene }: Props & { Scene: ComponentType<SceneProps> }) {
+  const ref = useRef<HTMLElement>(null);
+  const reduce = !!useReducedMotion();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
+  // Cùng thông số làm mượt với phong bì
+  const p = useSpring(scrollYProgress, { stiffness: 70, damping: 24, mass: 0.7 });
+  const settled = useMotionValue(1); // người dùng bật giảm chuyển động: hiện cảnh ở trạng thái cuối, không ghim
+
+  return (
+    <section
+      ref={ref}
+      aria-label={`Giới thiệu danh mục ${categoryLabel}`}
+      className="relative border-b border-black/5"
+      style={{
+        height: reduce ? undefined : `${pinHeight(hero.speed, SCENE_PIN_VH)}svh`,
+        background: `linear-gradient(180deg, ${hero.accent}1f 0%, #FEFDFD 85%)`,
+      }}
+    >
+      <div className="sticky top-0 flex h-[100svh] items-center justify-center overflow-hidden px-5">
+        <div className="w-full">
+          <Scene p={reduce ? settled : p} reduce={reduce} hero={hero} categoryLabel={categoryLabel} />
+        </div>
+      </div>
+    </section>
+  );
 }
 
 /* ====================== Phong bì: cảnh ghim + cuộn ====================== */
@@ -45,7 +88,7 @@ function EnvelopeHero({ hero, categoryLabel }: Props) {
       ref={ref}
       aria-label={`Giới thiệu danh mục ${categoryLabel}`}
       className="relative border-b border-black/5"
-      style={{ height: `${PIN_VH}svh`, background: `linear-gradient(180deg, ${hero.accent}1f 0%, #FEFDFD 85%)` }}
+      style={{ height: `${pinHeight(hero.speed, PIN_VH)}svh`, background: `linear-gradient(180deg, ${hero.accent}1f 0%, #FEFDFD 85%)` }}
     >
       <div
         className="sticky top-0 flex h-[100svh] items-center justify-center overflow-hidden px-5"
@@ -65,191 +108,6 @@ function EnvelopeHero({ hero, categoryLabel }: Props) {
         </div>
       </div>
     </section>
-  );
-}
-
-/* ====================== Ribbon / Cylinder / Wall ====================== */
-
-function FlowHero({ hero, categoryLabel }: Props) {
-  const ref = useRef<HTMLElement>(null);
-  const reduce = useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  // p là nguồn chung cho các kiểu 3D. Mặc định lấy theo vị trí cuộn; khi đặt chuột lên thì lăn chuột điều khiển.
-  const p = useMotionValue(0.8);
-  const hovering = useRef(false);
-  const run = useRef<AnimationPlaybackControls | null>(null);
-  useMotionValueEvent(scrollYProgress, "change", (v) => {
-    if (!hovering.current && !reduce) p.set(v);
-  });
-  const onEnter = () => {
-    hovering.current = true;
-    run.current?.stop();
-  };
-  const onLeave = () => {
-    hovering.current = false;
-    run.current?.stop();
-    if (reduce) return; // giữ nguyên vị trí vừa lăn tới
-    run.current = animate(p, scrollYProgress.get(), { duration: 0.6, ease: "easeOut" });
-  };
-
-  // Khi chuột ở trên hero: lăn chuột điều khiển animation, chưa xong thì chặn cuộn trang; hết thì trả cuộn cho trang.
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const WHEEL_PX = 1000;
-    const onWheel = (e: WheelEvent) => {
-      // wheel chỉ tới section khi con trỏ đang ở trên nó, nên không cần chờ pointerenter
-      if (!hovering.current) {
-        hovering.current = true;
-        run.current?.stop();
-      }
-      if (e.ctrlKey || e.deltaY === 0) return;
-      const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * window.innerHeight : e.deltaY;
-      const cur = p.get();
-      const atEnd = (dy > 0 && cur >= 1) || (dy < 0 && cur <= 0);
-      if (atEnd) return;
-      e.preventDefault();
-      p.set(Math.min(1, Math.max(0, cur + dy / WHEEL_PX)));
-    };
-    const onDocLeave = () => {
-      if (!hovering.current) return;
-      hovering.current = false;
-      run.current?.stop();
-      if (reduce) return;
-      run.current = animate(p, scrollYProgress.get(), { duration: 0.6, ease: "easeOut" });
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    document.documentElement.addEventListener("mouseleave", onDocLeave);
-    return () => {
-      el.removeEventListener("wheel", onWheel);
-      document.documentElement.removeEventListener("mouseleave", onDocLeave);
-    };
-  }, [p, reduce, scrollYProgress]);
-
-  const k = reduce ? 0 : hero.speed;
-  const accent = hero.accent;
-  const title = hero.title || categoryLabel;
-
-  return (
-    <section
-      ref={ref}
-      onPointerEnter={onEnter}
-      onPointerLeave={onLeave}
-      aria-label={`Giới thiệu danh mục ${categoryLabel}`}
-      className="relative overflow-hidden border-b border-black/5"
-      style={{ background: `linear-gradient(180deg, ${accent}1f 0%, #FEFDFD 85%)` }}
-    >
-      <div className="relative z-10 mx-auto max-w-[1520px] px-5 pb-2 pt-10 text-center md:pt-14">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: accent }}>
-          {categoryLabel}
-        </p>
-        <h2 className="mt-2 font-serif text-3xl font-semibold text-[#222] md:text-5xl">{title}</h2>
-        {hero.subtitle && <p className="mx-auto mt-3 max-w-xl text-sm text-[#555] md:text-base">{hero.subtitle}</p>}
-      </div>
-
-      <div className="relative h-[340px] md:h-[420px]" style={{ perspective: 1400 }}>
-        {hero.preset === "cylinder" ? <Cylinder p={p} k={k} hero={hero} /> : hero.preset === "wall" ? <Wall p={p} k={k} hero={hero} /> : <Ribbon p={p} k={k} hero={hero} />}
-      </div>
-    </section>
-  );
-}
-
-type PresetProps = { p: MotionValue<number>; k: number; hero: TemplateHero };
-
-/** Ảnh cho hero; chưa có ảnh thì dùng ô màu nhấn để bố cục vẫn hiện đẹp. */
-function Tile({ src, accent, w, h }: { src?: string; accent: string; w: number; h: number }) {
-  return (
-    <div
-      className="shrink-0 overflow-hidden rounded-[10px] shadow-[0_14px_30px_-12px_rgba(0,0,0,0.35)]"
-      style={{ width: w, height: h, background: src ? "#eee" : `linear-gradient(135deg, ${accent}, #1a1a1a)` }}
-    >
-      {src && <img src={src} alt="" loading="lazy" draggable={false} className="size-full object-cover" />}
-    </div>
-  );
-}
-
-function Ribbon({ p, k, hero }: PresetProps) {
-  // Hai dải nghiêng, chạy ngược chiều nhau. Mỗi dải nhân đôi nội dung để vòng lặp liền mạch.
-  const rowA = hero.images.length ? [...hero.images, ...hero.images] : Array.from({ length: 12 }, () => "");
-  const rowB = [...rowA].reverse();
-  const xA = useTransform(p, (v) => `${-loop01(v, k * 2) * 50}%`);
-  const xB = useTransform(p, (v) => `${-(1 - loop01(v, k * 2)) * 50}%`);
-  const row = (items: string[], x: MotionValue<string>, key: string) => (
-    <motion.div key={key} className="flex w-max gap-4" style={{ x }}>
-      {items.map((src, i) => (
-        <Tile key={`${key}-${i}`} src={src || undefined} accent={hero.accent} w={200} h={150} />
-      ))}
-    </motion.div>
-  );
-  return (
-    <div
-      className="absolute inset-0 flex flex-col justify-center gap-5"
-      style={{ transform: "rotateX(16deg) rotateZ(-5deg) scale(1.2)", transformStyle: "preserve-3d" }}
-    >
-      {row(rowA, xA, "a")}
-      {row(rowB, xB, "b")}
-    </div>
-  );
-}
-
-function Cylinder({ p, k, hero }: PresetProps) {
-  const n = Math.max(hero.images.length, 8);
-  const tiles = Array.from({ length: n }, (_, i) => hero.images[i % Math.max(hero.images.length, 1)] ?? "");
-  const w = 170, h = 230;
-  // bán kính sao cho các ô sát nhau trên vòng tròn
-  const radius = Math.max(300, Math.round((w / 2 + 14) / Math.tan(Math.PI / n)));
-  const rotY = useTransform(p, (v) => v * 360 * k * 1.5);
-  return (
-    <div className="absolute inset-0 flex items-center justify-center" style={{ transform: "rotateX(-8deg)", transformStyle: "preserve-3d" }}>
-      <motion.div className="relative" style={{ width: w, height: h, transformStyle: "preserve-3d", rotateY: rotY }}>
-        {tiles.map((src, i) => (
-          <div
-            key={i}
-            className="absolute inset-0"
-            style={{ transform: `rotateY(${(i * 360) / n}deg) translateZ(${radius}px)`, backfaceVisibility: "hidden" }}
-          >
-            <Tile src={src || undefined} accent={hero.accent} w={w} h={h} />
-          </div>
-        ))}
-      </motion.div>
-    </div>
-  );
-}
-
-function Wall({ p, k, hero }: PresetProps) {
-  // Năm cột ảnh lệch độ sâu, cột chẵn chạy lên, cột lẻ chạy xuống.
-  const cols = 5;
-  const base = hero.images;
-  const colItems = (c: number) => {
-    const src = base.length ? base.filter((_, i) => i % cols === c) : [];
-    const list = src.length ? src : Array.from({ length: 4 }, () => "");
-    return [...list, ...list];
-  };
-  return (
-    <div
-      className="absolute inset-0 flex items-center justify-center gap-4"
-      style={{ transform: "rotateX(22deg) rotateY(-14deg) scale(1.1)", transformStyle: "preserve-3d" }}
-    >
-      {Array.from({ length: cols }, (_, c) => (
-        <WallColumn key={c} p={p} k={k} hero={hero} items={colItems(c)} up={c % 2 === 0} depth={c % 2 === 0 ? 0 : -90} />
-      ))}
-    </div>
-  );
-}
-
-function WallColumn({ p, k, hero, items, up, depth }: PresetProps & { items: string[]; up: boolean; depth: number }) {
-  const y = useTransform(p, (v) => {
-    const f = loop01(v, k * 2);
-    return `${(up ? -f : f - 1) * 50}%`;
-  });
-  return (
-    <div className="relative h-full overflow-hidden" style={{ transform: `translateZ(${depth}px)`, transformStyle: "preserve-3d" }}>
-      <motion.div className="flex w-max flex-col gap-4" style={{ y }}>
-        {items.map((src, i) => (
-          <Tile key={i} src={src || undefined} accent={hero.accent} w={150} h={190} />
-        ))}
-      </motion.div>
-    </div>
   );
 }
 
