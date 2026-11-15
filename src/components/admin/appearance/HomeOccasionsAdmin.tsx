@@ -2,14 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getAdminHomeOccasions, saveAdminHomeOccasions } from "@/lib/api/admin";
-import { getTemplateCategoryTree } from "@/lib/api/templates";
-import { flattenTemplates, type TreeNode, type TreeTemplate } from "@/lib/templates-tree";
+import { getTemplateCategoryTree, getTemplates } from "@/lib/api/templates";
+import { templatesOf } from "@/lib/api/list";
+import { TemplateShowcase } from "@/components/templates/TemplateShowcase";
+import type { TreeNode } from "@/lib/templates-tree";
 import {
   DEFAULT_HOME_OCCASIONS,
   OCCASION_FONT_KEYS,
   OCCASION_FONT_LABELS,
   occasionFontFamily,
   type HomeOccasionsConfig,
+  type OccasionTemplate,
 } from "@/lib/home-occasions";
 import type { TitleFontKey } from "@/lib/title-style";
 import { ErrorBox, btnCls, btnGhostCls, errorMessage, inputCls } from "@/components/admin/ui";
@@ -21,6 +24,9 @@ export default function HomeOccasionsAdmin() {
   const [cfg, setCfg] = useState<HomeOccasionsConfig>(DEFAULT_HOME_OCCASIONS);
   const [roots, setRoots] = useState<TreeNode[]>([]);
   const [filter, setFilter] = useState<string>("");
+  const [choices, setChoices] = useState<OccasionTemplate[]>([]);
+  const [picked, setPicked] = useState<OccasionTemplate | null>(null);
+  const [listing, setListing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,8 +37,9 @@ export default function HomeOccasionsAdmin() {
     Promise.all([getAdminHomeOccasions(), getTemplateCategoryTree()])
       .then(([cur, tree]) => {
         if (!alive) return;
-        const { backgroundTemplateSlug, overlay, fonts } = cur.data;
+        const { backgroundTemplateSlug, overlay, fonts, backgroundTemplate } = cur.data;
         setCfg({ backgroundTemplateSlug, overlay, fonts });
+        setPicked(backgroundTemplate);
         const d = tree.data?.data ?? tree.data;
         setRoots(Array.isArray(d) ? (d as TreeNode[]) : []);
       })
@@ -43,18 +50,26 @@ export default function HomeOccasionsAdmin() {
     };
   }, []);
 
-  // Mẫu để chọn làm nền: chỉ mẫu có ảnh xem trước, lọc theo danh mục gốc đang chọn
-  const choices = useMemo<TreeTemplate[]>(() => {
-    const src = filter ? roots.filter((r) => r.id === filter) : roots;
-    const seen = new Set<string>();
-    return src
-      .flatMap((r) => flattenTemplates(r))
-      .filter((t) => t.previewImage && !seen.has(t.slug) && !!seen.add(t.slug));
-  }, [roots, filter]);
+  // Mẫu để chọn làm nền: lấy mẫu đầy đủ (giống trang mẫu thiệp) theo danh mục đang lọc để hiện đúng ảnh thiệp + phong bì
+  useEffect(() => {
+    let alive = true;
+    setListing(true);
+    getTemplates({ limit: filter ? 50 : 30, ...(filter ? { categoryId: filter } : {}) })
+      .then((r) => alive && setChoices(templatesOf(r.data) as unknown as OccasionTemplate[]))
+      .catch(() => alive && setChoices([]))
+      .finally(() => alive && setListing(false));
+    return () => {
+      alive = false;
+    };
+  }, [filter]);
 
-  const allTemplates = useMemo(() => roots.flatMap((r) => flattenTemplates(r)), [roots]);
-  const selected = allTemplates.find((t) => t.slug === cfg.backgroundTemplateSlug) ?? null;
+  const selected = picked && picked.slug === cfg.backgroundTemplateSlug ? picked : null;
   const selectedMissing = !!cfg.backgroundTemplateSlug && !selected;
+
+  const choose = (t: OccasionTemplate) => {
+    setPicked(t);
+    setCfg((c) => ({ ...c, backgroundTemplateSlug: t.slug }));
+  };
 
   const setFont = (id: string, font: TitleFontKey | "") =>
     setCfg((c) => {
@@ -71,6 +86,7 @@ export default function HomeOccasionsAdmin() {
     try {
       const { data } = await saveAdminHomeOccasions(cfg);
       setCfg({ backgroundTemplateSlug: data.backgroundTemplateSlug, overlay: data.overlay, fonts: data.fonts });
+      setPicked(data.backgroundTemplate);
       setNotice("Đã lưu. Trang chủ sẽ cập nhật ở lần tải tiếp theo.");
     } catch (e) {
       setError(errorMessage(e));
@@ -114,7 +130,10 @@ export default function HomeOccasionsAdmin() {
                 type="button"
                 className={btnGhostCls}
                 disabled={!cfg.backgroundTemplateSlug}
-                onClick={() => setCfg((c) => ({ ...c, backgroundTemplateSlug: null }))}
+                onClick={() => {
+                  setPicked(null);
+                  setCfg((c) => ({ ...c, backgroundTemplateSlug: null }));
+                }}
               >
                 Không dùng nền
               </button>
@@ -124,24 +143,25 @@ export default function HomeOccasionsAdmin() {
               <p className="text-xs text-[#8E2B3B]">Mẫu đang chọn ({cfg.backgroundTemplateSlug}) không còn được đăng, trang chủ sẽ không hiện nền. Hãy chọn mẫu khác.</p>
             )}
 
-            {choices.length === 0 ? (
-              <p className="text-sm text-[#5B6B7F]">Chưa có mẫu thiệp nào có ảnh xem trước.</p>
+            {listing ? (
+              <p className="text-sm text-[#5B6B7F]">Đang tải mẫu…</p>
+            ) : choices.length === 0 ? (
+              <p className="text-sm text-[#5B6B7F]">Chưa có mẫu thiệp nào trong danh mục này.</p>
             ) : (
-              <ul className="grid max-h-[420px] grid-cols-3 gap-3 overflow-y-auto pr-1 sm:grid-cols-4 xl:grid-cols-5">
+              <ul className="grid max-h-[460px] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3 xl:grid-cols-4">
                 {choices.map((t) => {
                   const on = t.slug === cfg.backgroundTemplateSlug;
                   return (
                     <li key={t.slug}>
                       <button
                         type="button"
-                        onClick={() => setCfg((c) => ({ ...c, backgroundTemplateSlug: t.slug }))}
+                        onClick={() => choose(t)}
                         aria-pressed={on}
                         title={t.name}
-                        className={`group block w-full border-2 text-left transition-colors ${on ? "border-[#27548A]" : "border-transparent hover:border-[#C5D0DE]"}`}
+                        className={`group block w-full rounded-md border-2 bg-[#FEFDFD] p-1 text-left transition-colors ${on ? "border-[#27548A]" : "border-[#EEF2F7] hover:border-[#C5D0DE]"}`}
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={t.previewImage!} alt={t.name} loading="lazy" className="aspect-[3/4] w-full object-cover" />
-                        <span className={`block truncate px-1 py-1 text-xs ${on ? "font-semibold text-[#27548A]" : "text-[#5B6B7F]"}`}>{t.name}</span>
+                        <TemplateShowcase template={t} />
+                        <span className={`block truncate px-1 pb-1 text-xs ${on ? "font-semibold text-[#27548A]" : "text-[#5B6B7F]"}`}>{t.name}</span>
                       </button>
                     </li>
                   );
@@ -152,17 +172,19 @@ export default function HomeOccasionsAdmin() {
 
           <div className="grid content-start gap-3">
             <p className="text-sm font-medium">Xem trước</p>
-            <div className="relative grid h-44 place-items-center overflow-hidden border border-[#D9E1EC] bg-[#FEFDFD]">
-              {selected?.previewImage && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={selected.previewImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="relative grid h-56 place-items-center overflow-hidden border border-[#D9E1EC] bg-[#FEFDFD]">
+              {selected && (
+                <div aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="h-full aspect-square" style={{ opacity: 1 - cfg.overlay / 100 }}>
+                    <TemplateShowcase template={selected} />
+                  </div>
+                </div>
               )}
-              <div className="absolute inset-0 bg-white" style={{ opacity: cfg.overlay / 100 }} />
               <span className="relative text-sm font-semibold text-[#1a1a1a]">NHỮNG DỊP LAN TỎA NIỀM VUI</span>
             </div>
             <label className="grid gap-1.5 text-sm font-medium">
               <span className="flex justify-between">
-                Độ phủ lớp trắng mờ <span className="tabular-nums text-[#5B6B7F]">{cfg.overlay}%</span>
+                Độ mờ của nền <span className="tabular-nums text-[#5B6B7F]">{cfg.overlay}%</span>
               </span>
               <input
                 type="range"
@@ -172,7 +194,7 @@ export default function HomeOccasionsAdmin() {
                 value={cfg.overlay}
                 onChange={(e) => setCfg((c) => ({ ...c, overlay: Number(e.target.value) }))}
               />
-              <span className="text-xs font-normal text-[#5B6B7F]">Tăng lên nếu ảnh nền làm tiêu đề khó đọc.</span>
+              <span className="text-xs font-normal text-[#5B6B7F]">Tăng lên nếu ảnh nền làm tiêu đề và thẻ khó đọc.</span>
             </label>
           </div>
         </div>

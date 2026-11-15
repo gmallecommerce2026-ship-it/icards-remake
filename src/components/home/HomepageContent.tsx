@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { settingsApi, templatesApi } from "@/lib/api";
-import { DEFAULT_HOME_OCCASIONS, occasionFontFamily, type HomeOccasionsView } from "@/lib/home-occasions";
+import { DEFAULT_HOME_OCCASIONS, occasionFontFamily, type HomeOccasionsView, type OccasionTemplate } from "@/lib/home-occasions";
 import { flattenTemplates, type TreeNode } from "@/lib/templates-tree";
 
 /* Giá trị lấy trực tiếp từ HomepageContent.css của bản src (đã áp dụng đúng thứ tự cascade). */
@@ -57,7 +57,7 @@ function SectionHeader({ sub, title }: { sub: string; title: string }) {
   );
 }
 
-type OccasionItem = { key: string; title: string; href: string; img?: string; font?: string };
+type OccasionItem = { key: string; title: string; href: string; template?: OccasionTemplate; img?: string; font?: string };
 
 /* Nút trước/sau: ẩn khi chưa rê chuột vào carousel, rê vào thì hiện cả hai nút hai bên.
    Trên màn hình cảm ứng (không có hover) hoặc khi dùng bàn phím (focus) thì luôn hiện.
@@ -123,13 +123,18 @@ function Occasions({ items }: { items: OccasionItem[] }) {
                   {o.title}
                 </p>
               </div>
-              <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-lg bg-[#f3f1ee]">
-                <img
-                  src={o.img || placeholder(o.title, "330x330")}
-                  alt={o.title}
-                  loading="lazy"
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                />
+              {/* Ảnh xem trước giống thẻ mẫu thiệp: thiệp + phong bì phía sau. Hover do thẻ Link (group) kích hoạt */}
+              <div className="relative aspect-square w-full shrink-0">
+                {o.template ? (
+                  <TemplateShowcase template={o.template} />
+                ) : (
+                  <img
+                    src={o.img || placeholder(o.title, "330x330")}
+                    alt={o.title}
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full rounded-lg object-cover"
+                  />
+                )}
               </div>
             </div>
           </Link>
@@ -237,10 +242,10 @@ export function HomepageContent() {
         const roots: TreeNode[] = Array.isArray(d) ? d : [];
         const l = lookRes.status === "fulfilled" ? ((lookRes.value.data?.data ?? lookRes.value.data) as Partial<HomeOccasionsView> | undefined) : undefined;
         const fonts = l?.fonts ?? {};
-        setLook({ ...DEFAULT_HOME_OCCASIONS, ...l, fonts });
+        setLook({ ...DEFAULT_HOME_OCCASIONS, ...l, fonts, coverTemplates: l?.coverTemplates ?? {} });
         setOccasions(
           roots.length
-            ? roots.map((r) => ({ key: r.id, title: r.label, href: r.path, font: fonts[r.id], img: flattenTemplates(r).find((t) => t.previewImage)?.previewImage ?? undefined }))
+            ? roots.map((r) => ({ key: r.id, title: r.label, href: r.path, font: fonts[r.id], template: l?.coverTemplates?.[r.id], img: flattenTemplates(r).find((t) => t.previewImage)?.previewImage ?? undefined }))
             : blocks.filter((b) => b.isActive).map((b) => ({ key: b._id, title: b.title, href: "/templates", img: b.templates?.[0]?.imgSrc })),
         );
 
@@ -284,11 +289,12 @@ export function HomepageContent() {
       <SideAdsShell hero={heroEl}>
       <main className={MAIN}>
         <section className={`${SECTION} relative isolate`}>
-          {look.backgroundImage && (
-            // Nền phủ kín khối (bù lại padding của <main>): ảnh mẫu thiệp + lớp trắng mờ để tiêu đề và thẻ luôn dễ đọc
-            <div aria-hidden className="pointer-events-none absolute -inset-x-5 -inset-y-10 -z-10 overflow-hidden">
-              <img src={look.backgroundImage} alt="" className="h-full w-full object-cover" />
-              <div className="absolute inset-0 bg-[#FEFDFD]" style={{ opacity: look.overlay / 100 }} />
+          {look.backgroundTemplate && (
+            // Nền: "ảnh xem trước" (thiệp + phong bì) của mẫu admin chọn, đặt giữa khối, mờ dần theo độ phủ để chữ và thẻ luôn dễ đọc
+            <div aria-hidden className="pointer-events-none absolute -inset-x-5 -inset-y-10 -z-10 flex items-center justify-center overflow-hidden">
+              <div className="w-[min(100%,760px)] shrink-0" style={{ opacity: 1 - look.overlay / 100 }}>
+                <TemplateShowcase template={look.backgroundTemplate} />
+              </div>
             </div>
           )}
           <SectionHeader sub="NHỮNG CƠ HỘI MỌI NGƯỜI KẾT NỐI THÂN THIẾT" title="NHỮNG DỊP LAN TỎA NIỀM VUI" />

@@ -1,5 +1,6 @@
 // Cấu hình khối "Những dịp lan tỏa niềm vui" trên trang chủ (khớp backend: src/templates/home-occasions.ts).
 import { TITLE_FONTS, type TitleFontKey } from "@/lib/title-style";
+import type { InvitationTemplate } from "@/lib/templates";
 
 export type HomeOccasionsConfig = {
   /** slug mẫu thiệp dùng làm hình nền của khối; null = không dùng nền */
@@ -10,9 +11,17 @@ export type HomeOccasionsConfig = {
   fonts: Record<string, TitleFontKey>;
 };
 
-export type HomeOccasionsView = HomeOccasionsConfig & { backgroundImage: string | null };
+/** Mẫu đầy đủ (như danh sách mẫu thiệp) để dựng "ảnh xem trước" thiệp + phong bì bằng TemplateShowcase. */
+export type OccasionTemplate = InvitationTemplate & { _id: string };
 
-export const DEFAULT_HOME_OCCASIONS: HomeOccasionsView = { backgroundTemplateSlug: null, overlay: 55, fonts: {}, backgroundImage: null };
+export type HomeOccasionsView = HomeOccasionsConfig & {
+  /** mẫu làm nền; null nếu chưa chọn hoặc mẫu không còn đăng */
+  backgroundTemplate: OccasionTemplate | null;
+  /** mẫu đại diện của từng danh mục gốc (khóa = slug danh mục) */
+  coverTemplates: Record<string, OccasionTemplate>;
+};
+
+export const DEFAULT_HOME_OCCASIONS: HomeOccasionsView = { backgroundTemplateSlug: null, overlay: 55, fonts: {}, backgroundTemplate: null, coverTemplates: {} };
 
 /** Font mặc định của tên danh mục khi admin chưa chọn. */
 export const DEFAULT_OCCASION_FONT = "var(--font-tpl-display), Georgia, serif";
