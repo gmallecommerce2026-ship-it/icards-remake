@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { animate, cubicBezier, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform, type AnimationPlaybackControls, type MotionValue } from "motion/react";
+import { animate, cubicBezier, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTime, useTransform, useVelocity, type AnimationPlaybackControls, type MotionValue } from "motion/react";
 import type { TemplateHero } from "@/lib/template-heroes";
 
 type Props = { hero: TemplateHero; categoryLabel: string };
@@ -14,32 +14,73 @@ const loop01 = (v: number, k: number) => {
 
 /**
  * Hero 3D cho trang danh mục mẫu thiệp. Bố cục do preset quyết định, nội dung do admin nhập.
- * Chạy theo cuộn trang bằng CSS 3D (perspective + preserve-3d). Người dùng bật "giảm chuyển động" thì đứng yên ở trạng thái cuối.
+ * - envelope: cảnh "ghim" (sticky) dài vài màn hình như trang xem thiệp mời; cuộn trang điều khiển animation, có lò xo làm mượt.
+ * - ribbon / cylinder / wall: chạy theo cuộn trang bằng CSS 3D.
  */
-export function CategoryHero3D({ hero, categoryLabel }: Props) {
+export function CategoryHero3D(props: Props) {
+  return props.hero.preset === "envelope" ? <EnvelopeHero {...props} /> : <FlowHero {...props} />;
+}
+
+/* ====================== Phong bì: cảnh ghim + cuộn ====================== */
+
+/** Chiều cao vùng ghim (svh). Quãng cuộn để chạy hết animation = (PIN_VH − 100) svh. Tăng để chậm hơn, giảm để nhanh hơn. */
+const PIN_VH = 260;
+
+function EnvelopeHero({ hero, categoryLabel }: Props) {
   const ref = useRef<HTMLElement>(null);
-  const reduce = useReducedMotion();
-  const isEnvelope = hero.preset === "envelope";
-  // Phong bì: p = 0 khi mới vào trang (thấy phong bì đóng), chạy 0→1 khi cuộn xuống qua hero. Các kiểu khác giữ nguyên.
-  const { scrollYProgress } = useScroll({ target: ref, offset: isEnvelope ? ["start start", "end 35%"] : ["start end", "end start"] });
-  // p là nguồn chung cho mọi kiểu 3D. Mặc định lấy theo vị trí cuộn; khi đặt chuột lên thì tự chạy.
-  // raw = giá trị đích (cuộn / lăn chuột đặt vào). Phong bì dùng bản lò xo của raw nên lướt mượt, có quán tính, không giật theo từng nấc lăn.
-  const raw = useMotionValue(isEnvelope ? 0 : 0.8);
-  const spring = useSpring(raw, { stiffness: 70, damping: 20, mass: 0.9, restDelta: 0.0004 });
-  const p = isEnvelope && !reduce ? spring : raw;
-  // Nghiêng camera theo vị trí con trỏ (chỉ chuột, có lò xo)
+  const reduce = !!useReducedMotion();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
+  // Cùng thông số làm mượt với trang xem thiệp mời (PublicEnvelopeIntro)
+  const p = useSpring(scrollYProgress, { stiffness: 70, damping: 24, mass: 0.7 });
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
-  const look = { x: useSpring(mx, { stiffness: 55, damping: 16 }), y: useSpring(my, { stiffness: 55, damping: 16 }) };
+  const look = { x: useSpring(mx, { stiffness: 60, damping: 18 }), y: useSpring(my, { stiffness: 60, damping: 18 }) };
+  const velocity = useSpring(useVelocity(p), { stiffness: 80, damping: 30 });
+  const leanRaw = useTransform(velocity, [-1.2, 0, 1.2], [4, 0, -4]);
+  const zero = useMotionValue(0);
+  const lean = reduce ? zero : leanRaw;
+
+  return (
+    <section
+      ref={ref}
+      aria-label={`Giới thiệu danh mục ${categoryLabel}`}
+      className="relative border-b border-black/5"
+      style={{ height: `${PIN_VH}svh`, background: `linear-gradient(180deg, ${hero.accent}1f 0%, #FEFDFD 85%)` }}
+    >
+      <div
+        className="sticky top-0 flex h-[100svh] items-center justify-center overflow-hidden px-5"
+        onPointerMove={(e) => {
+          if (e.pointerType !== "mouse" || reduce) return;
+          const r = e.currentTarget.getBoundingClientRect();
+          mx.set((e.clientX - r.left) / r.width - 0.5);
+          my.set((e.clientY - r.top) / r.height - 0.5);
+        }}
+        onPointerLeave={() => {
+          mx.set(0);
+          my.set(0);
+        }}
+      >
+        <div className="w-full">
+          <EnvelopeScene p={p} look={look} lean={lean} reduce={reduce} hero={hero} categoryLabel={categoryLabel} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ====================== Ribbon / Cylinder / Wall ====================== */
+
+function FlowHero({ hero, categoryLabel }: Props) {
+  const ref = useRef<HTMLElement>(null);
+  const reduce = useReducedMotion();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  // p là nguồn chung cho các kiểu 3D. Mặc định lấy theo vị trí cuộn; khi đặt chuột lên thì lăn chuột điều khiển.
+  const p = useMotionValue(0.8);
   const hovering = useRef(false);
   const run = useRef<AnimationPlaybackControls | null>(null);
   useMotionValueEvent(scrollYProgress, "change", (v) => {
-    if (!hovering.current && !reduce) raw.set(v);
+    if (!hovering.current && !reduce) p.set(v);
   });
-  // Khi chuột ở trên hero: lăn chuột điều khiển animation, chưa xong thì chặn cuộn trang.
-  // Hết animation theo chiều đang lăn thì trả lại cuộn trang bình thường.
-  // Giảm chuyển động: hero không tự chạy theo cuộn trang, nhưng vẫn cho người dùng tự lăn chuột để điều khiển
-  // (chuyển động chỉ xảy ra khi chính họ thao tác).
   const onEnter = () => {
     hovering.current = true;
     run.current?.stop();
@@ -48,47 +89,34 @@ export function CategoryHero3D({ hero, categoryLabel }: Props) {
     hovering.current = false;
     run.current?.stop();
     if (reduce) return; // giữ nguyên vị trí vừa lăn tới
-    mx.set(0);
-    my.set(0);
-    // rời chuột thì đưa animation về đúng vị trí cuộn trang hiện tại
-    if (isEnvelope) raw.set(scrollYProgress.get());
-    else run.current = animate(raw, scrollYProgress.get(), { duration: 0.6, ease: "easeOut" });
-  };
-  const onMove = (e: React.PointerEvent) => {
-    if (e.pointerType !== "mouse" || !isEnvelope || reduce) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    mx.set((e.clientX - r.left) / r.width - 0.5);
-    my.set((e.clientY - r.top) / r.height - 0.5);
+    run.current = animate(p, scrollYProgress.get(), { duration: 0.6, ease: "easeOut" });
   };
 
+  // Khi chuột ở trên hero: lăn chuột điều khiển animation, chưa xong thì chặn cuộn trang; hết thì trả cuộn cho trang.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const WHEEL_PX = 1300; // số px lăn chuột để chạy hết animation
+    const WHEEL_PX = 1000;
     const onWheel = (e: WheelEvent) => {
-      // Sự kiện wheel chỉ tới section khi con trỏ đang ở trên nó, nên không cần chờ pointerenter
-      // (pointerenter có thể đến trễ hoặc không đến khi trang cuộn dưới con trỏ đứng yên).
+      // wheel chỉ tới section khi con trỏ đang ở trên nó, nên không cần chờ pointerenter
       if (!hovering.current) {
         hovering.current = true;
         run.current?.stop();
       }
-      if (e.ctrlKey || e.deltaY === 0) return; // ctrl+lăn = zoom của trình duyệt; lăn ngang thì bỏ qua
-      // Chuẩn hóa về px: Firefox/chuột cũ báo theo dòng (deltaMode 1) hoặc trang (2)
+      if (e.ctrlKey || e.deltaY === 0) return;
       const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * window.innerHeight : e.deltaY;
-      const cur = raw.get();
+      const cur = p.get();
       const atEnd = (dy > 0 && cur >= 1) || (dy < 0 && cur <= 0);
-      if (atEnd) return; // đã hết animation theo chiều này: để trang cuộn bình thường
+      if (atEnd) return;
       e.preventDefault();
-      raw.set(Math.min(1, Math.max(0, cur + dy / WHEEL_PX)));
+      p.set(Math.min(1, Math.max(0, cur + dy / WHEEL_PX)));
     };
-    // Con trỏ rời cửa sổ mà section không nhận pointerleave: vẫn phải trả p về theo cuộn trang
     const onDocLeave = () => {
       if (!hovering.current) return;
       hovering.current = false;
       run.current?.stop();
       if (reduce) return;
-      if (isEnvelope) raw.set(scrollYProgress.get());
-      else run.current = animate(raw, scrollYProgress.get(), { duration: 0.6, ease: "easeOut" });
+      run.current = animate(p, scrollYProgress.get(), { duration: 0.6, ease: "easeOut" });
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     document.documentElement.addEventListener("mouseleave", onDocLeave);
@@ -96,7 +124,8 @@ export function CategoryHero3D({ hero, categoryLabel }: Props) {
       el.removeEventListener("wheel", onWheel);
       document.documentElement.removeEventListener("mouseleave", onDocLeave);
     };
-  }, [raw, reduce, scrollYProgress, isEnvelope]);
+  }, [p, reduce, scrollYProgress]);
+
   const k = reduce ? 0 : hero.speed;
   const accent = hero.accent;
   const title = hero.title || categoryLabel;
@@ -106,36 +135,21 @@ export function CategoryHero3D({ hero, categoryLabel }: Props) {
       ref={ref}
       onPointerEnter={onEnter}
       onPointerLeave={onLeave}
-      onPointerMove={onMove}
       aria-label={`Giới thiệu danh mục ${categoryLabel}`}
       className="relative overflow-hidden border-b border-black/5"
       style={{ background: `linear-gradient(180deg, ${accent}1f 0%, #FEFDFD 85%)` }}
     >
-      {hero.preset === "envelope" ? (
-        <div className="relative z-10 px-5 pb-6 pt-10 md:pt-14">
-          <EnvelopeScene p={p} look={look} hero={hero} categoryLabel={categoryLabel} />
-        </div>
-      ) : (
-        <>
-          <div className="relative z-10 mx-auto max-w-[1520px] px-5 pb-2 pt-10 text-center md:pt-14">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: accent }}>
-              {categoryLabel}
-            </p>
-            <h2 className="mt-2 font-serif text-3xl font-semibold text-[#222] md:text-5xl">{title}</h2>
-            {hero.subtitle && <p className="mx-auto mt-3 max-w-xl text-sm text-[#555] md:text-base">{hero.subtitle}</p>}
-          </div>
+      <div className="relative z-10 mx-auto max-w-[1520px] px-5 pb-2 pt-10 text-center md:pt-14">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: accent }}>
+          {categoryLabel}
+        </p>
+        <h2 className="mt-2 font-serif text-3xl font-semibold text-[#222] md:text-5xl">{title}</h2>
+        {hero.subtitle && <p className="mx-auto mt-3 max-w-xl text-sm text-[#555] md:text-base">{hero.subtitle}</p>}
+      </div>
 
-          <div className="relative h-[340px] md:h-[420px]" style={{ perspective: 1400 }}>
-            {hero.preset === "cylinder" ? (
-              <Cylinder p={p} k={k} hero={hero} />
-            ) : hero.preset === "wall" ? (
-              <Wall p={p} k={k} hero={hero} />
-            ) : (
-              <Ribbon p={p} k={k} hero={hero} />
-            )}
-          </div>
-        </>
-      )}
+      <div className="relative h-[340px] md:h-[420px]" style={{ perspective: 1400 }}>
+        {hero.preset === "cylinder" ? <Cylinder p={p} k={k} hero={hero} /> : hero.preset === "wall" ? <Wall p={p} k={k} hero={hero} /> : <Ribbon p={p} k={k} hero={hero} />}
+      </div>
     </section>
   );
 }
@@ -256,7 +270,7 @@ const mix = (a: string, pct: number, b: string) => `color-mix(in srgb, ${a} ${pc
 
 type Look = { x: MotionValue<number>; y: MotionValue<number> };
 
-function EnvelopeScene({ p, look, hero, categoryLabel }: { p: MotionValue<number>; look: Look; hero: TemplateHero; categoryLabel: string }) {
+function EnvelopeScene({ p, look, lean, reduce, hero, categoryLabel }: { p: MotionValue<number>; look: Look; lean: MotionValue<number>; reduce: boolean; hero: TemplateHero; categoryLabel: string }) {
   const accent = hero.accent;
   const tr = (input: number[], output: number[]) => useTransform(p, input, output, { ease });
 
@@ -276,7 +290,10 @@ function EnvelopeScene({ p, look, hero, categoryLabel }: { p: MotionValue<number
   const cardTop = tr([0, 0.2, 0.4, 0.56, 0.84], [14.5, 14.5, 4, 4, 14.5]);
   const cardArc = useTransform(p, [0.36, 0.47, 0.58, 0.58, 0.7, 0.84], [0, -2.5, 0, 0, -3, 0]);
   const cardLeftCss = useTransform(cardLeft, (v) => `calc(${v}% - 21cqw)`);
-  const cardTopCss = useTransform([cardTop, cardArc], ([t, a]: number[]) => `${t + a}cqw`);
+  const time = useTime();
+  const floatAmp = useTransform(p, [0.4, 0.5], [0, 1]);
+  const floatY = useTransform([time, floatAmp], ([t, a]: number[]) => (reduce ? 0 : Math.sin(t / 1200) * 0.5 * a)); // thiệp lơ lửng nhẹ khi đã rút ra
+  const cardTopCss = useTransform([cardTop, cardArc, floatY], ([t, a, f]: number[]) => `${t + a + f}cqw`);
   const cardTilt = useTransform(p, [0.2, 0.32, 0.4], [-2.5, -1, 0]);
   const cardScale = useTransform(p, [0.2, 0.4, 0.46, 0.58, 0.72, 0.84], [1, 1.03, 1.03, 0.82, 0.82, 1]); // bù lại phối cảnh khi thiệp nhấc gần camera
   const cardZ = useTransform(p, [0.44, 0.56, 0.72, 0.84], [10, 320, 320, 10]); // nhấc thiệp cao khỏi phong bì rồi mới lật, để hai mặt phẳng không cắt nhau
@@ -287,7 +304,7 @@ function EnvelopeScene({ p, look, hero, categoryLabel }: { p: MotionValue<number
 
   // Camera: dolly + xoay nhẹ theo tiến độ, cộng thêm nghiêng theo con trỏ
   const camY = useTransform([p, look.x], ([pv, x]: number[]) => -9 + pv * 14 + x * 9);
-  const camX = useTransform([p, look.y], ([pv, y]: number[]) => 7 - pv * 4 - y * 6);
+  const camX = useTransform([p, look.y, lean], ([pv, y, l]: number[]) => 7 - pv * 4 - y * 6 + l); // lean: ngả theo tốc độ cuộn
   const camScale = useTransform(p, [0, 0.5, 0.8, 1], [0.95, 1, 1.04, 1]);
   const textShift = useTransform(look.x, (x) => `${-x * 1.6}cqw`);
 
@@ -319,12 +336,10 @@ function EnvelopeScene({ p, look, hero, categoryLabel }: { p: MotionValue<number
   const H = "33cqw";
 
   return (
-    <div className="relative mx-auto w-full max-w-[960px]" style={{ containerType: "inline-size" }}>
+    <div className="relative mx-auto w-full" style={{ containerType: "inline-size", maxWidth: "min(1080px, calc((100svh - 120px) * 2))" }}>
       <div className="relative w-full" style={{ height: "50cqw", perspective: 1400 }}>
         {/* Cánh hoa rơi chậm (phẳng, nằm sau cảnh) */}
-        {PETALS.map((pt, i) => (
-          <Petal key={i} p={p} {...pt} accent={accent} />
-        ))}
+        {!reduce && PETALS.map((pt, i) => <Petal key={i} p={p} {...pt} accent={accent} />)}
 
         {/* Camera: mọi lớp bên trong được sắp theo độ sâu thật (translateZ), không còn chồng phẳng bằng z-index */}
         <motion.div className="absolute inset-0" style={{ transformStyle: "preserve-3d", rotateX: camX, rotateY: camY, scale: camScale }}>
