@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 import { FONTS, PALETTE } from './editor.data';
 import { readImage } from './readImage';
 import { useEditorStore, type Align, type CardEl } from './useEditorStore';
+import { mergeUnique, useDesignAssets } from '@/lib/design-assets';
 import e from './editor.module.css';
 
 const IC = {
@@ -28,9 +29,10 @@ export function Icon({ k, size = 22 }: { k: keyof typeof IC; size?: number }) {
 
 /** Bảng màu: onBegin gọi trước khi đổi (để lưu mốc undo), onPick gọi mỗi lần đổi */
 export function ColorGrid({ value, onPick, onBegin }: { value?: string; onPick: (c: string) => void; onBegin?: () => void }) {
+  const extra = useDesignAssets();
   return (
     <div className={e.palette}>
-      {PALETTE.map((c) => (
+      {mergeUnique(PALETTE, extra.colors).map((c) => (
         <button key={c} type="button" className={e.sw} style={{ background: c }} aria-label={c} aria-pressed={value === c}
           onClick={() => { onBegin?.(); onPick(c); }} />
       ))}
@@ -46,6 +48,7 @@ export function TextToolbar({ el }: { el: CardEl }) {
   const patch = useEditorStore((s) => s.patch);
   const checkpoint = useEditorStore((s) => s.checkpoint);
   const [pop, setPop] = useState(false);
+  const extra = useDesignAssets();
   const set = (p: Partial<CardEl>) => { checkpoint(); patch(el.id, p); };
   const size = Math.round(el.size ?? 32);
   const aligns: Align[] = ['left', 'center', 'right'];
@@ -54,7 +57,7 @@ export function TextToolbar({ el }: { el: CardEl }) {
   return (
     <div className={e.textbar} onPointerDown={(ev) => ev.stopPropagation()}>
       <select value={el.font} onChange={(ev) => set({ font: ev.target.value })} aria-label="Phông chữ" style={{ fontFamily: `'${el.font}'` }}>
-        {FONTS.map((f) => <option key={f} value={f}>{f}</option>)}
+        {mergeUnique(FONTS, extra.fonts.map((f) => f.name)).map((f) => <option key={f} value={f}>{f}</option>)}
       </select>
       <select value={el.bold ? 'b' : 'r'} onChange={(ev) => set({ bold: ev.target.value === 'b' })} aria-label="Độ đậm">
         <option value="r">Thường</option>

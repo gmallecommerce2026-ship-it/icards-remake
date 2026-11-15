@@ -207,3 +207,17 @@ export const saveAdminTemplateEnvelope = (id: string, body: { envId: string | nu
 export const getAdminTemplateCategories = () => api.get<AdminTemplateCategory[]>("/admin/template-categories");
 export const getAdminEnvelopePresets = () => api.get<EnvelopePresetsData>("/admin/envelope-presets");
 export const saveAdminEnvelopePresets = (body: EnvelopePresetsData) => api.put<EnvelopePresetsData>("/admin/envelope-presets", body);
+
+/* ---------- Tài nguyên thiết kế (font, màu, hình nền bổ sung cho trình thiết kế) ---------- */
+
+export type DesignFontItem = { id: string; name: string };
+export type DesignBackdropItem = { id: string; name: string; type: "color" | "gradient" | "image"; value: string };
+export type DesignAssetsData = { fonts: DesignFontItem[]; colors: string[]; backdrops: DesignBackdropItem[] };
+
+export const getAdminDesignAssets = () => api.get<DesignAssetsData>("/admin/design-assets");
+export const saveAdminDesignAssets = (body: DesignAssetsData) => api.put<DesignAssetsData>("/admin/design-assets", body);
+export const uploadAdminDesignAsset = (file: File) => {
+  const fd = new FormData();
+  fd.append("file", file);
+  return api.post<{ url: string }>("/admin/design-assets/uploads", fd, { headers: { "Content-Type": "multipart/form-data" } });
+};

@@ -7,8 +7,8 @@ export const trackTemplateView = (id: string) => api.post(`/invitation-templates
 export const getTemplateBlocks = () => api.get("/template-blocks");
 export const getTemplateBlockBySlug = (slug: string) => api.get(`/template-blocks/slug/${slug}`);
 export const getFonts = () => api.get("/fonts");
-export const getDesignAssets = (type: "icon" | "component" | "tag") =>
-  api.get("/design-assets", { params: { type } });
+/** Tài nguyên thiết kế bổ sung (font, màu, hình nền) do admin quản lý. Công khai. */
+export const getDesignAssetsPublic = () => api.get("/design-assets");
 
 /** Cây danh mục nhiều cấp (danh mục → nhóm → mẫu thiệp). */
 export const getTemplateCategoryTree = () => api.get("/template-categories");

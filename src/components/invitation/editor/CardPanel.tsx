@@ -12,6 +12,7 @@ import {
 } from './editor.data';
 import { FrameView } from './PageEditor';
 import { ColorGrid } from './Toolbars';
+import { backdropCss, mergeUnique, useDesignAssets } from '@/lib/design-assets';
 import { readImage, imageRatio } from './readImage';
 import { PAGES, useEditorStore, type PageId } from './useEditorStore';
 import { AppsPanel, BrandPanel, ToolsPanel } from './ExtraPanels';
@@ -208,7 +209,8 @@ const PAIRS: { name: string; a: [string, number]; b: [string, number]; ta: strin
 function TextPanel() {
   const { addText } = useEditorStore.getState();
   const [q, setQ] = useState('');
-  const fonts = FONTS.filter((f) => f.toLowerCase().includes(q.trim().toLowerCase()));
+  const extra = useDesignAssets();
+  const fonts = mergeUnique(FONTS, extra.fonts.map((f) => f.name)).filter((f) => f.toLowerCase().includes(q.trim().toLowerCase()));
   return (
     <>
       <Search value={q} onChange={setQ} placeholder="Tìm phông chữ" />
@@ -254,11 +256,13 @@ function TextPanel() {
 function BackgroundPanel() {
   const bg = useEditorStore((s) => s.backdrops[s.page]);
   const { setBackdrop, checkpoint } = useEditorStore.getState();
+  const extra = useDesignAssets();
+  const backdrops = mergeUnique(BACKDROPS, [...extra.colors, ...extra.backdrops.map(backdropCss)]);
   return (
     <>
       <h3 className={p.browse}>Màu nền</h3>
       <div className={p.grid}>
-        {BACKDROPS.map((b) => (
+        {backdrops.map((b) => (
           <button key={b} type="button" className={p.swatch} style={{ background: b }} aria-label={b} aria-pressed={bg === b} onClick={() => setBackdrop(b)} />
         ))}
         <label className={p.custom}>

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactN
 import QRCode from 'qrcode';
 import { FONTS } from './editor.data';
 import { ColorGrid } from './Toolbars';
+import { mergeUnique, useDesignAssets } from '@/lib/design-assets';
 import { readImage, imageRatio } from './readImage';
 import { fitInside } from './bounds';
 import { extractPalette } from './palette';
@@ -29,6 +30,7 @@ const selectedEl = (s: ReturnType<typeof useEditorStore.getState>): CardEl | nul
 type EyeDropperCtor = new () => { open: () => Promise<{ sRGBHex: string }> };
 
 export function BrandPanel() {
+  const extraAssets = useDesignAssets();
   const { colors, fonts, logos, addColor, removeColor, toggleFont, addLogo, removeLogo } = useBrandStore();
   const [pick, setPick] = useState('#2f6bff');
   const [busy, setBusy] = useState(false);
@@ -142,7 +144,7 @@ export function BrandPanel() {
       </button>
       <p className={p.hint} style={{ marginTop: 0 }}>Đánh dấu ★ tối đa 6 phông. Phông đầu tiên là <b>tiêu đề</b>, phông thứ hai là <b>nội dung</b>.</p>
       <div className={p.stack}>
-        {[...FONTS].sort((a, b) => {
+        {[...mergeUnique(FONTS, extraAssets.fonts.map((f) => f.name))].sort((a, b) => {
           const ia = fonts.indexOf(a), ib = fonts.indexOf(b);
           return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
         }).map((f) => {
