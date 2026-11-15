@@ -206,13 +206,14 @@ export function PublicEnvelopeIntro({ info, design, guestName }: { info: IntroIn
   /* thiệp rút ra */
   const cardY = useTransform(p, [0, 0.2, 0.42, 0.54, 1], ["-48.5%", "-48.5%", "-133%", "-53%", "-53%"], E);
   const cardScale = useTransform(p, [0, 0.1, 0.42, 0.54, 1], [0.855, 0.95, 0.95, 1.05, 1.05], E);
-  const cardRotZ = useTransform(p, [0, 0.42, 0.54, 1], [-90, -90, 0, 0], E);
   const cardRotY = useTransform(p, RY_STOPS, RY_VALS, E);
   const cardRotX = useTransform(p, RX_STOPS, RX_VALS, E);
   const cardZ = useTransform(p, [0, 0.415, 0.43, 1], [2, 2, 40, 40]);
   const isCard = design?.format === "card";
   // tỉ lệ cao / rộng của thiệp: 1.4 (gập 5:7) hoặc khổ thiệp 2 mặt. Phong bì và khung thiệp đều theo tỉ lệ này
   const ratioHW = useEditorStore((s) => s.dims.h / s.dims.w);
+  // thiệp dọc nằm ngang trong phong bì rồi xoay đứng khi rút ra; thiệp ngang nằm sẵn ngang, không xoay
+  const cardRotZ = useTransform(p, [0, 0.42, 0.54, 1], ratioHW > 1 ? [-90, -90, 0, 0] : [0, 0, 0, 0], E);
   // thiệp 2 mặt: sau khi rút ra thì lật 0° → 180° (mặt sau) → 360° (mặt trước)
   const cardFlipY = useTransform(p, CARD_FLIP_STOPS, CARD_FLIP_VALS, E);
 
@@ -277,10 +278,10 @@ export function PublicEnvelopeIntro({ info, design, guestName }: { info: IntroIn
                 {/* thiệp: thiệp 4 mặt = FoldingCard của studio; thiệp 2 mặt = hai mặt lật qua lại (cùng khung, cùng chuyển động) */}
                 <motion.div
                   className="absolute left-1/2 top-[54%]"
-                  style={{ width: "var(--cw)", height: "calc(var(--cw) * var(--ratio))", x: "-50%", y: cardY, scale: cardScale, rotateX: cardRotX, rotateY: isCard ? 0 : cardRotY, rotateZ: cardRotZ, z: cardZ }}
+                  style={{ width: "var(--cw)", height: "calc(var(--cw) * var(--ratio))", x: "-50%", y: cardY, scale: cardScale, rotateX: cardRotX, rotateY: isCard ? 0 : cardRotY, rotateZ: cardRotZ, z: cardZ, transformStyle: isCard ? "preserve-3d" : undefined }}
                 >
-                  <motion.div className="h-full w-full" style={{ y: floatY, rotateZ: floatRot }}>
-                    <motion.div className="relative h-full w-full" style={{ scale: focusK, x: focusX, y: focusY, boxShadow: shadow, ["--k" as string]: focusK } as MotionStyle}>
+                  <motion.div className="h-full w-full" style={{ y: floatY, rotateZ: floatRot, transformStyle: isCard ? "preserve-3d" : undefined }}>
+                    <motion.div className="relative h-full w-full" style={{ scale: focusK, x: focusX, y: focusY, boxShadow: shadow, transformStyle: isCard ? "preserve-3d" : undefined, ["--k" as string]: focusK } as MotionStyle}>
                       {isCard ? (
                         <motion.div className="absolute inset-0" style={{ rotateY: cardFlipY, transformStyle: "preserve-3d" }}>
                           <CardSide pageId="cover" />
@@ -488,7 +489,7 @@ function CardSide({ pageId, back = false }: { pageId: PageId; back?: boolean }) 
       className="absolute inset-0 overflow-hidden rounded-[3px]"
       style={{
         ...HIDE_BACK,
-        transform: back ? "rotateY(180deg)" : undefined,
+        transform: back ? "translateZ(1.5px) rotateY(180deg)" : "translateZ(1.5px)",
         boxShadow: "0 30px 60px -28px rgba(30,45,100,.45), 0 1px 2px rgba(30,45,100,.18)",
       }}
     >
