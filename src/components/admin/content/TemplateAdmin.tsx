@@ -261,7 +261,7 @@ export default function TemplateAdmin() {
                     <button type="button" className={btnGhostCls} onClick={() => openEditFull(t)}>
                       <Pencil className="mr-1 size-3.5" aria-hidden /> Sửa
                     </button>
-                    <Link href={`/template-designer?id=${t._id}`} className={`${btnCls} h-9 px-3 no-underline`}>
+                    <Link href={`/admin/templates/design?id=${t._id}`} className={`${btnCls} h-9 px-3 no-underline`}>
                       <PenTool className="mr-1 size-3.5" aria-hidden /> Thiết kế
                     </Link>
                   </div>
