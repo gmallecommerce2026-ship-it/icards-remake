@@ -9,6 +9,8 @@ import { findPath, type TreeNode } from "@/lib/templates-tree";
 import { templatesApi } from "@/lib/api";
 import { SideAdsShell } from "@/components/ads/SideAdsShell";
 import { PageHero } from "@/components/ui/Primitives";
+import { CategoryHero3D } from "./CategoryHero3D";
+import { HERO_CATEGORY_LABELS, HERO_CATEGORIES, type HeroCategory, type TemplateHeroes } from "@/lib/template-heroes";
 
 /* Giá trị lấy từ InvitationContent.css của bản src. */
 
@@ -30,12 +32,16 @@ type Props = {
   category?: string;
   group?: string;
   initialSort?: string;
+  /** Hero 3D theo danh mục, lấy từ admin. Không có thì không hiện. */
+  heroes?: TemplateHeroes;
 };
 
 const chip =
   "inline-flex h-10 shrink-0 items-center rounded-[2px] border-[0.5px] border-black px-6 text-base font-medium uppercase no-underline transition-all duration-300";
 
-export function TemplatesListing({ templates, categories, tree = [], category = "all", group, initialSort }: Props) {
+export function TemplatesListing({ templates, categories, tree = [], category = "all", group, initialSort, heroes = {} }: Props) {
+  const heroKey = HERO_CATEGORIES.find((id) => id === category) as HeroCategory | undefined;
+  const hero = heroKey ? heroes[heroKey] : undefined;
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>(SORTS.some((o) => o.value === initialSort) ? (initialSort as Sort) : "popular");
   const filtersRef = useRef<HTMLDivElement>(null);
@@ -140,6 +146,7 @@ export function TemplatesListing({ templates, categories, tree = [], category = 
   return (
     <SideAdsShell hero={<PageHero title={currentLabel ?? "Khám Phá Các Mẫu Thiệp"} description="Thiết kế ấn tượng, thao tác dễ dàng chỉ trong vài phút" />}>
     <div className="bg-[#FEFDFD] font-inter text-[#333]">
+      {hero && heroKey && <CategoryHero3D hero={hero} categoryLabel={HERO_CATEGORY_LABELS[heroKey]} />}
       <div className="mx-auto w-full max-w-[1520px] px-5 py-[20px]">
         {/* Bộ lọc danh mục: nền xanh, chữ trắng như bản src */}
         <div ref={wrapRef} className="relative" onMouseLeave={scheduleClose}>

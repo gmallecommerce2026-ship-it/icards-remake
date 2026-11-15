@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getTemplateCategories, getTemplates, getTemplateTree } from "@/lib/catalog";
+import { getTemplateCategories, getTemplateHeroes, getTemplates, getTemplateTree } from "@/lib/catalog";
 import { TemplatesListing } from "@/components/templates/TemplatesListing";
 
 export const metadata: Metadata = {
@@ -19,10 +19,11 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Se
   const group = first(sp.group);
   const sort = first(sp.sort);
   const categoryId = group ?? (category !== "all" ? category : undefined);
-  const [templates, categories, tree] = await Promise.all([
+  const [templates, categories, tree, heroes] = await Promise.all([
     getTemplates({ categoryId, sort: SORT_VALUES.includes(sort ?? "") ? sort : undefined }),
     getTemplateCategories(),
     getTemplateTree(),
+    getTemplateHeroes(),
   ]);
   return (
     <TemplatesListing
@@ -32,6 +33,7 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Se
       category={category}
       group={group}
       initialSort={sort}
+      heroes={heroes}
     />
   );
 }

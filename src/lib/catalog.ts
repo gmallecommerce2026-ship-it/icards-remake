@@ -3,6 +3,7 @@
 import { serverGet } from "./api/server";
 import type { PublicContentKey } from "./api/content-keys";
 import type { InvitationTemplate } from "./templates";
+import type { TemplateHeroes } from "./template-heroes";
 import type { TreeNode } from "./templates-tree";
 import type { Product } from "./shop";
 import type { Service, ProcessStep } from "./services";
@@ -44,6 +45,14 @@ export const getTemplateTree = async (): Promise<TreeNode[]> => {
   }
 };
 export const getTemplateCategories = () => content<Option[]>("templates.categories", []);
+/** Hero 3D theo danh mục. Lỗi hoặc chưa cấu hình thì trả về {} để trang không hiện hero. */
+export const getTemplateHeroes = async (): Promise<TemplateHeroes> => {
+  try {
+    return (await serverGet<TemplateHeroes>("/template-heroes")) ?? {};
+  } catch {
+    return {};
+  }
+};
 
 // ---- Cửa hàng
 export const getProducts = async (query?: { category?: string; limit?: number }) =>

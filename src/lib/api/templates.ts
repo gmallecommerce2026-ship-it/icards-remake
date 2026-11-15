@@ -12,3 +12,6 @@ export const getDesignAssetsPublic = () => api.get("/design-assets");
 
 /** Cây danh mục nhiều cấp (danh mục → nhóm → mẫu thiệp). */
 export const getTemplateCategoryTree = () => api.get("/template-categories");
+
+/** Hero 3D theo danh mục cho trang /templates. Công khai, lỗi thì trang vẫn chạy không có hero. */
+export const getTemplateHeroes = () => api.get("/template-heroes");

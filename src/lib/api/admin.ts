@@ -235,6 +235,15 @@ export type DesignCategory = { id: string; label: string };
 
 export const getAdminDesignAssets = () => api.get<DesignAssetsData & { categories: DesignCategory[] }>("/admin/design-assets");
 export const saveAdminDesignAssets = (body: DesignAssetsData) => api.put<DesignAssetsData>("/admin/design-assets", body);
+import type { HeroCategory, TemplateHero } from "@/lib/template-heroes";
+export type AdminTemplateHeroes = Partial<Record<HeroCategory, TemplateHero>>;
+export const getAdminTemplateHeroes = () => api.get<AdminTemplateHeroes>("/admin/template-heroes");
+export const saveAdminTemplateHeroes = (body: AdminTemplateHeroes) => api.put<AdminTemplateHeroes>("/admin/template-heroes", body);
+export const uploadAdminTemplateHeroImage = (file: File) => {
+  const fd = new FormData();
+  fd.append("file", file);
+  return api.post<{ url: string }>("/admin/template-heroes/uploads", fd, { headers: { "Content-Type": "multipart/form-data" } });
+};
 export const uploadAdminDesignAsset = (file: File) => {
   const fd = new FormData();
   fd.append("file", file);
