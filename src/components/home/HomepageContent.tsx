@@ -114,12 +114,13 @@ function Occasions({ items }: { items: OccasionItem[] }) {
             href={o.href}
             className="group block w-[calc((100%-3*var(--g))/4)] shrink-0 cursor-pointer snap-start rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#27548A] max-[1200px]:w-[calc((100%-2*var(--g))/3)] max-[993px]:w-[calc((100%-var(--g))/2)] max-[577px]:w-full"
           >
-            {/* Thẻ chữ nhật 3:4, không viền, không bóng, không nền để hòa vào nền trang: tên danh mục ở trên, ảnh vuông bên dưới, không đè lên nhau */}
-            <div className="flex aspect-[3/4] w-full flex-col">
-              <div className="grid min-h-0 flex-1 place-items-center px-3">
+            {/* Thẻ không viền, không bóng, không nền để hòa vào nền trang: tên danh mục ở trên, ảnh vuông bên dưới, không đè lên nhau */}
+            <div className="flex w-full flex-col">
+              {/* Tên nằm sát ngay phía trên ảnh; chừa đủ chỗ cho 2 dòng (2.4em) và canh đáy để mọi thẻ có chữ ngang hàng nhau dù tên 1 hay 2 dòng */}
+              <div className="flex min-h-[2.4em] items-end justify-center px-2 pb-1 text-[30px] max-[993px]:text-[26px] max-[769px]:text-[24px]">
                 <p
                   style={{ fontFamily: occasionFontFamily(o.font) }}
-                  className="m-0 line-clamp-2 text-center text-[22px] font-semibold leading-[1.2] tracking-[0.01em] text-[#1a1a1a] group-hover:underline group-hover:underline-offset-4 group-focus-visible:underline group-focus-visible:underline-offset-4"
+                  className="m-0 line-clamp-2 text-center text-[1em] font-semibold leading-[1.2] tracking-[0.01em] text-[#1a1a1a] group-hover:underline group-hover:underline-offset-4 group-focus-visible:underline group-focus-visible:underline-offset-4"
                 >
                   {o.title}
                 </p>
