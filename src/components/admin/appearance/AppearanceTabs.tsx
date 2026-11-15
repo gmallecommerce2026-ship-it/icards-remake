@@ -6,12 +6,14 @@ import { PageTitle } from "@/components/admin/ui";
 
 // Các trình quản lý dùng state/API phía trình duyệt (banner còn dùng dnd-kit) nên tải động; chỉ tải tab đang mở.
 const loading = () => <p className="text-sm text-[#5B6B7F]">Đang tải…</p>;
+const AnnouncementAdmin = dynamic(() => import("@/components/admin/appearance/AnnouncementAdmin"), { ssr: false, loading });
 const OccasionsAdmin = dynamic(() => import("@/components/admin/appearance/HomeOccasionsAdmin"), { ssr: false, loading });
 const TemplateHeroAdmin = dynamic(() => import("@/components/admin/content/TemplateHeroAdmin"), { ssr: false, loading });
 const BannerAdmin = dynamic(() => import("@/components/admin/banners/BannerAdmin"), { ssr: false, loading });
 const MenuAdmin = dynamic(() => import("@/components/admin/content/MenuAdmin"), { ssr: false, loading });
 
 const TABS = [
+  { id: "announcement", label: "Thanh thông báo", Panel: AnnouncementAdmin },
   { id: "occasions", label: "Dịp lan tỏa niềm vui", Panel: OccasionsAdmin },
   { id: "heroes", label: "Hero danh mục 3D", Panel: TemplateHeroAdmin },
   { id: "banners", label: "Banner", Panel: BannerAdmin },

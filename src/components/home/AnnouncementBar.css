@@ -1,0 +1,73 @@
+/* Thanh thông báo phía trên header. Class đều có tiền tố .ann- để dùng được cả ở trang admin (xem trước) lẫn trang chủ. */
+.ann-bar {
+  position: relative;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  background-size: cover;
+  background-position: center;
+}
+.ann-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+}
+.ann-inner {
+  position: relative;
+  padding: 10px 20px;
+}
+.ann-bar--closable .ann-inner { padding-right: 44px; }
+.ann-bar--marquee .ann-inner { padding-left: 0; }
+
+.ann-static { text-align: center; margin: 0; }
+
+.ann-link { color: inherit; text-decoration: none; }
+.ann-link:hover, .ann-link:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
+
+/* Chữ chạy liền mạch: hai nửa giống hệt nhau nối đuôi, dịch đúng -50% rồi lặp nên không có khoảng trống.
+   Thời lượng do JS tính từ độ rộng thật và tốc độ (px/giây) admin chọn. */
+.ann-viewport { overflow: hidden; }
+.ann-track {
+  display: flex;
+  width: max-content;
+  animation: ann-scroll linear infinite;
+  will-change: transform;
+}
+.ann-bar:hover .ann-track,
+.ann-bar:focus-within .ann-track { animation-play-state: paused; }
+.ann-half { display: flex; flex: none; }
+.ann-item { flex: none; white-space: nowrap; padding-right: 4rem; }
+
+@keyframes ann-scroll {
+  to { transform: translateX(-50%); }
+}
+
+.ann-close {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  font-size: 22px;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.ann-close:hover, .ann-close:focus-visible { opacity: 1; }
+
+/* Người dùng giảm chuyển động: không chạy, chữ xuống dòng và căn giữa */
+@media (prefers-reduced-motion: reduce) {
+  .ann-track { animation: none; width: auto; justify-content: center; }
+  .ann-half[aria-hidden="true"] { display: none; }
+  .ann-item { white-space: normal; padding-right: 0; text-align: center; }
+  .ann-bar--marquee .ann-inner { padding-left: 20px; }
+}

@@ -9,6 +9,7 @@ import { settingsApi, templatesApi } from "@/lib/api";
 import { FALLBACK_ROOTS, flattenTemplates, rootOf, type TreeNode } from "@/lib/templates-tree";
 import { useAuth } from "@/providers/AuthProvider";
 import "./GlobalHeader.css";
+import { AnnouncementBar } from "./AnnouncementBar";
 
 /* ---------- Kiểu & tiện ích ---------- */
 type Link = { text: string; href: string };
@@ -153,41 +154,6 @@ const MobileNav = ({ isOpen, onMenuToggle, menuData, mainNavItems }: { isOpen: b
       </div>
     </div>
   );
-};
-
-type Announcement = { isEnabled?: boolean; text?: string; link?: string; backgroundColor?: string; textColor?: string; backgroundImage?: string; isMarquee?: boolean };
-
-const AnnouncementBar = ({ bar }: { bar?: Announcement }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  useEffect(() => {
-    if (!localStorage.getItem("announcementDismissed")) setIsVisible(true);
-  }, []);
-  if (!isVisible || !bar?.isEnabled || !bar.text) return null;
-
-  const { text, link, backgroundColor, textColor, backgroundImage, isMarquee } = bar;
-  const barStyle: React.CSSProperties = { color: textColor || "var(--color-text-white)", position: "relative", overflow: "hidden" };
-  if (backgroundImage) barStyle.backgroundImage = `url(${backgroundImage})`;
-  else if (backgroundColor) barStyle.backgroundColor = backgroundColor;
-
-  const handleClose = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsVisible(false);
-    localStorage.setItem("announcementDismissed", "true");
-  };
-
-  const content = (
-    <div className="announcement-bar" style={barStyle}>
-      {backgroundImage && <div className="announcement-bar-overlay"></div>}
-      <div className={`announcement-bar-content ${isMarquee ? "marquee" : ""}`}>
-        <p>
-          {text} {link && <a href={link} className="learn-more-link">Tìm hiểu thêm.</a>}
-        </p>
-      </div>
-      <button onClick={handleClose} className="announcement-close-btn" aria-label="Đóng thông báo">&times;</button>
-    </div>
-  );
-  return link ? <a href={link} className="announcement-bar-link">{content}</a> : content;
 };
 
 /* ---------- Thanh menu desktop: vừa đủ khung, phần thừa gom vào "Thiệp khác" ---------- */

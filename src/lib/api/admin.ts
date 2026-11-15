@@ -59,6 +59,8 @@ export type NavItem = {
   children: NavItem[];
 };
 
+import type { AnnouncementBarData } from "@/components/home/AnnouncementBar";
+
 export type AdminSiteSettings = {
   theme: unknown;
   headerNav: NavItem[];
@@ -69,6 +71,9 @@ export type AdminSiteSettings = {
 };
 
 export const getAdminSettings = () => api.get<AdminSiteSettings>("/admin/settings");
+
+export const saveAdminAnnouncementBar = (announcementBar: AnnouncementBarData) =>
+  api.put<AdminSiteSettings>("/admin/settings/announcement-bar", { announcementBar });
 
 export const saveAdminBannerGroups = (bannerGroups: BannerGroupData[]) =>
   api.put<AdminSiteSettings>("/admin/settings/banner-groups", { bannerGroups });
