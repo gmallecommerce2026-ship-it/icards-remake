@@ -1,9 +1,11 @@
 "use client";
 
+import { useRef, type PointerEvent, type ReactNode } from "react";
 import { useEnvelopeCatalog } from "@/lib/envelope-catalog";
 import type { InvitationTemplate } from "@/lib/templates";
 import { cardCluster } from "@/components/invitation/envelope/envelope.geometry";
 import { InvitationPreview } from "./InvitationPreview";
+import "./TemplateShowcase.css";
 
 /* Cụm thiệp + phong bì dùng chung cho trang chủ (mẫu nổi bật) và trang mẫu thiệp.
  *
@@ -62,6 +64,31 @@ function EnvelopeBack({ box, color, linerBg }: { box: Box; color: string; linerB
   );
 }
 
+/** Khung vuông chứa cụm thiệp. Chuột di chuyển -> nghiêng nhẹ theo con trỏ (qua biến CSS --rx/--ry, không re-render).
+ *  Phần hiệu ứng hover nằm trong TemplateShowcase.css và được kích hoạt bởi thẻ cha có class `group`. */
+function Stage({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const onMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== "mouse") return;
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5;
+    const y = (e.clientY - r.top) / r.height - 0.5;
+    el.style.setProperty("--ry", `${(x * 9).toFixed(2)}deg`);
+    el.style.setProperty("--rx", `${(-y * 7).toFixed(2)}deg`);
+  };
+  const onLeave = () => {
+    ref.current?.style.removeProperty("--ry");
+    ref.current?.style.removeProperty("--rx");
+  };
+  return (
+    <div ref={ref} className="tpl-sc relative aspect-square w-full" onPointerMove={onMove} onPointerLeave={onLeave}>
+      <div className="tpl-sc__stage absolute inset-0">{children}</div>
+    </div>
+  );
+}
+
 export function TemplateShowcase({ template }: { template: InvitationTemplate }) {
   const catalog = useEnvelopeCatalog();
   const env =
@@ -73,38 +100,44 @@ export function TemplateShowcase({ template }: { template: InvitationTemplate })
   if (template.format === "card") {
     const g = cardCluster(template.orientation ?? "portrait");
     return (
-      <div className="relative aspect-square w-full">
-        <EnvelopeBack
-          box={{ left: g.originX, top: g.originY, width: g.envW, height: g.envH, flapPct: (g.flapH / g.envH) * 100 }}
-          color={env.color}
-          linerBg={liner.background}
-        />
+      <Stage>
+        <div className="tpl-sc__env absolute inset-0">
+          <EnvelopeBack
+            box={{ left: g.originX, top: g.originY, width: g.envW, height: g.envH, flapPct: (g.flapH / g.envH) * 100 }}
+            color={env.color}
+            linerBg={liner.background}
+          />
+        </div>
         <div
-          className="absolute z-10 overflow-hidden rounded-[3px] shadow-[0_8px_20px_-8px_rgba(14,27,44,0.4)] ring-1 ring-[#0E1B2C]/10 transition-transform duration-500 group-hover:scale-[1.04]"
+          className="tpl-sc__card absolute z-10 overflow-hidden rounded-[3px] shadow-[0_8px_20px_-8px_rgba(14,27,44,0.4)] ring-1 ring-[#0E1B2C]/10"
           style={{ left: `${g.originX + g.cardX}%`, top: `${g.originY + g.cardY}%`, width: `${g.cardW}%` }}
         >
           <InvitationPreview template={template} variant="card" />
+          <span aria-hidden className="tpl-sc__gloss" />
         </div>
-      </div>
+      </Stage>
     );
   }
 
   // Thiệp gập 5:7: giữ nguyên hình học cũ
   return (
-    <div className="relative aspect-square w-full">
-      <EnvelopeBack
-        box={{ left: ORIGIN_X, top: ORIGIN_Y, width: ENV_W, height: ENV_H, flapPct: (FLAP_H / ENV_H) * 100 }}
-        color={env.color}
-        linerBg={liner.background}
-      />
+    <Stage>
+      <div className="tpl-sc__env absolute inset-0">
+        <EnvelopeBack
+          box={{ left: ORIGIN_X, top: ORIGIN_Y, width: ENV_W, height: ENV_H, flapPct: (FLAP_H / ENV_H) * 100 }}
+          color={env.color}
+          linerBg={liner.background}
+        />
+      </div>
 
       {/* Thiệp (nằm trước), tỉ lệ 5:7 như trong studio */}
       <div
-        className="absolute z-10 overflow-hidden rounded-[3px] bg-white shadow-[0_8px_20px_-8px_rgba(14,27,44,0.4)] ring-1 ring-[#0E1B2C]/10 transition-transform duration-500 group-hover:scale-[1.06]"
+        className="tpl-sc__card absolute z-10 overflow-hidden rounded-[3px] bg-white shadow-[0_8px_20px_-8px_rgba(14,27,44,0.4)] ring-1 ring-[#0E1B2C]/10"
         style={{ left: `${ORIGIN_X + CARD_X}%`, top: `${ORIGIN_Y + CARD_Y}%`, width: `${CARD_W}%` }}
       >
         <InvitationPreview template={template} />
+        <span aria-hidden className="tpl-sc__gloss" />
       </div>
-    </div>
+    </Stage>
   );
 }

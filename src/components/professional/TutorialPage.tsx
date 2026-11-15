@@ -82,9 +82,7 @@ function FeatureCard({ icon: Icon, title, description }: { icon: typeof Heart; t
 function ProTemplateCard({ template }: { template: Template }) {
   return (
     <Link href={`/templates/${template.slug}`} className="group block rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-lacquer">
-      <div className="transition-transform duration-500 group-hover:-translate-y-1">
-        <TemplateShowcase template={template} />
-      </div>
+      <TemplateShowcase template={template} />
       <h3 className="mt-4 truncate text-center text-base font-bold text-ink transition-colors group-hover:text-lacquer">{template.title}</h3>
     </Link>
   );
