@@ -95,6 +95,8 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
   const [invId, setInvId] = useState<string | null>(invitationId ?? null);
   const invIdRef = useRef<string | null>(invitationId ?? null);
   const [serverInfo, setServerInfo] = useState<Partial<EventInfo> | undefined>(undefined);
+  const [serverPage, setServerPage] = useState<unknown>(undefined);   // invitation.page đã lưu: kiểu trang, màu, các khối
+  const [serverSettings, setServerSettings] = useState<{ showRsvp?: boolean; showGuests?: boolean } | undefined>(undefined);
   const [serverReady, setServerReady] = useState(!invitationId);
   const serverDesignRef = useRef(false);
   const [saveError, setSaveError] = useState('');
@@ -140,6 +142,8 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
           serverDesignRef.current = true;
         }
         setServerInfo(inv.info);
+        setServerPage(inv.page);
+        setServerSettings({ showRsvp: inv.settings?.allowRsvp, showGuests: inv.settings?.showGuestList });
       })
       .catch(() => { if (alive) setSaveError('Không mở được thiệp đã lưu. Hãy tải lại trang.'); })
       .finally(() => { if (alive) setServerReady(true); });
@@ -544,14 +548,22 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
         pages, backdrops, format, orientation,
         envelope: { color: env.color, liner: liner.background, stampId, recipientName },
       }));
+      let id: string;
       if (invIdRef.current) {
         const r = await invitationsApi.updateInvitation(invIdRef.current, form);
-        return (r.data as ApiInvitation)._id;
+        id = (r.data as ApiInvitation)._id;
+      } else {
+        const r = await invitationsApi.createInvitation(form);
+        id = (r.data as ApiInvitation)._id;
+        invIdRef.current = id;
+        setInvId(id);
       }
-      const r = await invitationsApi.createInvitation(form);
-      const id = (r.data as ApiInvitation)._id;
-      invIdRef.current = id;
-      setInvId(id);
+      // hai công tắc của "Cài đặt sự kiện" nằm ở settings của thiệp (trang công khai đọc từ đây)
+      await invitationsApi.updateSettings(id, { allowRsvp: data.showRsvp, showGuestList: data.showGuests });
+      // mở lại màn cấu hình (không tải lại trang) vẫn thấy đúng những gì vừa lưu
+      setServerInfo(info);
+      setServerPage({ styleId: data.styleId, accent: data.accent, bg: data.bg, blocks: data.blocks });
+      setServerSettings({ showRsvp: data.showRsvp, showGuests: data.showGuests });
       return id;
     };
     const next = persistQueue.current.then(run, run);
@@ -722,6 +734,8 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
           recipientName={recipientName}
           onSceneReady={() => setSceneHidden(true)}
           initial={eventInitial}
+          initialPage={serverPage}
+          initialSettings={serverSettings}
           onSave={saveEvent}
           onAddGuests={pushGuests}
           onClose={closeSend}

@@ -41,7 +41,7 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 /* ------------------------------------------------------------------ */
 /*  KIỂU TRANG (tab Page Style)                                        */
 /* ------------------------------------------------------------------ */
-type PageStyle = {
+export type PageStyle = {
   id: string;
   name: string;
   font: string; // tiêu đề
@@ -105,6 +105,26 @@ function toEmbed(url: string): string | null {
   return vm ? `https://player.vimeo.com/video/${vm[1]}` : null;
 }
 
+/** Ảnh người dùng chọn -> data URL JPEG đã thu nhỏ (blob URL chết sau khi tải lại trang, khách mời cũng không xem được) */
+async function imageToDataUrl(file: File, max = 1600): Promise<string | null> {
+  try {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(bmp.width * k));
+    c.height = Math.max(1, Math.round(bmp.height * k));
+    const ctx = c.getContext("2d");
+    if (!ctx) return null;
+    ctx.fillStyle = "#fff"; // PNG trong suốt -> nền trắng thay vì đen khi đổi sang JPEG
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(bmp, 0, 0, c.width, c.height);
+    bmp.close();
+    return c.toDataURL("image/jpeg", 0.82);
+  } catch {
+    return null;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /*  DỮ LIỆU                                                            */
 /* ------------------------------------------------------------------ */
@@ -126,7 +146,53 @@ type Tab = "style" | "settings" | "blocks";
 /** Chế độ xem trước: mọi ô nhập thành chữ thường, ẩn nút thêm / xoá */
 const ReadOnlyCtx = createContext(false);
 
-export type EventPageData = { info: EventInfo; styleId: string; accent: string; bg: string; blocks: Block[] };
+export type EventPageData = { info: EventInfo; styleId: string; accent: string; bg: string; blocks: Block[]; showRsvp: boolean; showGuests: boolean };
+export type EventPageConfig = Pick<EventPageData, "styleId" | "accent" | "bg" | "blocks">;
+
+const HEX = /^#[0-9a-fA-F]{6}$/;
+const SAFE_SRC = /^(?:https?:\/\/|\/|data:image\/(?:jpeg|png|webp|gif);base64,)/;
+const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
+const objs = (v: unknown) => (Array.isArray(v) ? v : []).filter((x): x is Record<string, unknown> => !!x && typeof x === "object");
+
+/**
+ * Đọc cấu hình trang (`invitation.page` từ API) về dạng an toàn: giá trị lạ / thiếu -> mặc định,
+ * màu phải là hex 6 ký tự, ảnh chỉ nhận http(s), đường dẫn tương đối hoặc data URL (bỏ blob: cũ).
+ * Dùng chung cho studio (mở lại thiệp đã lưu) và trang công khai, để hai nơi dựng ra cùng một trang.
+ */
+export function normalizePage(raw: unknown): EventPageConfig {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const styleId = PAGE_STYLES.some((x) => x.id === r.styleId) ? (r.styleId as string) : PAGE_STYLES[0].id;
+  const accent = typeof r.accent === "string" && HEX.test(r.accent) ? r.accent : ACCENTS[0];
+  const bg = typeof r.bg === "string" && HEX.test(r.bg) ? r.bg : BGS[0];
+  const types = Object.keys(BLOCK_DEFS);
+  const blocks = objs(r.blocks)
+    .filter((b) => typeof b.type === "string" && types.includes(b.type))
+    .map((b): Block => ({
+      id: str(b.id, 40) || uid(),
+      type: b.type as BlockType,
+      title: str(b.title, 200),
+      text: str(b.text, 5000),
+      url: str(b.url, 500),
+      people: objs(b.people).slice(0, 60).map((p) => ({ id: str(p.id, 40) || uid(), name: str(p.name, 120), role: str(p.role, 120) })),
+      photos: objs(b.photos).slice(0, 60).map((p) => ({ id: str(p.id, 40) || uid(), src: str(p.src, 3_000_000) })).filter((p) => SAFE_SRC.test(p.src)),
+    }));
+  return { styleId, accent, bg, blocks };
+}
+
+/** Kiểu chữ của trang theo `styleId` (để phần dưới trang công khai dùng đúng phông tiêu đề) */
+export function getPageStyle(id: string): PageStyle {
+  return PAGE_STYLES.find((x) => x.id === id) ?? PAGE_STYLES[0];
+}
+
+/** Biến màu của trang: cùng công thức với khung thiệp trong editor */
+export function pageTheme(accent: string, bg: string): CSSProperties {
+  return {
+    ["--ev-accent" as string]: accent,
+    ["--ev-bg" as string]: bg,
+    ["--ev-ink" as string]: isDark(bg) ? "#F5F1E8" : "#1D1B2A",
+    ["--ev-on-accent" as string]: isDark(accent) ? "#FFFFFF" : "#1D1B2A",
+  } as CSSProperties;
+}
 
 export type EventDetailsEditorProps = {
   initial?: Partial<EventInfo>;
@@ -140,29 +206,29 @@ export type EventDetailsEditorProps = {
   readOnly?: boolean;
   defaultShowRsvp?: boolean;
   defaultShowGuests?: boolean;
+  /** cấu hình trang đã lưu (`invitation.page`): kiểu trang, màu, các khối. Không truyền thì dùng mặc định */
+  initialPage?: unknown;
+  /** hai công tắc trong "Cài đặt sự kiện" đã lưu (map từ settings.allowRsvp / settings.showGuestList) */
+  initialSettings?: { showRsvp?: boolean; showGuests?: boolean };
 };
 
 export function EventDetailsEditor({
   initial, guests, onClose, onSave, onAddGuests, onReplay,
-  readOnly = false, defaultShowRsvp = true, defaultShowGuests = true,
+  readOnly = false, defaultShowRsvp = true, defaultShowGuests = false, initialPage, initialSettings,
 }: EventDetailsEditorProps) {
   const [info, setInfo] = useState<EventInfo>({ ...DEFAULT_INFO, ...initial });
-  const [styleId, setStyleId] = useState(PAGE_STYLES[0].id);
-  const [accent, setAccent] = useState(ACCENTS[0]);
-  const [bg, setBg] = useState(BGS[0]);
-  const [blocks, setBlocks] = useState<Block[]>([]);
+  const [saved] = useState(() => normalizePage(initialPage));   // chỉ đọc một lần lúc mở
+  const [styleId, setStyleId] = useState(saved.styleId);
+  const [accent, setAccent] = useState(saved.accent);
+  const [bg, setBg] = useState(saved.bg);
+  const [blocks, setBlocks] = useState<Block[]>(saved.blocks);
   const [tab, setTab] = useState<Tab | null>(null);
-  const [showRsvp, setShowRsvp] = useState(defaultShowRsvp);
-  const [showGuests, setShowGuests] = useState(defaultShowGuests);
+  const [showRsvp, setShowRsvp] = useState(initialSettings?.showRsvp ?? defaultShowRsvp);
+  const [showGuests, setShowGuests] = useState(initialSettings?.showGuests ?? defaultShowGuests);
   const [preview, setPreview] = useState(readOnly);
 
   const st = PAGE_STYLES.find((s) => s.id === styleId) ?? PAGE_STYLES[0];
-  const vars = {
-    ["--ev-accent" as string]: accent,
-    ["--ev-bg" as string]: bg,
-    ["--ev-ink" as string]: isDark(bg) ? "#F5F1E8" : "#1D1B2A",
-    ["--ev-on-accent" as string]: isDark(accent) ? "#FFFFFF" : "#1D1B2A",
-  } as CSSProperties;
+  const vars = pageTheme(accent, bg);
 
   const head: CSSProperties = {
     fontFamily: st.font,
@@ -233,11 +299,11 @@ export function EventDetailsEditor({
             <span className="max-sm:sr-only">{preview ? "Tiếp tục chỉnh sửa" : "Xem trước"}</span>
           </button>
           {onSave && (
-            <button type="button" onClick={() => onSave({ info, styleId, accent, bg, blocks })} className="hover:underline">
+            <button type="button" onClick={() => onSave({ info, styleId, accent, bg, blocks, showRsvp, showGuests })} className="hover:underline">
               Lưu
             </button>
           )}
-          <button type="button" onClick={() => onAddGuests?.({ info, styleId, accent, bg, blocks })} className="whitespace-nowrap rounded-full px-5 py-2 text-white max-sm:px-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" style={{ background: CRIMSON, outlineColor: CRIMSON }}>
+          <button type="button" onClick={() => onAddGuests?.({ info, styleId, accent, bg, blocks, showRsvp, showGuests })} className="whitespace-nowrap rounded-full px-5 py-2 text-white max-sm:px-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" style={{ background: CRIMSON, outlineColor: CRIMSON }}>
             Thêm khách mời
           </button>
         </div>
@@ -399,7 +465,7 @@ export function EventDetailsEditor({
             </div>
           </div>
 
-          {showGuests && (
+          {showGuests && !(preview && g.attending.length + g.pending.length === 0) && (
             <section className="mx-auto mt-24 max-w-4xl text-center">
               <h3 style={label}>Danh sách khách mời</h3>
               <GuestGrid title={`${g.attending.length} khách tham dự`} names={g.attending} />
@@ -511,7 +577,9 @@ function InfoCol({ label, labelStyle, children }: { label: string; labelStyle: C
 }
 
 function GuestGrid({ title, names }: { title: string; names: string[] }) {
+  const ro = useContext(ReadOnlyCtx);
   const empty = names.length === 0;
+  if (empty && ro) return null;   // khách mời xem: không hiện tên giả "Tên khách"
   const list = empty ? Array.from({ length: 4 }, () => "Tên khách") : names;
   return (
     <div className="mt-8">
@@ -600,11 +668,13 @@ function BlockBody({ b, patch }: { b: Block; patch: (p: Partial<Block>) => void 
             accept="image/*"
             multiple
             className="sr-only"
-            onChange={(e) => {
-              // demo: dùng blob URL. Khi nối API thì upload file rồi lưu URL trả về
+            onChange={async (e) => {
+              // data URL đã thu nhỏ: backend đẩy lên kho ảnh khi lưu thiệp và thay bằng URL thật
               const files = Array.from(e.target.files ?? []);
-              patch({ photos: [...b.photos, ...files.map((f) => ({ id: uid(), src: URL.createObjectURL(f) }))] });
               e.target.value = "";
+              const srcs = await Promise.all(files.map((f) => imageToDataUrl(f)));
+              const added = srcs.flatMap((src) => (src ? [{ id: uid(), src }] : []));
+              if (added.length) patch({ photos: [...b.photos, ...added] });
             }}
           />
         </label>

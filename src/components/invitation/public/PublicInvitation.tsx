@@ -4,17 +4,22 @@ import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { invitationsApi, wishesApi } from "@/lib/api";
 import { errorText, formatEventDate } from "@/lib/invitation-flow";
-import { EVENT_FONT_VARS, EventDetailsEditor } from "@/components/invitation-send/EventDetailsEditor";
+import { EVENT_FONT_VARS, EventDetailsEditor, getPageStyle, normalizePage, pageTheme } from "@/components/invitation-send/EventDetailsEditor";
 import { PublicEnvelopeIntro, type PublicDesign } from "./PublicEnvelopeIntro";
 
 type Guest = { name: string; status: "pending" | "attending" | "declined"; companions: number } | null;
-type Settings = { allowRsvp: boolean; allowWishes: boolean; moderateWishes?: boolean; maxCompanions: number; rsvpDeadline?: string | null };
+type Settings = { allowRsvp: boolean; allowWishes: boolean; moderateWishes?: boolean; showGuestList?: boolean; maxCompanions: number; rsvpDeadline?: string | null };
 type PublicInv = {
   _id: string;
   slug: string;
   title: string;
+  eventType?: "wedding" | "birthday" | "baby" | "event";
   eventDate?: string | null;
   cover?: string | null;
+  /** cấu hình trang studio đã lưu: { styleId, accent, bg, blocks } */
+  page?: unknown;
+  /** chỉ có khi chủ thiệp bật "Hiện danh sách khách mời" */
+  guests?: { attending: string[]; pending: string[] } | null;
   info?: { title?: string; description?: string; host?: string; date?: string; time?: string; venue?: string; address?: string };
   settings: Settings;
   guest: Guest;
@@ -22,14 +27,13 @@ type PublicInv = {
 };
 type Wish = { _id: string; name: string; message: string };
 
-/* Cùng bảng màu mặc định với EventDetailsEditor, để phần xác nhận và lưu bút
-   liền mạch với nội dung thiệp phía trên (cùng nền, cùng chữ, cùng màu nhấn). */
-const THEME = {
-  "--ev-accent": "#2F4C8F",
-  "--ev-bg": "#FFFCF6",
-  "--ev-ink": "#1D1B2A",
-  "--ev-on-accent": "#FFFFFF",
-} as CSSProperties;
+/* Lời kêu gọi gửi lưu bút theo loại sự kiện (trước đây cứng "hai bạn" của đám cưới) */
+const WISH_HEADING: Record<string, string> = {
+  wedding: "Gửi lời chúc tới hai bạn",
+  birthday: "Gửi lời chúc tới chủ nhân bữa tiệc",
+  baby: "Gửi lời chúc tới bé và gia đình",
+  event: "Gửi lời nhắn tới ban tổ chức",
+};
 
 const LABEL: CSSProperties = {
   fontFamily: "var(--ev-sans), sans-serif",
@@ -39,9 +43,8 @@ const LABEL: CSSProperties = {
   textTransform: "uppercase",
   opacity: 0.65,
 };
-const TITLE: CSSProperties = { fontFamily: "var(--ev-serif), serif", fontWeight: 500, fontSize: "clamp(1.7rem,4.5vw,2.4rem)", lineHeight: 1.15 };
 const FIELD: CSSProperties = { borderBottom: "1px dotted var(--ev-accent)", background: "transparent", font: "inherit", color: "inherit" };
-const BOX: CSSProperties = { border: "1px solid rgba(29,27,42,.15)", background: "transparent", font: "inherit", color: "inherit" };
+const BOX: CSSProperties = { border: "1px solid color-mix(in srgb, var(--ev-ink) 25%, transparent)", background: "transparent", font: "inherit", color: "inherit" };
 const PILL: CSSProperties = {
   background: "var(--ev-accent)",
   color: "var(--ev-on-accent)",
@@ -84,6 +87,14 @@ export function PublicInvitation() {
   }
 
   const info = inv.info ?? {};
+  // cùng kiểu trang + màu với phần cấu hình trong studio (đọc từ inv.page, không còn dùng màu cứng)
+  const pg = normalizePage(inv.page);
+  const st = getPageStyle(pg.styleId);
+  const theme = pageTheme(pg.accent, pg.bg);
+  const TITLE: CSSProperties = {
+    fontFamily: st.font, fontWeight: st.weight, letterSpacing: st.tracking, textTransform: st.upper ? "uppercase" : "none",
+    fontSize: "clamp(1.7rem,4.5vw,2.4rem)", lineHeight: 1.15,
+  };
   const deadlinePassed = !!inv.settings.rsvpDeadline && new Date(inv.settings.rsvpDeadline) < new Date();
   const canRsvp = inv.settings.allowRsvp && !!guestId && !!inv.guest && !deadlinePassed;
   // nội dung thiệp hiển thị y như phần dưới của luồng gửi thiệp trong studio
@@ -137,8 +148,15 @@ export function PublicInvitation() {
       <PublicEnvelopeIntro info={eventInfo} design={inv.design} guestName={inv.guest?.name} />
 
       {/* Toàn bộ phần dưới dùng CHUNG một nền + một bộ font/màu, nên nội dung thiệp và phần xác nhận liền mạch */}
-      <div className={`${EVENT_FONT_VARS} min-h-dvh`} style={{ ...THEME, background: "var(--ev-bg)", color: "var(--ev-ink)" }}>
-        <EventDetailsEditor readOnly initial={eventInfo} defaultShowRsvp={false} defaultShowGuests={false} />
+      <div className={`${EVENT_FONT_VARS} min-h-dvh`} style={{ ...theme, background: "var(--ev-bg)", color: "var(--ev-ink)" }}>
+        {/* nút "Sẽ tham dự / Không tham dự" trong khối này chỉ là hình minh hoạ; biểu mẫu xác nhận thật nằm ngay bên dưới */}
+        <EventDetailsEditor
+          readOnly
+          initial={eventInfo}
+          initialPage={inv.page}
+          initialSettings={{ showRsvp: false, showGuests: !!inv.settings.showGuestList }}
+          guests={inv.guests ?? undefined}
+        />
 
         <main className="mx-auto max-w-xl px-5 pb-28 text-center" style={{ fontFamily: "var(--ev-sans), system-ui, sans-serif" }}>
           {inv.guest && (
@@ -147,12 +165,12 @@ export function PublicInvitation() {
             </p>
           )}
 
-          {inv.guest && (
+          {inv.guest && inv.settings.allowRsvp && (
             <section className="mt-16" aria-labelledby="rsvp-title">
               <h2 id="rsvp-title" style={LABEL}>Xác nhận tham dự</h2>
               <div className="mt-3" style={TITLE}>Bạn có đến được không?</div>
 
-              {!inv.settings.allowRsvp || deadlinePassed ? (
+              {deadlinePassed ? (
                 <p className="mt-6 opacity-70">Đã hết hạn xác nhận tham dự.</p>
               ) : canRsvp ? (
                 <form onSubmit={onRsvp} className="mx-auto mt-8 max-w-sm space-y-6 text-left">
@@ -191,7 +209,7 @@ export function PublicInvitation() {
 
           <section className="mt-20" aria-labelledby="wish-title">
             <h2 id="wish-title" style={LABEL}>Sổ lưu bút</h2>
-            <div className="mt-3" style={TITLE}>Gửi lời chúc tới hai bạn</div>
+            <div className="mt-3" style={TITLE}>{WISH_HEADING[inv.eventType ?? "wedding"] ?? WISH_HEADING.event}</div>
 
             {inv.settings.allowWishes ? (
               <form onSubmit={onWish} className="mx-auto mt-8 max-w-sm space-y-4 text-left">

@@ -72,7 +72,7 @@ const AUTO_EASE = (t: number) => {
   return (t - a / 2) / (1 - a);
 };
 
-export type InvitationSendFlowProps = Pick<EventDetailsEditorProps, "initial" | "guests" | "onSave" | "onAddGuests"> & {
+export type InvitationSendFlowProps = Pick<EventDetailsEditorProps, "initial" | "initialPage" | "initialSettings" | "guests" | "onSave" | "onAddGuests"> & {
   open: boolean;
   /** mặt ngoài của thiệp (đặt sẵn `absolute inset-0`) - thường là <CardFaceStatic /> */
   card: ReactNode;
@@ -100,7 +100,7 @@ export function InvitationSendFlow({ open, ...rest }: InvitationSendFlowProps) {
 
 function FlowBody({
   card, getSceneRect, getStageRect, envelopeColor, liner, stampId, recipientName, onSceneReady,
-  initial, guests, onSave, onAddGuests, onClose, format = "folding", orientation = "portrait",
+  initial, initialPage, initialSettings, guests, onSave, onAddGuests, onClose, format = "folding", orientation = "portrait",
 }: Omit<InvitationSendFlowProps, "open">) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLElement>(null);
@@ -444,6 +444,8 @@ function FlowBody({
       <section className="relative min-h-dvh bg-white">
         <EventDetailsEditor
           initial={initial}
+          initialPage={initialPage}
+          initialSettings={initialSettings}
           guests={guests}
           onSave={onSave}
           onAddGuests={onAddGuests}
