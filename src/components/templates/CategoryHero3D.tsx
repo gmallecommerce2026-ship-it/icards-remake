@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
+import { motion, useMotionValue, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
 import type { TemplateHero } from "@/lib/template-heroes";
 
 type Props = { hero: TemplateHero; categoryLabel: string };
@@ -14,12 +14,15 @@ const loop01 = (v: number, k: number) => {
 
 /**
  * Hero 3D cho trang danh mục mẫu thiệp. Bố cục do preset quyết định, nội dung do admin nhập.
- * Chạy theo cuộn trang bằng CSS 3D (perspective + preserve-3d). Người dùng bật "giảm chuyển động" thì đứng yên.
+ * Chạy theo cuộn trang bằng CSS 3D (perspective + preserve-3d). Người dùng bật "giảm chuyển động" thì đứng yên ở trạng thái cuối.
  */
 export function CategoryHero3D({ hero, categoryLabel }: Props) {
   const ref = useRef<HTMLElement>(null);
   const reduce = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  // Trạng thái cuối cùng dùng khi tắt chuyển động: không cần cuộn vẫn thấy đủ nội dung
+  const finalP = useMotionValue(0.8);
+  const p = reduce ? finalP : scrollYProgress;
   const k = reduce ? 0 : hero.speed;
   const accent = hero.accent;
   const title = hero.title || categoryLabel;
@@ -31,23 +34,31 @@ export function CategoryHero3D({ hero, categoryLabel }: Props) {
       className="relative overflow-hidden border-b border-black/5"
       style={{ background: `linear-gradient(180deg, ${accent}1f 0%, #FEFDFD 85%)` }}
     >
-      <div className="relative z-10 mx-auto max-w-[1520px] px-5 pb-2 pt-10 text-center md:pt-14">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: accent }}>
-          {categoryLabel}
-        </p>
-        <h2 className="mt-2 font-serif text-3xl font-semibold text-[#222] md:text-5xl">{title}</h2>
-        {hero.subtitle && <p className="mx-auto mt-3 max-w-xl text-sm text-[#555] md:text-base">{hero.subtitle}</p>}
-      </div>
+      {hero.preset === "envelope" ? (
+        <div className="relative z-10 px-5 pb-6 pt-10 md:pt-14">
+          <EnvelopeScene p={p} hero={hero} categoryLabel={categoryLabel} />
+        </div>
+      ) : (
+        <>
+          <div className="relative z-10 mx-auto max-w-[1520px] px-5 pb-2 pt-10 text-center md:pt-14">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: accent }}>
+              {categoryLabel}
+            </p>
+            <h2 className="mt-2 font-serif text-3xl font-semibold text-[#222] md:text-5xl">{title}</h2>
+            {hero.subtitle && <p className="mx-auto mt-3 max-w-xl text-sm text-[#555] md:text-base">{hero.subtitle}</p>}
+          </div>
 
-      <div className="relative h-[340px] md:h-[420px]" style={{ perspective: 1400 }}>
-        {hero.preset === "cylinder" ? (
-          <Cylinder p={scrollYProgress} k={k} hero={hero} />
-        ) : hero.preset === "wall" ? (
-          <Wall p={scrollYProgress} k={k} hero={hero} />
-        ) : (
-          <Ribbon p={scrollYProgress} k={k} hero={hero} />
-        )}
-      </div>
+          <div className="relative h-[340px] md:h-[420px]" style={{ perspective: 1400 }}>
+            {hero.preset === "cylinder" ? (
+              <Cylinder p={p} k={k} hero={hero} />
+            ) : hero.preset === "wall" ? (
+              <Wall p={p} k={k} hero={hero} />
+            ) : (
+              <Ribbon p={p} k={k} hero={hero} />
+            )}
+          </div>
+        </>
+      )}
     </section>
   );
 }
@@ -117,7 +128,7 @@ function Cylinder({ p, k, hero }: PresetProps) {
 function Wall({ p, k, hero }: PresetProps) {
   // Năm cột ảnh lệch độ sâu, cột chẵn chạy lên, cột lẻ chạy xuống.
   const cols = 5;
-  const base = hero.images.length ? hero.images : [];
+  const base = hero.images;
   const colItems = (c: number) => {
     const src = base.length ? base.filter((_, i) => i % cols === c) : [];
     const list = src.length ? src : Array.from({ length: 4 }, () => "");
@@ -147,6 +158,152 @@ function WallColumn({ p, k, hero, items, up, depth }: PresetProps & { items: str
           <Tile key={i} src={src || undefined} accent={hero.accent} w={150} h={190} />
         ))}
       </motion.div>
+    </div>
+  );
+}
+
+/* ---------- Phong bì 3D: kịch bản theo cuộn ----------
+   0.00–0.12  phong bì ở bên TRÁI, chữ tiêu đề ở bên PHẢI
+   0.12–0.24  nắp mở ra
+   0.20–0.36  thiệp được rút lên khỏi phong bì
+   0.36–0.50  phong bì + thiệp chuyển sang PHẢI, chữ chuyển sang TRÁI
+   0.50–0.66  thiệp chuyển sang TRÁI và lật 3D (phong bì mờ đi)
+   0.60–0.72  chữ mặt sau hiện ở bên PHẢI
+   Vị trí tính theo % chiều rộng sân khấu; kích thước dùng cqw để co giãn theo khung. */
+const L = 22;
+const R = 78;
+
+function EnvelopeScene({ p, hero, categoryLabel }: { p: MotionValue<number>; hero: TemplateHero; categoryLabel: string }) {
+  const accent = hero.accent;
+  const envLeft = useTransform(p, [0, 0.36, 0.5], [L, L, R]);
+  const envOpacity = useTransform(p, [0.5, 0.66], [1, 0]);
+  const flapDeg = useTransform(p, [0.12, 0.24], [0, -170]);
+  const flapZ = useTransform(flapDeg, (d) => (d < -90 ? 0 : 4));
+  const cardLeft = useTransform(p, [0, 0.36, 0.5, 0.66], [L, L, R, L]);
+  const cardTop = useTransform(p, [0, 0.2, 0.36], [50, 50, 26]);
+  const flipDeg = useTransform(p, [0.5, 0.66], [0, 180]);
+
+  const envLeftCss = useTransform(envLeft, (v) => `calc(${v}% - 24cqw)`);
+  const cardLeftCss = useTransform(cardLeft, (v) => `calc(${v}% - 21cqw)`);
+  const cardTopCss = useTransform(cardTop, (v) => `calc(${v}% - 14.5cqw)`);
+
+  const rightOpacity = useTransform(p, [0, 0.1, 0.36, 0.44], [1, 1, 1, 0]);
+  const leftOpacity = useTransform(p, [0.36, 0.46, 0.54, 0.6], [0, 1, 1, 0]);
+  const backOpacity = useTransform(p, [0.6, 0.72], [0, 1]);
+
+  const front = hero.images[0];
+  const back = hero.images[1] ?? hero.images[0];
+  const envTop = "calc(50% - 16.5cqw)";
+
+  return (
+    <div className="relative mx-auto w-full max-w-[960px]" style={{ containerType: "inline-size" }}>
+      <div className="relative w-full" style={{ height: "45cqw", perspective: 1600 }}>
+        {/* Thân phong bì (sau) */}
+        <motion.div
+          aria-hidden
+          className="absolute rounded-[4px] shadow-[0_18px_34px_-14px_rgba(0,0,0,0.5)]"
+          style={{ left: envLeftCss, top: envTop, width: "48cqw", height: "33cqw", background: accent, opacity: envOpacity, zIndex: 1 }}
+        />
+
+        {/* Thiệp: nằm giữa thân và phần trước của túi, lật 3D quanh trục giữa */}
+        <motion.div
+          className="absolute"
+          style={{
+            left: cardLeftCss,
+            top: cardTopCss,
+            width: "42cqw",
+            height: "29cqw",
+            zIndex: 2,
+            transformStyle: "preserve-3d",
+            rotateY: flipDeg,
+          }}
+        >
+          <CardFace src={front} text={hero.title || categoryLabel} accent={accent} />
+          <CardFace src={back} text={hero.subtitle || hero.title || categoryLabel} accent={accent} back />
+        </motion.div>
+
+        {/* Phần trước của túi: che phần dưới của thiệp khi còn trong phong bì */}
+        <motion.div
+          aria-hidden
+          className="absolute"
+          style={{
+            left: envLeftCss,
+            top: envTop,
+            width: "48cqw",
+            height: "33cqw",
+            background: accent,
+            clipPath: "polygon(0 0, 50% 58%, 100% 0, 100% 100%, 0 100%)",
+            opacity: envOpacity,
+            zIndex: 3,
+            filter: "brightness(0.92)",
+          }}
+        />
+
+        {/* Nắp: bản lề ở mép trên, mở ra phía sau */}
+        <motion.div
+          aria-hidden
+          className="absolute"
+          style={{
+            left: envLeftCss,
+            top: envTop,
+            width: "48cqw",
+            height: "18cqw",
+            background: accent,
+            clipPath: "polygon(0 0, 100% 0, 50% 100%)",
+            transformOrigin: "50% 0%",
+            rotateX: flapDeg,
+            opacity: envOpacity,
+            zIndex: flapZ,
+            filter: "brightness(1.08)",
+          }}
+        />
+
+        {/* Chữ: đổi bên theo từng cảnh */}
+        <motion.div
+          className="absolute"
+          style={{ right: "4cqw", top: "50%", width: "42cqw", transform: "translateY(-50%)", opacity: rightOpacity, zIndex: 6 }}
+        >
+          <p className="font-semibold uppercase tracking-[0.18em]" style={{ color: accent, fontSize: "2.2cqw" }}>{categoryLabel}</p>
+          <h2 className="mt-[1cqw] font-serif font-semibold text-[#222]" style={{ fontSize: "5cqw", lineHeight: 1.1 }}>{hero.title || categoryLabel}</h2>
+          {hero.subtitle && <p className="mt-[1.5cqw] text-[#555]" style={{ fontSize: "2.4cqw", lineHeight: 1.4 }}>{hero.subtitle}</p>}
+        </motion.div>
+        <motion.div
+          className="absolute"
+          style={{ left: "4cqw", top: "50%", width: "40cqw", transform: "translateY(-50%)", opacity: leftOpacity, zIndex: 6 }}
+        >
+          <p className="font-semibold uppercase tracking-[0.18em]" style={{ color: accent, fontSize: "2.2cqw" }}>{categoryLabel}</p>
+          <h2 className="mt-[1cqw] font-serif font-semibold text-[#222]" style={{ fontSize: "5cqw", lineHeight: 1.1 }}>{hero.title || categoryLabel}</h2>
+        </motion.div>
+        <motion.div
+          className="absolute"
+          style={{ right: "4cqw", top: "50%", width: "42cqw", transform: "translateY(-50%)", opacity: backOpacity, zIndex: 6 }}
+        >
+          <h2 className="font-serif font-semibold text-[#222]" style={{ fontSize: "4.6cqw", lineHeight: 1.15 }}>{hero.subtitle || hero.title || categoryLabel}</h2>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+/** Một mặt của thiệp: ảnh nếu có, không thì ô màu nhấn. Mặt sau xoay sẵn 180° và ẩn khi quay ra sau. */
+function CardFace({ src, text, accent, back = false }: { src?: string; text: string; accent: string; back?: boolean }) {
+  return (
+    <div
+      className="absolute inset-0 overflow-hidden rounded-[4px] shadow-[0_10px_24px_-10px_rgba(0,0,0,0.45)]"
+      style={{
+        backfaceVisibility: "hidden",
+        WebkitBackfaceVisibility: "hidden",
+        transform: back ? "rotateY(180deg)" : undefined,
+        background: src ? "#f6f1e6" : `linear-gradient(135deg, ${accent}, #1a1a1a)`,
+      }}
+    >
+      {src ? (
+        <img src={src} alt="" draggable={false} className="size-full object-cover" />
+      ) : (
+        <div className="flex size-full items-center justify-center p-[3cqw] text-center font-serif text-white" style={{ fontSize: "3.4cqw", lineHeight: 1.2 }}>
+          {text}
+        </div>
+      )}
     </div>
   );
 }

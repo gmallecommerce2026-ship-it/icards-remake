@@ -10,13 +10,14 @@ export const HERO_CATEGORY_LABELS: Record<HeroCategory, string> = {
   event: "Sự kiện",
 };
 
-export const HERO_PRESETS = ["ribbon", "cylinder", "wall"] as const;
+export const HERO_PRESETS = ["ribbon", "cylinder", "wall", "envelope"] as const;
 export type HeroPreset = (typeof HERO_PRESETS)[number];
 
 export const HERO_PRESET_LABELS: Record<HeroPreset, string> = {
   ribbon: "Dải nghiêng chạy ngang",
   cylinder: "Vòng trụ quay theo cuộn",
   wall: "Tường thẻ 3D",
+  envelope: "Phong bì 3D: lấy thiệp ra và lật",
 };
 
 export type TemplateHero = {
