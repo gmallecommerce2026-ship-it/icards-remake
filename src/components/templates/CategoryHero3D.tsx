@@ -29,22 +29,23 @@ export function CategoryHero3D({ hero, categoryLabel }: Props) {
   });
   // Khi chuột ở trên hero: lăn chuột điều khiển animation, chưa xong thì chặn cuộn trang.
   // Hết animation theo chiều đang lăn thì trả lại cuộn trang bình thường.
+  // Giảm chuyển động: hero không tự chạy theo cuộn trang, nhưng vẫn cho người dùng tự lăn chuột để điều khiển
+  // (chuyển động chỉ xảy ra khi chính họ thao tác).
   const onEnter = () => {
-    if (reduce) return;
     hovering.current = true;
     run.current?.stop();
   };
   const onLeave = () => {
-    if (reduce) return;
     hovering.current = false;
     run.current?.stop();
+    if (reduce) return; // giữ nguyên vị trí vừa lăn tới
     // rời chuột thì đưa animation về đúng vị trí cuộn trang hiện tại
     run.current = animate(p, scrollYProgress.get(), { duration: 0.6, ease: "easeOut" });
   };
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || reduce) return;
+    if (!el) return;
     const WHEEL_PX = 1000; // số px lăn chuột để chạy hết animation
     const onWheel = (e: WheelEvent) => {
       // Sự kiện wheel chỉ tới section khi con trỏ đang ở trên nó, nên không cần chờ pointerenter
@@ -67,6 +68,7 @@ export function CategoryHero3D({ hero, categoryLabel }: Props) {
       if (!hovering.current) return;
       hovering.current = false;
       run.current?.stop();
+      if (reduce) return;
       run.current = animate(p, scrollYProgress.get(), { duration: 0.6, ease: "easeOut" });
     };
     el.addEventListener("wheel", onWheel, { passive: false });
