@@ -113,8 +113,8 @@ function Occasions({ items }: { items: OccasionItem[] }) {
             href={o.href}
             className="group block w-[clamp(160px,20vw,220px)] shrink-0 cursor-pointer snap-start transition-transform duration-300 hover:-translate-y-1"
           >
-            {/* Thẻ chữ nhật 3:4: tên danh mục ở phần trên, ảnh vuông nằm phía dưới nên chữ và ảnh tách bạch, không đè lên nhau */}
-            <div className="flex aspect-[3/4] w-full flex-col overflow-hidden rounded-lg bg-white shadow-[0_6px_18px_-8px_rgba(14,27,44,0.28)] ring-1 ring-[#0E1B2C]/10 transition-shadow duration-300 group-hover:shadow-[0_12px_28px_-10px_rgba(14,27,44,0.35)]">
+            {/* Thẻ chữ nhật 3:4, không viền, không bóng, không nền để hòa vào nền trang: tên danh mục ở trên, ảnh vuông bên dưới, không đè lên nhau */}
+            <div className="flex aspect-[3/4] w-full flex-col">
               <div className="grid min-h-0 flex-1 place-items-center px-3">
                 <p
                   style={{ fontFamily: occasionFontFamily(o.font) }}
@@ -123,7 +123,7 @@ function Occasions({ items }: { items: OccasionItem[] }) {
                   {o.title}
                 </p>
               </div>
-              <div className="relative aspect-square w-full shrink-0 overflow-hidden bg-[#f3f1ee]">
+              <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-lg bg-[#f3f1ee]">
                 <img
                   src={o.img || placeholder(o.title, "330x330")}
                   alt={o.title}
