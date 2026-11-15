@@ -22,6 +22,7 @@ import { CardPanel, type CardTab } from '../editor/CardPanel';
 import { ActionBar, StyleBar, TextToolbar } from '../editor/Toolbars';
 import { FONTS_URL } from '../editor/editor.data';
 import { CardFaceStatic } from '../editor/CardFaceStatic';
+import { CardEnvelopeScene } from './CardEnvelopeScene';
 import { InvitationSendFlow } from '@/components/invitation-send/InvitationSendFlow';
 import type { EventInfo, EventPageData } from '@/components/invitation-send/EventDetailsEditor';
 import { PAGES, useEditorStore, type PageId, type Snap } from '../editor/useEditorStore';
@@ -166,13 +167,16 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
   const [settled, setSettled] = useState(editable); // thiệp đã rút ra xong, đứng yên -> mới cho chỉnh sửa
   const [focus, setFocus] = useState<'card' | 'envelope'>('card');   // vật nào đang đứng TRƯỚC (quyết định sidebar)
   const [swapping, setSwapping] = useState(false);   // đang chạy hiệu ứng đảo thiệp <-> phong bì: bỏ qua chạm tiếp
+  // thiệp 2 mặt: đang xem phong bì (true) hay thiệp (false). Phong bì của thiệp 2 mặt là cảnh riêng, không dùng luồng gập
+  const [cardEnv, setCardEnv] = useState(false);
+  const cardSend = useMotionValue(1);                // 1 = đã cất thiệp vào phong bì (sealed), để xem khung phong bì khít thiệp
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const lockTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const swapPending = useRef(false);   // đã bấm đổi sang phong bì nhưng thiệp còn đang khép bìa (focus chưa kịp đổi)
   const stageRef = useRef<HTMLElement>(null);
   const cm = useCardMotion(view);
 
-  const canEdit = editable && mode === 'edit' && cardFront && focus === 'card' && settled && !swapping && !cm.busy;
+  const canEdit = editable && mode === 'edit' && cardFront && focus === 'card' && settled && !swapping && !cm.busy && !cardEnv;
   const tplName = useEditorStore((s) => s.tplName);
   const isCard = useEditorStore((s) => s.format) === 'card';   // thiệp 2 mặt phẳng: không có phong bì
   const orientation = useEditorStore((s) => s.orientation);
@@ -244,8 +248,9 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
 
   const env = catalog.envelopes.find((e) => e.id === envId) ?? catalog.envelopes[0];
   const liner = catalog.liners.find((l) => l.id === linerId) ?? catalog.liners[0];
-  const inCard = editable && (isCard || isCardTab(tab));                       // đang chỉnh thiệp hay phong bì -> quyết định cả thanh tab
-  const railTabs: TabDef<Tab>[] = inCard ? CARD_TABS : ENV_TABS;
+  const inCard = editable && (isCard ? !cardEnv : isCardTab(tab));             // đang chỉnh thiệp hay phong bì -> quyết định cả thanh tab
+  // thiệp 2 mặt không có tem (phong bì chỉ đổi màu và lớp lót)
+  const railTabs: TabDef<Tab>[] = inCard ? CARD_TABS : isCard ? ENV_TABS.filter((t) => t.id !== 'stamp') : ENV_TABS;
   const cur = (inCard ? CARD_TABS : ENV_TABS).find((t) => t.id === tab) ?? ENV_TABS[0];
 
   const q = query.trim().toLowerCase();
@@ -317,6 +322,18 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
     setSide('back');
     setFocus('card');
     if (!cardFront) pullOut(); else lock(1800);
+  }
+  // thiệp 2 mặt: đổi qua lại giữa thiệp và phong bì (không dùng luồng rút thiệp của phong bì gập)
+  function setCardObject(toEnv: boolean) {
+    setCardEnv(toEnv);
+    setTab(toEnv ? lastEnv.current : lastCard.current);
+    setQuery(''); setTone(null);
+    useEditorStore.getState().select(null);
+  }
+  function pickCardTab(t: Tab) {
+    setTab(t); setQuery(''); setTone(null);
+    useEditorStore.getState().select(null);
+    if (isCardTab(t)) lastCard.current = t; else lastEnv.current = t as EnvTab;
   }
   function selectTab(t: Tab) {
     stopPlay();
@@ -580,10 +597,10 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
               <button type="button" disabled={!canRedo} onClick={() => useEditorStore.getState().redo()}>Làm lại</button>
             </div>
           )}
-          {editable && !isCard && (
+          {editable && (
             <div className={d.modeSwitch} role="group" aria-label="Đối tượng đang chỉnh">
-              <button type="button" aria-pressed={inCard} onClick={() => { if (!inCard) selectTab(lastCard.current); }}>Thiệp</button>
-              <button type="button" aria-pressed={!inCard} onClick={() => { if (inCard) selectTab(lastEnv.current); }}>Phong bì</button>
+              <button type="button" aria-pressed={inCard} onClick={() => { if (!inCard) (isCard ? setCardObject(false) : selectTab(lastCard.current)); }}>Thiệp</button>
+              <button type="button" aria-pressed={!inCard} onClick={() => { if (inCard) (isCard ? setCardObject(true) : selectTab(lastEnv.current)); }}>Phong bì</button>
             </div>
           )}
           {editable && (
@@ -602,7 +619,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
       <div className={d.body}>
       <nav className={d.tabs} role="tablist" aria-label={inCard ? 'Công cụ chỉnh thiệp' : 'Tùy chỉnh phong bì'}>
         {railTabs.map((t) => (
-          <button key={t.id} type="button" role="tab" className={d.tab} aria-selected={tab === t.id} onClick={() => selectTab(t.id)}>
+          <button key={t.id} type="button" role="tab" className={d.tab} aria-selected={tab === t.id} onClick={() => (isCard ? pickCardTab(t.id) : selectTab(t.id))}>
             {t.icon}<span>{t.label}</span>
           </button>
         ))}
@@ -640,7 +657,11 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
           </button>
         )}
 
-        {isCard ? (
+        {isCard && cardEnv ? (
+          <div ref={sceneBoxRef} style={{ position: 'absolute', inset: 0 }}>
+            <CardEnvelopeScene card={<CardFaceStatic pageId="cover" />} orientation={orientation} envelopeColor={env.color} liner={liner.background} send={cardSend} />
+          </div>
+        ) : isCard ? (
           <CardFlatEditor view={view} editable={canEdit} onFlip={() => setView(view === 'back' ? 'cover' : 'back')} rootRef={sceneBoxRef} />
         ) : (
         <motion.div ref={sceneBoxRef} className={d.scene} style={{ rotateX: tiltOn ? rx : 0, rotateY: tiltOn ? ry : 0, transformPerspective: 1600, visibility: sceneHidden ? 'hidden' : 'visible' }}>
@@ -669,7 +690,7 @@ export function EnvelopeDesigner({ recipientName: recipientProp, editable = fals
 
         {!(canEdit && sel) && (
           <p className={d.hint} aria-live="polite">
-            {isCard ? 'Chạm vào chữ hoặc hình để chỉnh sửa · dùng nút “Xem mặt sau” để chỉnh mặt còn lại' : cardFront && focus === 'envelope'
+            {isCard ? (cardEnv ? 'Chọn màu và lớp lót của phong bì ở thanh bên · phong bì luôn khít với thiệp' : 'Chạm vào chữ hoặc hình để chỉnh sửa · dùng nút “Xem mặt sau” để chỉnh mặt còn lại') : cardFront && focus === 'envelope'
               ? 'Chạm vào tấm thiệp phía sau để chuyển sang chỉnh sửa thiệp'
               : cardFront
               ? (canEdit || (editable && mode === 'edit')
