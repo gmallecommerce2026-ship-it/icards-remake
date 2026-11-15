@@ -508,11 +508,109 @@ function QrApp() {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  ỨNG DỤNG: danh mục giống Canva. Ứng dụng đã dùng được có nội dung thật;    */
+/*  ứng dụng kết nối bên thứ ba / AI hiển thị trạng thái và điều kiện bật.      */
+/* ------------------------------------------------------------------ */
+type AppCat = 'design' | 'ai' | 'connect';
+type AppDef = {
+  id: string;
+  name: string;
+  desc: string;
+  cat: AppCat;
+  color: string;
+  glyph: string;
+  /** builtin: dùng được ngay trong trình thiết kế. pending: cần cấu hình phía máy chủ trước. */
+  kind: 'builtin' | 'pending';
+  /** Điều kiện để bật ứng dụng (chỉ với kind = pending). */
+  needs?: string;
+};
+const APP_CATS: { id: AppCat; label: string }[] = [
+  { id: 'design', label: 'Dành cho thiệp' },
+  { id: 'ai', label: 'Trợ lý AI' },
+  { id: 'connect', label: 'Kết nối nền tảng' },
+];
+const APPS: AppDef[] = [
+  { id: 'qr', name: 'Mã QR', desc: 'Tạo mã QR liên kết hoặc chuyển khoản ngân hàng', cat: 'design', color: '#27548A', glyph: 'QR', kind: 'builtin' },
+  { id: 'emoji', name: 'Biểu tượng cảm xúc', desc: 'Chèn emoji vào thiệp', cat: 'design', color: '#f5b301', glyph: '😊', kind: 'builtin' },
+  { id: 'ai-text', name: 'AI viết lời chúc', desc: 'Gợi ý lời chúc và tiêu đề cho thiệp', cat: 'ai', color: '#7c3aed', glyph: 'AI', kind: 'pending', needs: 'Cần khóa API của nhà cung cấp AI và một endpoint phía máy chủ để gọi.' },
+  { id: 'ai-image', name: 'AI tạo hình ảnh', desc: 'Tạo ảnh minh họa từ mô tả', cat: 'ai', color: '#db2777', glyph: 'AI', kind: 'pending', needs: 'Cần nhà cung cấp tạo ảnh và ngân sách cho mỗi lượt tạo.' },
+  { id: 'ai-bgremove', name: 'AI xóa nền', desc: 'Tách nền ảnh để đặt lên thiệp', cat: 'ai', color: '#0d9488', glyph: 'AI', kind: 'pending', needs: 'Cần dịch vụ xử lý ảnh và endpoint phía máy chủ.' },
+  { id: 'gdrive', name: 'Google Drive', desc: 'Dùng ảnh và tệp từ Google Drive trong thiết kế', cat: 'connect', color: '#1a73e8', glyph: '▲', kind: 'pending', needs: 'Cần OAuth Client ID của Google Cloud và đăng ký đường dẫn chuyển hướng trên máy chủ.' },
+  { id: 'pinterest', name: 'Pinterest', desc: 'Tìm ý tưởng và ảnh để thêm vào thiệp', cat: 'connect', color: '#e60023', glyph: 'P', kind: 'pending', needs: 'Cần ứng dụng Pinterest Developer đã được duyệt quyền đọc ghim.' },
+  { id: 'dropbox', name: 'Dropbox', desc: 'Lấy ảnh và tệp từ Dropbox', cat: 'connect', color: '#0061ff', glyph: 'D', kind: 'pending', needs: 'Cần Dropbox App key và đăng ký đường dẫn chuyển hướng trên máy chủ.' },
+  { id: 'figma', name: 'Figma', desc: 'Nhập khung thiết kế từ Figma', cat: 'connect', color: '#a259ff', glyph: 'F', kind: 'pending', needs: 'Cần Figma OAuth app và quyền đọc tệp.' },
+];
+
 export function AppsPanel() {
+  const [tab, setTab] = useState<'explore' | 'mine'>('explore');
+  const [q, setQ] = useState('');
+  const [openId, setOpenId] = useState<string | null>(null);
+  const needle = q.trim().toLowerCase();
+  const matches = (a: AppDef) => !needle || a.name.toLowerCase().includes(needle) || a.desc.toLowerCase().includes(needle);
+  const open = APPS.find((a) => a.id === openId) ?? null;
+
+  if (open) {
+    return (
+      <>
+        <button type="button" className={p.back} onClick={() => setOpenId(null)}>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 5l-7 7 7 7" /></svg>
+          {open.name}
+        </button>
+        {open.kind === 'builtin' ? (
+          open.id === 'qr' ? <QrApp /> : <AppEmoji />
+        ) : (
+          <div className={p.notice}>
+            <p style={{ marginTop: 0 }}>{open.desc}.</p>
+            <p><b>Chưa bật.</b> {open.needs}</p>
+            <button type="button" className={p.ghost} disabled style={{ width: '100%' }}>Kết nối (chưa cấu hình)</button>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  const shown = tab === 'mine' ? APPS.filter((a) => a.kind === 'builtin' && matches(a)) : APPS.filter(matches);
   return (
     <>
-      <QrApp />
-      <h3 className={p.browse} style={{ marginTop: 22 }}>Biểu tượng cảm xúc</h3>
+      <div className={p.searchWrap}>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
+        <input className={p.search} type="search" value={q} placeholder="Tìm ứng dụng" aria-label="Tìm ứng dụng" onChange={(ev) => setQ(ev.target.value)} />
+      </div>
+      <div className={p.seg2} role="tablist" aria-label="Phạm vi ứng dụng" style={{ marginBottom: 14 }}>
+        <button type="button" role="tab" aria-selected={tab === 'explore'} aria-pressed={tab === 'explore'} onClick={() => setTab('explore')}>Khám phá</button>
+        <button type="button" role="tab" aria-selected={tab === 'mine'} aria-pressed={tab === 'mine'} onClick={() => setTab('mine')}>Ứng dụng của bạn</button>
+      </div>
+
+      {tab === 'mine' && shown.length === 0 && <p className={p.empty}>Chưa có ứng dụng nào được dùng.</p>}
+
+      {APP_CATS.map((c) => {
+        const list = shown.filter((a) => a.cat === c.id);
+        if (list.length === 0) return null;
+        return (
+          <section key={c.id} className={p.section}>
+            <header className={p.sectionHead}><h3>{c.label}</h3></header>
+            <div className={p.grid}>
+              {list.map((a) => (
+                <button key={a.id} type="button" className={p.item} aria-label={a.name} title={a.desc} onClick={() => setOpenId(a.id)} style={{ textAlign: 'left' }}>
+                  <span className={p.tileArt} style={{ background: a.color, display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 700, fontSize: 18, aspectRatio: '1' }}>{a.glyph}</span>
+                  <span style={{ display: 'block', fontSize: 12, marginTop: 4 }}>{a.name}</span>
+                  {a.kind === 'pending' && <span style={{ display: 'block', fontSize: 11, color: '#8a5a00' }}>Chưa bật</span>}
+                </button>
+              ))}
+            </div>
+          </section>
+        );
+      })}
+      {tab === 'explore' && shown.length === 0 && <p className={p.empty}>Không tìm thấy ứng dụng phù hợp</p>}
+    </>
+  );
+}
+
+function AppEmoji() {
+  return (
+    <>
+      <h3 className={p.browse}>Biểu tượng cảm xúc</h3>
       <div className={p.emojiGrid}>
         {EMOJI.map((em) => (
           <button key={em} type="button" className={p.emoji} aria-label={`Thêm ${em}`} onClick={() => useEditorStore.getState().addText({ text: em, size: 88, w: 160, font: 'Be Vietnam Pro' })}>{em}</button>
