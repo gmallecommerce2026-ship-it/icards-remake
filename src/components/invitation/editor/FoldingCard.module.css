@@ -92,13 +92,19 @@
        Bìa vẫn lật 3D bình thường nhờ perspective này + preserve-3d của chính .cover. */
     transform-style: flat;
     perspective: 2400px;
+    /* lật 3D thật: khi tấm thiệp quay quá 90° thì mặt trước tự ẩn (không fade) */
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
-/* mặt sau: xoay sẵn 180° để khi cả tấm thiệp lật sẽ hiện đúng chiều */
+/* mặt sau: xoay sẵn 180° để khi cả tấm thiệp lật sẽ hiện đúng chiều.
+   backface-visibility: hidden để lúc tấm thiệp còn ở mặt trước thì mặt sau ẩn đi, quay tới thì hiện ra. */
 .rear {
     position: absolute;
     inset: 0;
     transform: rotateY(180deg);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 .shine {

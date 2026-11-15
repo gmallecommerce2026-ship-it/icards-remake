@@ -59,10 +59,10 @@ export function FoldingCard({ cm, view, editable, gesture = false, onViewChange 
   // trang trong chỉ được vẽ khi bìa đã hé: bìa đóng thì ẩn hẳn để chữ không lộ xuyên qua bìa (hai lớp đồng phẳng)
   const insideVis = useTransform(open, (v) => (v > 0.002 ? 'visible' : 'hidden'));
 
-  // ---- Lật cả tấm thiệp để xem mặt sau: xoay + nhích lên + nghiêng nhẹ như cầm trên tay
+  // ---- Lật cả tấm thiệp để xem mặt sau: xoay 3D thật quanh trục giữa + nhích lên + nghiêng nhẹ như cầm trên tay.
+  // KHÔNG đổi opacity: mặt nào quay ra sau thì tự ẩn nhờ backface-visibility (xem FoldingCard.module.css),
+  // nên mặt trước thật sự quay đi và mặt sau quay vào, thay vì mờ dần.
   const turnDeg = useTransform(turn, (v) => 180 * v);
-  const frontAlpha = useTransform(turnDeg, (v) => (v < 90 ? 1 : 0));
-  const backAlpha = useTransform(turnDeg, (v) => (v < 90 ? 0 : 1));
   const shine = useTransform(turn, (v) => 0.4 * Math.abs(Math.sin(Math.PI * v)));
   const pop = useTransform(turn, (v) => 1 + 0.07 * Math.sin(Math.PI * v));
   const tilt = useTransform(turn, (v) => -7 * Math.sin(Math.PI * v));
@@ -157,7 +157,7 @@ export function FoldingCard({ cm, view, editable, gesture = false, onViewChange 
       <div className={c.stage} style={{ transform: `scale(${k})` }}>
         <motion.div className={c.flipper} style={{ rotateY: turnDeg, rotateX: tilt, scale: pop, y: hop }}>
           {/* Mặt trước + ruột thiệp */}
-          <motion.div className={c.front} style={{ opacity: frontAlpha, pointerEvents: showFront ? 'auto' : 'none' }}>
+          <motion.div className={c.front} style={{ pointerEvents: showFront ? 'auto' : 'none' }}>
             {/* Ruột thiệp = TRANG PHẢI (nằm dưới) */}
             <div className={c.sheet} data-editable={editInside} data-active={showActive('inside')} style={{ background: insideBg, ...(onCover ? none : null) }}>
               <motion.div style={{ position: 'absolute', inset: 0, visibility: insideVis }}>
@@ -181,7 +181,7 @@ export function FoldingCard({ cm, view, editable, gesture = false, onViewChange 
           </motion.div>
 
           {/* Mặt sau của thiệp */}
-          <motion.div className={c.rear} style={{ opacity: backAlpha, pointerEvents: showFront ? 'none' : 'auto' }}>
+          <motion.div className={c.rear} style={{ pointerEvents: showFront ? 'none' : 'auto' }}>
             <div className={c.sheet} data-editable={editBack} style={{ background: backBg }}>
               <PageEditor pageId="back" editable={editBack} />
             </div>
