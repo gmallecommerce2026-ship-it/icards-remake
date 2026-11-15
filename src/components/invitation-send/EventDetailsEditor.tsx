@@ -11,7 +11,6 @@ import {
   Flower2,
   Image as ImageIcon,
   Mic,
-  MoreHorizontal,
   Palette,
   Pencil,
   PencilLine,
@@ -122,7 +121,7 @@ const DEFAULT_INFO: EventInfo = {
   address: "12 Đường Láng, Đống Đa, Hà Nội",
 };
 
-type Tab = "style" | "settings" | "blocks" | "more";
+type Tab = "style" | "settings" | "blocks";
 
 /** Chế độ xem trước: mọi ô nhập thành chữ thường, ẩn nút thêm / xoá */
 const ReadOnlyCtx = createContext(false);
@@ -253,7 +252,6 @@ export function EventDetailsEditor({
             <RailBtn icon={Settings} label="Cài đặt" active={tab === "settings"} onClick={() => setTab(tab === "settings" ? null : "settings")} />
             <RailBtn icon={Pencil} label="Sửa nội dung" onClick={focusTitle} />
             <RailBtn icon={PlusSquare} label="Thêm khối" active={tab === "blocks"} onClick={() => setTab(tab === "blocks" ? null : "blocks")} />
-            <RailBtn icon={MoreHorizontal} label="Khác" active={tab === "more"} onClick={() => setTab(tab === "more" ? null : "more")} />
           </div>
         </nav>
 
@@ -313,6 +311,16 @@ export function EventDetailsEditor({
               {tab === "settings" && (
                 <Panel title="Cài đặt sự kiện" onClose={() => setTab(null)}>
                   <EventSettings showRsvp={showRsvp} setShowRsvp={setShowRsvp} showGuests={showGuests} setShowGuests={setShowGuests} />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTab(null);
+                      onReplay?.();
+                    }}
+                    className="mt-4 flex w-full items-center gap-3 rounded-md border border-black/15 px-4 py-3 text-left text-sm font-medium hover:bg-black/[0.03]"
+                  >
+                    <RotateCcw className="size-4" /> Xem lại hiệu ứng phong bì
+                  </button>
                 </Panel>
               )}
 
@@ -345,20 +353,6 @@ export function EventDetailsEditor({
                 </Panel>
               )}
 
-              {tab === "more" && (
-                <Panel title="Khác" onClose={() => setTab(null)}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTab(null);
-                      onReplay?.();
-                    }}
-                    className="flex w-full items-center gap-3 rounded-md border border-black/15 px-4 py-3 text-left text-sm font-medium hover:bg-black/[0.03]"
-                  >
-                    <RotateCcw className="size-4" /> Xem lại hiệu ứng phong bì
-                  </button>
-                </Panel>
-              )}
             </motion.aside>
           )}
         </AnimatePresence>
