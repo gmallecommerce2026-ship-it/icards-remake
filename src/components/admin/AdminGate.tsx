@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { LayoutDashboard, LogOut, FileText, Users, Image as ImageIcon, Menu as MenuIcon, ShoppingBag, Newspaper, LayoutTemplate, Mail, Palette, Sparkles } from "lucide-react";
+import { LayoutDashboard, LogOut, FileText, Users, ShoppingBag, Newspaper, LayoutTemplate, Mail, Palette, SlidersHorizontal } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 
 const NAV = [
@@ -11,11 +11,9 @@ const NAV = [
   { href: "/admin/users", label: "Người dùng", icon: Users },
   { href: "/admin/invitations", label: "Thiệp mời", icon: FileText },
   { href: "/admin/templates", label: "Thiết kế mẫu", icon: LayoutTemplate },
-  { href: "/admin/template-heroes", label: "Hero danh mục 3D", icon: Sparkles },
   { href: "/admin/envelopes", label: "Phong bì", icon: Mail },
   { href: "/admin/design-assets", label: "Tài nguyên thiết kế", icon: Palette },
-  { href: "/admin/banners", label: "Banner", icon: ImageIcon },
-  { href: "/admin/menu", label: "Menu", icon: MenuIcon },
+  { href: "/admin/appearance", label: "Tuỳ chỉnh giao diện", icon: SlidersHorizontal },
   { href: "/admin/shop", label: "Cửa hàng & Dịch vụ", icon: ShoppingBag },
   { href: "/admin/news", label: "Tin tức", icon: Newspaper },
 ];

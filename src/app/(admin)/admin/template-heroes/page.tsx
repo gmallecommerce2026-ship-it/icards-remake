@@ -1,13 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import dynamic from "next/dynamic";
-
-// Trình quản lý dùng state và API phía trình duyệt, nên tải động để không chạy trên server.
-const TemplateHeroAdmin = dynamic(() => import("@/components/admin/content/TemplateHeroAdmin"), {
-  ssr: false,
-  loading: () => <p className="text-sm text-[#5B6B7F]">Đang tải…</p>,
-});
-
+// Hero danh mục 3D đã gom vào "Tuỳ chỉnh giao diện".
 export default function AdminTemplateHeroesPage() {
-  return <TemplateHeroAdmin />;
+  redirect("/admin/appearance?tab=heroes");
 }

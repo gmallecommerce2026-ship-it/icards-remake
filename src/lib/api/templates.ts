@@ -15,3 +15,6 @@ export const getTemplateCategoryTree = () => api.get("/template-categories");
 
 /** Hero 3D theo danh mục cho trang /templates. Công khai, lỗi thì trang vẫn chạy không có hero. */
 export const getTemplateHeroes = () => api.get("/template-heroes");
+
+/** Ảnh nền + font tên danh mục của khối "Những dịp lan tỏa niềm vui" ở trang chủ. Công khai, lỗi thì dùng mặc định. */
+export const getHomeOccasions = () => api.get("/home-occasions");

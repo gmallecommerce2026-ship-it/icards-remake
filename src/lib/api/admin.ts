@@ -249,3 +249,9 @@ export const uploadAdminDesignAsset = (file: File) => {
   fd.append("file", file);
   return api.post<{ url: string }>("/admin/design-assets/uploads", fd, { headers: { "Content-Type": "multipart/form-data" } });
 };
+
+/* ---------- Tuỳ chỉnh khối "Những dịp lan tỏa niềm vui" trên trang chủ ---------- */
+
+import type { HomeOccasionsConfig, HomeOccasionsView } from "@/lib/home-occasions";
+export const getAdminHomeOccasions = () => api.get<HomeOccasionsView>("/admin/home-occasions");
+export const saveAdminHomeOccasions = (body: HomeOccasionsConfig) => api.put<HomeOccasionsView>("/admin/home-occasions", body);

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { settingsApi, templatesApi } from "@/lib/api";
+import { DEFAULT_HOME_OCCASIONS, occasionFontFamily, type HomeOccasionsView } from "@/lib/home-occasions";
 import { flattenTemplates, type TreeNode } from "@/lib/templates-tree";
 
 /* Giá trị lấy trực tiếp từ HomepageContent.css của bản src (đã áp dụng đúng thứ tự cascade). */
@@ -56,7 +57,7 @@ function SectionHeader({ sub, title }: { sub: string; title: string }) {
   );
 }
 
-type OccasionItem = { key: string; title: string; href: string; img?: string };
+type OccasionItem = { key: string; title: string; href: string; img?: string; font?: string };
 
 /* Nút trước/sau: ẩn khi chưa rê chuột vào carousel, rê vào thì hiện cả hai nút hai bên.
    Trên màn hình cảm ứng (không có hover) hoặc khi dùng bàn phím (focus) thì luôn hiện.
@@ -112,21 +113,23 @@ function Occasions({ items }: { items: OccasionItem[] }) {
             href={o.href}
             className="group block w-[clamp(160px,20vw,220px)] shrink-0 cursor-pointer snap-start transition-transform duration-300 hover:-translate-y-1"
           >
-            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-[#f3f1ee] shadow-[0_6px_18px_-8px_rgba(14,27,44,0.28)] ring-1 ring-[#0E1B2C]/10 transition-shadow duration-300 group-hover:shadow-[0_12px_28px_-10px_rgba(14,27,44,0.35)]">
-              <img
-                src={o.img || placeholder(o.title, "330x440")}
-                alt={o.title}
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-              />
-              {/* Tên danh mục nằm phía trên, trong thẻ, trên nền gradient tối để chữ luôn đọc được */}
-              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-black/65 via-black/30 to-transparent px-4 pb-10 pt-4">
+            {/* Thẻ chữ nhật 3:4: tên danh mục ở phần trên, ảnh vuông nằm phía dưới nên chữ và ảnh tách bạch, không đè lên nhau */}
+            <div className="flex aspect-[3/4] w-full flex-col overflow-hidden rounded-lg bg-white shadow-[0_6px_18px_-8px_rgba(14,27,44,0.28)] ring-1 ring-[#0E1B2C]/10 transition-shadow duration-300 group-hover:shadow-[0_12px_28px_-10px_rgba(14,27,44,0.35)]">
+              <div className="grid min-h-0 flex-1 place-items-center px-3">
                 <p
-                  style={{ fontFamily: "var(--font-tpl-display), Georgia, serif" }}
-                  className="m-0 line-clamp-2 text-center text-[22px] font-semibold leading-[1.2] tracking-[0.01em] text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.45)]"
+                  style={{ fontFamily: occasionFontFamily(o.font) }}
+                  className="m-0 line-clamp-2 text-center text-[22px] font-semibold leading-[1.2] tracking-[0.01em] text-[#1a1a1a]"
                 >
                   {o.title}
                 </p>
+              </div>
+              <div className="relative aspect-square w-full shrink-0 overflow-hidden bg-[#f3f1ee]">
+                <img
+                  src={o.img || placeholder(o.title, "330x330")}
+                  alt={o.title}
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                />
               </div>
             </div>
           </Link>
@@ -213,6 +216,7 @@ export function HomepageContent() {
   const [featured, setFeatured] = useState<Template[]>([]);
   const [bannerGroups, setBannerGroups] = useState<BannerGroupData[]>([]);
   const [introHtml, setIntroHtml] = useState<string | undefined>();
+  const [look, setLook] = useState<HomeOccasionsView>(DEFAULT_HOME_OCCASIONS);
 
   useEffect(() => {
     let alive = true;
@@ -222,17 +226,21 @@ export function HomepageContent() {
       templatesApi.getTemplates({ limit: 50 }),
       settingsApi.getPublicSettings(),
       templatesApi.getTemplateCategoryTree(),
+      templatesApi.getHomeOccasions(),
     ])
-      .then(([blocksRes, templatesRes, settingsRes, treeRes]) => {
+      .then(([blocksRes, templatesRes, settingsRes, treeRes, lookRes]) => {
         if (!alive) return;
         const blocks: Block[] = blocksRes.status === "fulfilled" ? listOf<Block>(blocksRes.value.data) : [];
         const usedIds = new Set(blocks.flatMap((b) => b.templates?.map((t) => t._id) ?? []));
         // Dịp lan tỏa niềm vui = toàn bộ danh mục gốc giống menu header; chưa có cây thì dùng các khối cũ
         const d = treeRes.status === "fulfilled" ? (treeRes.value.data?.data ?? treeRes.value.data) : [];
         const roots: TreeNode[] = Array.isArray(d) ? d : [];
+        const l = lookRes.status === "fulfilled" ? ((lookRes.value.data?.data ?? lookRes.value.data) as Partial<HomeOccasionsView> | undefined) : undefined;
+        const fonts = l?.fonts ?? {};
+        setLook({ ...DEFAULT_HOME_OCCASIONS, ...l, fonts });
         setOccasions(
           roots.length
-            ? roots.map((r) => ({ key: r.id, title: r.label, href: r.path, img: flattenTemplates(r).find((t) => t.previewImage)?.previewImage ?? undefined }))
+            ? roots.map((r) => ({ key: r.id, title: r.label, href: r.path, font: fonts[r.id], img: flattenTemplates(r).find((t) => t.previewImage)?.previewImage ?? undefined }))
             : blocks.filter((b) => b.isActive).map((b) => ({ key: b._id, title: b.title, href: "/templates", img: b.templates?.[0]?.imgSrc })),
         );
 
@@ -275,7 +283,14 @@ export function HomepageContent() {
     <div className="bg-[#FEFDFD] font-inter text-[#333]">
       <SideAdsShell hero={heroEl}>
       <main className={MAIN}>
-        <section className={SECTION}>
+        <section className={`${SECTION} relative isolate`}>
+          {look.backgroundImage && (
+            // Nền phủ kín khối (bù lại padding của <main>): ảnh mẫu thiệp + lớp trắng mờ để tiêu đề và thẻ luôn dễ đọc
+            <div aria-hidden className="pointer-events-none absolute -inset-x-5 -inset-y-10 -z-10 overflow-hidden">
+              <img src={look.backgroundImage} alt="" className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-[#FEFDFD]" style={{ opacity: look.overlay / 100 }} />
+            </div>
+          )}
           <SectionHeader sub="NHỮNG CƠ HỘI MỌI NGƯỜI KẾT NỐI THÂN THIẾT" title="NHỮNG DỊP LAN TỎA NIỀM VUI" />
           {occasions.length > 0 ? <Occasions items={occasions} /> : <p className="text-center text-[#666]">Đang cập nhật các khối...</p>}
         </section>
