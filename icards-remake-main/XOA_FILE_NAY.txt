@@ -1,0 +1,6 @@
+Sau khi giải nén và ghi đè, hãy XOÁ thư mục cũ (route này đã được chuyển ra ngoài layout có header/footer):
+
+  src/app/(site)/events/view/
+
+(Xoá cả thư mục "view" và thư mục "events" nếu "events" không còn file nào khác.)
+Route mới nằm tại: src/app/(invitation)/events/view/page.tsx
