@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { animate, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useTransform, type AnimationPlaybackControls, type MotionValue } from "motion/react";
+import { animate, cubicBezier, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useTransform, type AnimationPlaybackControls, type MotionValue } from "motion/react";
 import type { TemplateHero } from "@/lib/template-heroes";
 
 type Props = { hero: TemplateHero; categoryLabel: string };
@@ -19,9 +19,11 @@ const loop01 = (v: number, k: number) => {
 export function CategoryHero3D({ hero, categoryLabel }: Props) {
   const ref = useRef<HTMLElement>(null);
   const reduce = useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const isEnvelope = hero.preset === "envelope";
+  // Phong bì: p = 0 khi mới vào trang (thấy phong bì đóng), chạy 0→1 khi cuộn xuống qua hero. Các kiểu khác giữ nguyên.
+  const { scrollYProgress } = useScroll({ target: ref, offset: isEnvelope ? ["start start", "end 35%"] : ["start end", "end start"] });
   // p là nguồn chung cho mọi kiểu 3D. Mặc định lấy theo vị trí cuộn; khi đặt chuột lên thì tự chạy.
-  const p = useMotionValue(0.8);
+  const p = useMotionValue(isEnvelope ? 0 : 0.8);
   const hovering = useRef(false);
   const run = useRef<AnimationPlaybackControls | null>(null);
   useMotionValueEvent(scrollYProgress, "change", (v) => {
@@ -219,148 +221,226 @@ function WallColumn({ p, k, hero, items, up, depth }: PresetProps & { items: str
   );
 }
 
-/* ---------- Phong bì 3D: kịch bản theo cuộn ----------
-   0.00–0.12  phong bì ở bên TRÁI, chữ tiêu đề ở bên PHẢI
-   0.12–0.24  nắp mở ra
-   0.20–0.36  thiệp được rút lên khỏi phong bì
-   0.36–0.50  phong bì + thiệp chuyển sang PHẢI, chữ chuyển sang TRÁI
-   0.50–0.66  thiệp chuyển sang TRÁI và lật 3D (phong bì mờ đi)
-   0.60–0.72  chữ mặt sau hiện ở bên PHẢI
+/* ---------- Phong bì 3D cho thiệp cưới ----------
+   0.00–0.08  phong bì kem đóng kín, con dấu sáp ở giữa nắp, chữ ở bên PHẢI
+   0.08–0.26  con dấu mờ đi, nắp lật mở (mặt trong nắp màu nhấn)
+   0.24–0.42  thiệp trượt lên khỏi phong bì, hơi nghiêng rồi thẳng lại
+   0.42–0.58  phong bì + thiệp lướt sang PHẢI theo đường cung, chữ chuyển sang TRÁI
+   0.58–0.80  thiệp bay sang TRÁI, nhấc lên khỏi mặt phẳng và lật 180°, phong bì chìm xuống mờ đi
+   0.78–0.92  chữ mặt sau hiện ở bên PHẢI
    Vị trí tính theo % chiều rộng sân khấu; kích thước dùng cqw để co giãn theo khung. */
 const L = 22;
 const R = 78;
+const ease = cubicBezier(0.65, 0, 0.35, 1);
+const SERIF = "var(--font-display-raw), 'Cormorant Garamond', Georgia, serif";
+const SCRIPT = "var(--font-card-script), 'Great Vibes', cursive";
+const mix = (a: string, pct: number, b: string) => `color-mix(in srgb, ${a} ${pct}%, ${b})`;
 
 function EnvelopeScene({ p, hero, categoryLabel }: { p: MotionValue<number>; hero: TemplateHero; categoryLabel: string }) {
   const accent = hero.accent;
-  const envLeft = useTransform(p, [0, 0.36, 0.5], [L, L, R]);
-  const envOpacity = useTransform(p, [0.5, 0.66], [1, 0]);
-  const flapDeg = useTransform(p, [0.12, 0.24], [0, -170]);
-  const flapZ = useTransform(flapDeg, (d) => (d < -90 ? 0 : 4));
-  const cardLeft = useTransform(p, [0, 0.36, 0.5, 0.66], [L, L, R, L]);
-  const cardTop = useTransform(p, [0, 0.2, 0.36], [50, 50, 26]);
-  const flipDeg = useTransform(p, [0.5, 0.66], [0, 180]);
+  const tr = (input: number[], output: number[]) => useTransform(p, input, output, { ease });
 
-  const envLeftCss = useTransform(envLeft, (v) => `calc(${v}% - 24cqw)`);
+  const envLeft = tr([0, 0.42, 0.58], [L, L, R]);
+  const envOpacity = useTransform(p, [0.58, 0.8], [1, 0]);
+  const envDrop = tr([0.58, 0.8], [0, 5]); // phong bì chìm nhẹ xuống khi mờ đi (cqw)
+  const sealOpacity = useTransform(p, [0.06, 0.14], [1, 0]);
+  const flapDeg = tr([0.1, 0.26], [0, -125]); // mở chừng 125° để nắp vẫn nằm trong khung
+  const flapZ = useTransform(flapDeg, (d) => (d < -80 ? 0 : 5));
+
+  const cardLeft = tr([0, 0.42, 0.58, 0.8], [L, L, R, L]);
+  const cardTop = tr([0, 0.24, 0.42, 0.58, 0.8], [14.5, 14.5, 4, 4, 14.5]); // cqw tính từ đỉnh sân khấu
+  const cardArc = useTransform(p, [0.42, 0.5, 0.58, 0.58, 0.69, 0.8], [0, -2.5, 0, 0, -3, 0]); // nhấc cao ở giữa quãng đường (cqw)
   const cardLeftCss = useTransform(cardLeft, (v) => `calc(${v}% - 21cqw)`);
-  const cardTopCss = useTransform(cardTop, (v) => `calc(${v}% - 14.5cqw)`);
+  const cardTopCss = useTransform([cardTop, cardArc], ([t, a]: number[]) => `${t + a}cqw`);
+  const cardTilt = useTransform(p, [0.24, 0.34, 0.42], [-2.5, -1, 0]);
+  const cardScale = useTransform(p, [0.24, 0.42, 0.69, 0.8], [1, 1.03, 1.06, 1]);
+  const cardZ = useTransform(p, [0.58, 0.69, 0.8], [0, 160, 0]);
+  const flipDeg = tr([0.58, 0.8], [0, 180]);
+  const flipTilt = useTransform(p, [0.58, 0.69, 0.8], [0, -9, 0]); // nghiêng nhẹ khi đang lật cho có chiều sâu
+  const shadowOpacity = useTransform(p, [0.58, 0.69, 0.8], [0.35, 0.18, 0.35]);
 
   const rightOpacity = useTransform(p, [0, 0.1, 0.36, 0.44], [1, 1, 1, 0]);
-  const leftOpacity = useTransform(p, [0.36, 0.46, 0.54, 0.6], [0, 1, 1, 0]);
-  const backOpacity = useTransform(p, [0.6, 0.72], [0, 1]);
+  const rightY = useTransform(p, [0.36, 0.44], [0, -2]);
+  const leftOpacity = useTransform(p, [0.4, 0.5, 0.62, 0.7], [0, 1, 1, 0]);
+  const leftY = useTransform(p, [0.4, 0.5, 0.62, 0.7], [2, 0, 0, -2]);
+  const backOpacity = useTransform(p, [0.78, 0.9], [0, 1]);
+  const backY = useTransform(p, [0.78, 0.9], [2, 0]);
+
+  const envLeftCss = useTransform(envLeft, (v) => `calc(${v}% - 24cqw)`);
+  const envTopCss = useTransform(envDrop, (d) => `${12.5 + d}cqw`);
 
   const front = hero.images[0];
   const back = hero.images[1] ?? hero.images[0];
-  const envTop = "calc(50% - 16.5cqw)";
+  const cream = "linear-gradient(160deg, #fbf6ec 0%, #f1e7d3 100%)";
+  const creamShade = (a: number) => `linear-gradient(${a}deg, #f6eddc 0%, #e9dcc3 100%)`;
+  const liner = `linear-gradient(170deg, ${mix(accent, 88, "#fff")} 0%, ${mix(accent, 70, "#000")} 100%)`;
+  const W = "48cqw";
+  const H = "33cqw";
 
   return (
     <div className="relative mx-auto w-full max-w-[960px]" style={{ containerType: "inline-size" }}>
-      <div className="relative w-full" style={{ height: "45cqw", perspective: 1600 }}>
-        {/* Thân phong bì (sau) */}
+      <div className="relative w-full" style={{ height: "50cqw", perspective: 1600 }}>
+        {/* Cánh hoa rơi chậm, di chuyển theo p cho cảnh có chiều sâu */}
+        {PETALS.map((pt, i) => (
+          <Petal key={i} p={p} {...pt} accent={accent} />
+        ))}
+
+        {/* Bóng đổ dưới phong bì */}
         <motion.div
           aria-hidden
-          className="absolute rounded-[4px] shadow-[0_18px_34px_-14px_rgba(0,0,0,0.5)]"
-          style={{ left: envLeftCss, top: envTop, width: "48cqw", height: "33cqw", background: accent, opacity: envOpacity, zIndex: 1 }}
+          className="absolute rounded-[50%]"
+          style={{ left: useTransform(envLeft, (v) => `calc(${v}% - 22cqw)`), top: "43.5cqw", width: "44cqw", height: "4cqw", background: "rgba(40,20,20,0.35)", filter: "blur(2.2cqw)", opacity: useTransform(envOpacity, (o) => o * 0.55), zIndex: 0 }}
         />
 
-        {/* Thiệp: nằm giữa thân và phần trước của túi, lật 3D quanh trục giữa */}
-        <motion.div
-          className="absolute"
-          style={{
-            left: cardLeftCss,
-            top: cardTopCss,
-            width: "42cqw",
-            height: "29cqw",
-            zIndex: 2,
-            transformStyle: "preserve-3d",
-            rotateY: flipDeg,
-          }}
-        >
-          <CardFace src={front} text={hero.title || categoryLabel} accent={accent} />
-          <CardFace src={back} text={hero.subtitle || hero.title || categoryLabel} accent={accent} back />
-        </motion.div>
-
-        {/* Phần trước của túi: che phần dưới của thiệp khi còn trong phong bì */}
+        {/* Mặt trong phong bì (lớp sau cùng) */}
         <motion.div
           aria-hidden
           className="absolute"
-          style={{
-            left: envLeftCss,
-            top: envTop,
-            width: "48cqw",
-            height: "33cqw",
-            background: accent,
-            clipPath: "polygon(0 0, 50% 58%, 100% 0, 100% 100%, 0 100%)",
-            opacity: envOpacity,
-            zIndex: 3,
-            filter: "brightness(0.92)",
-          }}
+          style={{ left: envLeftCss, top: envTopCss, width: W, height: H, background: liner, borderRadius: 4, opacity: envOpacity, zIndex: 1, boxShadow: "0 1.4cqw 3cqw -1cqw rgba(0,0,0,0.45)" }}
         />
 
-        {/* Nắp: bản lề ở mép trên, mở ra phía sau */}
+        {/* Thiệp: nằm giữa mặt trong và phần trước của túi */}
+        <motion.div
+          className="absolute"
+          style={{ left: cardLeftCss, top: cardTopCss, width: "42cqw", height: "29cqw", zIndex: 2, transformStyle: "preserve-3d", rotateZ: cardTilt, scale: cardScale, z: cardZ, rotateX: flipTilt, rotateY: flipDeg }}
+        >
+          <CardFace src={front} label={categoryLabel} text={hero.title || categoryLabel} accent={accent} />
+          <CardFace src={back} label="" text={hero.subtitle || hero.title || categoryLabel} accent={accent} back />
+          <motion.div aria-hidden className="pointer-events-none absolute inset-0" style={{ boxShadow: "0 2.4cqw 4cqw -1.2cqw rgba(0,0,0,0.5)", opacity: shadowOpacity, borderRadius: 3 }} />
+        </motion.div>
+
+        {/* Túi phía trước: ba mảnh gấp chéo hình chữ V, mỗi mảnh một sắc độ như giấy gấp thật */}
+        {[
+          { clip: "polygon(0 0, 50% 54.5%, 0 100%)", bg: creamShade(100) },
+          { clip: "polygon(100% 0, 50% 54.5%, 100% 100%)", bg: creamShade(80) },
+          { clip: "polygon(0 100%, 50% 54.5%, 100% 100%)", bg: cream },
+        ].map((f, i) => (
+          <motion.div
+            key={i}
+            aria-hidden
+            className="absolute"
+            style={{ left: envLeftCss, top: envTopCss, width: W, height: H, background: f.bg, clipPath: f.clip, opacity: envOpacity, zIndex: 3 }}
+          />
+        ))}
+        {/* nét gấp mảnh (đường chéo) */}
+        <motion.svg
+          aria-hidden
+          viewBox="0 0 48 33"
+          className="absolute"
+          style={{ left: envLeftCss, top: envTopCss, width: W, height: H, opacity: envOpacity, zIndex: 3 }}
+        >
+          <path d="M0 0 L24 18 L48 0 M0 33 L24 18 L48 33" fill="none" stroke="rgba(120,90,50,0.22)" strokeWidth="0.12" />
+        </motion.svg>
+
+        {/* Nắp: hai mặt (ngoài kem, trong màu nhấn), bản lề ở mép trên, mở ra phía sau */}
         <motion.div
           aria-hidden
           className="absolute"
-          style={{
-            left: envLeftCss,
-            top: envTop,
-            width: "48cqw",
-            height: "18cqw",
-            background: accent,
-            clipPath: "polygon(0 0, 100% 0, 50% 100%)",
-            transformOrigin: "50% 0%",
-            rotateX: flapDeg,
-            opacity: envOpacity,
-            zIndex: flapZ,
-            filter: "brightness(1.08)",
-          }}
-        />
+          style={{ left: envLeftCss, top: envTopCss, width: W, height: "18cqw", transformOrigin: "50% 0%", transformStyle: "preserve-3d", rotateX: flapDeg, opacity: envOpacity, zIndex: flapZ }}
+        >
+          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, #fbf6ec 0%, #eadfc8 100%)", clipPath: "polygon(0 0, 100% 0, 50% 100%)", backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }} />
+          <div className="absolute inset-0" style={{ background: mix(accent, 62, "#000"), clipPath: "polygon(0 100%, 100% 100%, 50% 0)", transform: "rotateX(180deg)", backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }} />
+        </motion.div>
 
-        {/* Chữ: đổi bên theo từng cảnh */}
+        {/* Con dấu sáp ở đầu nắp */}
         <motion.div
-          className="absolute"
-          style={{ right: "4cqw", top: "50%", width: "42cqw", transform: "translateY(-50%)", opacity: rightOpacity, zIndex: 6 }}
+          aria-hidden
+          className="absolute flex items-center justify-center rounded-full"
+          style={{
+            left: useTransform(envLeft, (v) => `calc(${v}% - 3.2cqw)`),
+            top: useTransform(envDrop, (d) => `${12.5 + 18 - 3.6 + d}cqw`),
+            width: "6.4cqw",
+            height: "6.4cqw",
+            zIndex: 7,
+            opacity: sealOpacity,
+            background: `radial-gradient(circle at 35% 30%, ${mix(accent, 75, "#fff")}, ${accent} 55%, ${mix(accent, 60, "#000")})`,
+            boxShadow: "0 0.5cqw 1cqw rgba(0,0,0,0.4), inset 0 0 0 0.45cqw rgba(255,255,255,0.14), inset 0 -0.3cqw 0.6cqw rgba(0,0,0,0.3)",
+            color: "rgba(255,255,255,0.9)",
+            fontFamily: SCRIPT,
+            fontSize: "3.6cqw",
+            lineHeight: 1,
+          }}
         >
-          <p className="font-semibold uppercase tracking-[0.18em]" style={{ color: accent, fontSize: "2.2cqw" }}>{categoryLabel}</p>
-          <h2 className="mt-[1cqw] font-serif font-semibold text-[#222]" style={{ fontSize: "5cqw", lineHeight: 1.1 }}>{hero.title || categoryLabel}</h2>
-          {hero.subtitle && <p className="mt-[1.5cqw] text-[#555]" style={{ fontSize: "2.4cqw", lineHeight: 1.4 }}>{hero.subtitle}</p>}
+          &amp;
         </motion.div>
-        <motion.div
-          className="absolute"
-          style={{ left: "4cqw", top: "50%", width: "40cqw", transform: "translateY(-50%)", opacity: leftOpacity, zIndex: 6 }}
-        >
-          <p className="font-semibold uppercase tracking-[0.18em]" style={{ color: accent, fontSize: "2.2cqw" }}>{categoryLabel}</p>
-          <h2 className="mt-[1cqw] font-serif font-semibold text-[#222]" style={{ fontSize: "5cqw", lineHeight: 1.1 }}>{hero.title || categoryLabel}</h2>
+
+        {/* Chữ: đổi bên theo từng cảnh, trượt nhẹ khi vào / ra */}
+        <motion.div className="absolute" style={{ right: "4cqw", top: "58%", width: "42cqw", y: useTransform(rightY, (v) => `calc(-50% + ${v}cqw)`), opacity: rightOpacity, zIndex: 6 }}>
+          <Heading label={categoryLabel} title={hero.title || categoryLabel} subtitle={hero.subtitle} accent={accent} />
         </motion.div>
-        <motion.div
-          className="absolute"
-          style={{ right: "4cqw", top: "50%", width: "42cqw", transform: "translateY(-50%)", opacity: backOpacity, zIndex: 6 }}
-        >
-          <h2 className="font-serif font-semibold text-[#222]" style={{ fontSize: "4.6cqw", lineHeight: 1.15 }}>{hero.subtitle || hero.title || categoryLabel}</h2>
+        <motion.div className="absolute" style={{ left: "4cqw", top: "58%", width: "40cqw", y: useTransform(leftY, (v) => `calc(-50% + ${v}cqw)`), opacity: leftOpacity, zIndex: 6 }}>
+          <Heading label={categoryLabel} title={hero.title || categoryLabel} accent={accent} />
+        </motion.div>
+        <motion.div className="absolute" style={{ right: "4cqw", top: "58%", width: "42cqw", y: useTransform(backY, (v) => `calc(-50% + ${v}cqw)`), opacity: backOpacity, zIndex: 6 }}>
+          <Heading title={hero.subtitle || hero.title || categoryLabel} accent={accent} small />
         </motion.div>
       </div>
     </div>
   );
 }
 
-/** Một mặt của thiệp: ảnh nếu có, không thì ô màu nhấn. Mặt sau xoay sẵn 180° và ẩn khi quay ra sau. */
-function CardFace({ src, text, accent, back = false }: { src?: string; text: string; accent: string; back?: boolean }) {
+/** Khối chữ: nhãn nhỏ, tiêu đề serif, đường kẻ vàng mảnh và phụ đề. */
+function Heading({ label, title, subtitle, accent, small = false }: { label?: string; title: string; subtitle?: string; accent: string; small?: boolean }) {
+  return (
+    <div>
+      {label && (
+        <p className="font-semibold uppercase" style={{ color: accent, fontSize: "1.9cqw", letterSpacing: "0.32em" }}>
+          {label}
+        </p>
+      )}
+      <h2 className="font-semibold" style={{ fontFamily: SERIF, color: "#2a2023", fontSize: small ? "4.4cqw" : "5.2cqw", lineHeight: 1.12, marginTop: label ? "1.2cqw" : 0 }}>
+        {title}
+      </h2>
+      <div className="flex items-center" style={{ gap: "1cqw", margin: "1.6cqw 0" }} aria-hidden>
+        <span style={{ height: 1, width: "7cqw", background: "linear-gradient(90deg, #c9a55c, transparent)" }} />
+        <span style={{ color: "#c9a55c", fontSize: "1.6cqw" }}>♥</span>
+      </div>
+      {subtitle && <p style={{ color: "#5b4d50", fontSize: "2.3cqw", lineHeight: 1.5 }}>{subtitle}</p>}
+    </div>
+  );
+}
+
+const PETALS = [
+  { x: 8, y0: 12, y1: 70, s: 1.6, r: 40 }, { x: 30, y0: 80, y1: 20, s: 1.1, r: -30 }, { x: 47, y0: 6, y1: 60, s: 1.3, r: 70 },
+  { x: 63, y0: 85, y1: 30, s: 1.8, r: -60 }, { x: 80, y0: 10, y1: 75, s: 1.2, r: 20 }, { x: 93, y0: 70, y1: 15, s: 1.5, r: -45 },
+];
+
+function Petal({ p, x, y0, y1, s, r, accent }: { p: MotionValue<number>; x: number; y0: number; y1: number; s: number; r: number; accent: string }) {
+  const top = useTransform(p, [0, 1], [`${y0}%`, `${y1}%`]);
+  const rot = useTransform(p, [0, 1], [r, r + 140]);
+  return (
+    <motion.span
+      aria-hidden
+      className="absolute"
+      style={{ left: `${x}%`, top, rotate: rot, width: `${s * 1.6}cqw`, height: `${s * 1.1}cqw`, borderRadius: "70% 0 70% 0", background: `linear-gradient(135deg, ${mix(accent, 35, "#fff")}, ${mix(accent, 70, "#fff")})`, opacity: 0.55, zIndex: 0 }}
+    />
+  );
+}
+
+/** Một mặt của thiệp: ảnh nếu có, không thì giấy kem có khung vàng mảnh. Mặt sau xoay sẵn 180° và ẩn khi quay ra sau. */
+function CardFace({ src, label, text, accent, back = false }: { src?: string; label: string; text: string; accent: string; back?: boolean }) {
   return (
     <div
-      className="absolute inset-0 overflow-hidden rounded-[4px] shadow-[0_10px_24px_-10px_rgba(0,0,0,0.45)]"
+      className="absolute inset-0 overflow-hidden"
       style={{
+        borderRadius: 3,
         backfaceVisibility: "hidden",
         WebkitBackfaceVisibility: "hidden",
         transform: back ? "rotateY(180deg)" : undefined,
-        background: src ? "#f6f1e6" : `linear-gradient(135deg, ${accent}, #1a1a1a)`,
+        background: src ? "#f6f1e6" : "linear-gradient(150deg, #fffdf8 0%, #f5ecda 100%)",
       }}
     >
       {src ? (
         <img src={src} alt="" draggable={false} className="size-full object-cover" />
       ) : (
-        <div className="flex size-full items-center justify-center p-[3cqw] text-center font-serif text-white" style={{ fontSize: "3.4cqw", lineHeight: 1.2 }}>
-          {text}
+        <div className="absolute flex flex-col items-center justify-center text-center" style={{ inset: "1.6cqw", border: `0.18cqw solid #c9a55c`, outline: "0.1cqw solid #c9a55c", outlineOffset: "0.5cqw", padding: "2cqw" }}>
+          {label && <p className="uppercase" style={{ color: accent, fontSize: "1.5cqw", letterSpacing: "0.36em" }}>{label}</p>}
+          <p style={{ fontFamily: SCRIPT, color: "#3a2a2e", fontSize: "5.2cqw", lineHeight: 1.15, marginTop: label ? "1cqw" : 0 }}>{text}</p>
+          <span style={{ color: "#c9a55c", fontSize: "1.8cqw", marginTop: "1cqw" }} aria-hidden>♥</span>
         </div>
       )}
+      {/* ánh sáng lướt nhẹ trên mặt giấy */}
+      <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(115deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 40%, rgba(0,0,0,0.06) 100%)" }} />
     </div>
   );
 }
