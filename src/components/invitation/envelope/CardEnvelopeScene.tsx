@@ -49,9 +49,11 @@ type Props = {
   envelopeColor: string;   // hex 6 ký tự
   liner: string;           // giá trị CSS background
   send: MotionValue<number>;
+  /** cảnh đã mount + đo xong → cha (InvitationSendFlow) mới bàn giao cảnh và tự cuộn xuống phần cấu hình */
+  onReady?: () => void;
 };
 
-export function CardEnvelopeScene({ card, orientation, envelopeColor, liner, send }: Props) {
+export function CardEnvelopeScene({ card, orientation, envelopeColor, liner, send, onReady }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const [k, setK] = useState(1);
 
@@ -64,6 +66,11 @@ export function CardEnvelopeScene({ card, orientation, envelopeColor, liner, sen
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // báo cho cha biết cảnh đã sẵn sàng (EnvelopeScene làm việc này qua `dim`; cảnh thiệp 2 mặt trước đây thiếu → lớp phủ kẹt)
+  const readyCb = useRef(onReady);
+  useEffect(() => { readyCb.current = onReady; }, [onReady]);
+  useEffect(() => { readyCb.current?.(); }, []);
 
   // Hình học y hệt trang mẫu → phong bì trong cảnh gói khớp với trang mẫu
   const g = cardCluster(orientation);

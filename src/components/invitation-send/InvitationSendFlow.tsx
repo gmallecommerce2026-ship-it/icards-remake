@@ -381,6 +381,7 @@ function FlowBody({
                 envelopeColor={envelopeColor}
                 liner={liner}
                 send={p}
+                onReady={() => setReady(true)}
               />
             ) : (
               <EnvelopeScene
