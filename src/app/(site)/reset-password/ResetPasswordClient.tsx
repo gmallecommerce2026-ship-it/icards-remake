@@ -1,3 +1,7 @@
-export default function Page_reset_password_token_() {
-  return <div>TODO: /reset-password/[token]</div>;
+"use client";
+
+import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm";
+
+export default function ResetPasswordClient() {
+  return <ResetPasswordForm />;
 }
