@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from "react";
+import { Pause, Play, RotateCcw, Search, X } from "lucide-react";
 import { CardFaceStatic } from "@/components/invitation/editor/CardFaceStatic";
 import { useEditorStore, type PageId, type Snap } from "@/components/invitation/editor/useEditorStore";
 import type { InvitationTemplate } from "@/lib/templates";
@@ -9,6 +10,16 @@ import { TemplateShowcase } from "./TemplateShowcase";
 
 const DISPLAY = { fontFamily: "var(--font-tpl-display), Georgia, serif" } as const;
 const BLUE = "#27548A";
+
+/*
+ * Kích thước khung xem: trên desktop, mọi mặt được co theo chiều cao màn hình để cả thiệp
+ * nằm trọn trong khung nhìn đầu tiên (không cần cuộn). 280px = đầu trang + nhãn + nút điều hướng.
+ */
+const FRAME_H = "(100svh-280px)";
+const CAP_SINGLE = `lg:max-w-[calc(${FRAME_H}*5/7)]`;
+const CAP_SPREAD = `lg:max-w-[calc(${FRAME_H}*10/7)]`;
+const CAP_ENVELOPE = "lg:max-w-[calc(100svh-340px)]";
+const AUTOPLAY_MS = 3500;
 
 /* ---------- Dự phòng khi mẫu chưa có thiết kế canvas (template.design) ---------- */
 
@@ -45,9 +56,7 @@ function FallbackBack({ t }: { t: InvitationTemplate }) {
   );
 }
 
-/* ---------- Carousel ---------- */
-
-type Slide = { key: string; label: string; paper: boolean; node: ReactNode };
+/* ---------- Các mặt thiết kế ---------- */
 
 /** Khung 5:7 chứa một mặt thiết kế (lấy từ canvas của mẫu, đúng như trong trình thiết kế). */
 function DesignFace({ page, ready }: { page: PageId; ready: boolean }) {
@@ -55,6 +64,52 @@ function DesignFace({ page, ready }: { page: PageId; ready: boolean }) {
     <div className="relative aspect-[5/7] w-full overflow-hidden bg-white">
       {ready && <CardFaceStatic pageId={page} />}
     </div>
+  );
+}
+
+/** Trang trong mở ra: hai mặt (trái và phải) cạnh nhau, có gáy trang ở giữa. Trên màn hình nhỏ xếp dọc. */
+function DesignSpread({ ready }: { ready: boolean }) {
+  return (
+    <div className="relative grid grid-cols-1 bg-white lg:grid-cols-2">
+      <DesignFace page="insideLeft" ready={ready} />
+      <DesignFace page="inside" ready={ready} />
+      <span aria-hidden className="pointer-events-none absolute inset-y-0 left-1/2 hidden w-12 -translate-x-1/2 bg-gradient-to-r from-transparent via-black/[0.07] to-transparent lg:block" />
+      <span aria-hidden className="pointer-events-none absolute inset-y-0 left-1/2 hidden w-px bg-[#0E1B2C]/15 lg:block" />
+    </div>
+  );
+}
+
+/* ---------- Carousel ---------- */
+
+type Slide = { key: string; label: string; paper: boolean; wide?: boolean; node: ReactNode };
+
+function ToolButton({
+  label,
+  icon,
+  onClick,
+  active,
+}: {
+  label: string;
+  icon: ReactNode;
+  onClick: () => void;
+  active?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={active}
+      title={label}
+      className={`flex w-16 flex-col items-center gap-1.5 rounded-sm border px-1 py-2.5 text-[11px] font-medium leading-tight transition-colors ${
+        active
+          ? "border-[#27548A] bg-[#27548A] text-white"
+          : "border-line bg-white text-ink hover:bg-porcelain"
+      }`}
+    >
+      <span aria-hidden className="grid size-5 place-items-center">{icon}</span>
+      <span>{label}</span>
+    </button>
   );
 }
 
@@ -91,8 +146,7 @@ export function TemplateCarousel({ template }: { template: InvitationTemplate })
   if (useDesign) {
     faces = [
       { key: "cover", label: "Mặt ngoài", paper: true, node: <DesignFace page="cover" ready={ready} /> },
-      { key: "insideLeft", label: "Trang trái", paper: true, node: <DesignFace page="insideLeft" ready={ready} /> },
-      { key: "inside", label: "Trang phải", paper: true, node: <DesignFace page="inside" ready={ready} /> },
+      { key: "inside", label: "Trang trong", paper: true, wide: true, node: <DesignSpread ready={ready} /> },
       { key: "back", label: "Mặt sau", paper: true, node: <DesignFace page="back" ready={ready} /> },
     ];
   } else if (isCard) {
@@ -109,12 +163,34 @@ export function TemplateCarousel({ template }: { template: InvitationTemplate })
   }
 
   const slides: Slide[] = [envelope, ...faces];
+  const count = slides.length;
 
   const [index, setIndex] = useState(0);
-  const count = slides.length;
+  const [zoom, setZoom] = useState(false);
+  const [playing, setPlaying] = useState(false);
   const touchX = useRef(0);
 
   const go = (dir: number) => setIndex((i) => (i + dir + count) % count);
+
+  // Tự động lật (bật/tắt bằng nút trên thanh công cụ)
+  useEffect(() => {
+    if (!playing) return;
+    const t = setInterval(() => setIndex((i) => (i + 1) % count), AUTOPLAY_MS);
+    return () => clearInterval(t);
+  }, [playing, count]);
+
+  // Phóng to: Esc để đóng, khoá cuộn trang nền
+  useEffect(() => {
+    if (!zoom) return;
+    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === "Escape") setZoom(false); };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [zoom]);
 
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     if (e.key === "ArrowRight") go(1);
@@ -128,78 +204,131 @@ export function TemplateCarousel({ template }: { template: InvitationTemplate })
     if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
   };
 
-  return (
-    <section
-      aria-roledescription="carousel"
-      aria-label={`Các mặt của thiệp ${template.name}`}
-      onKeyDown={onKeyDown}
-      tabIndex={0}
-      className="group mx-auto w-full max-w-[440px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[#27548A]/40 lg:max-w-[min(340px,max(240px,calc((100svh-240px)*5/7)))]"
+  const current = slides[index];
+
+  const toolbar = (
+    <div
+      role="toolbar"
+      aria-label="Công cụ xem thiệp"
+      className="order-last mt-5 flex items-start justify-center gap-2 lg:order-first lg:mt-1 lg:flex-col lg:justify-start"
     >
-      <div className="rounded-2xl bg-porcelain px-4 py-5 sm:px-6 sm:py-6 lg:px-5 lg:py-5" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        {/* Các slide cùng một ô lưới: chiều cao khung không nhảy khi đổi slide */}
-        <div className="grid">
-          {slides.map((s, k) => {
-            const active = k === index;
-            const side = k < index ? "-translate-x-8" : "translate-x-8";
-            return (
-              <div
-                key={s.key}
-                aria-hidden={!active}
-                className={`col-start-1 row-start-1 flex items-center justify-center transition-all duration-500 ease-out ${
-                  active ? "z-10 translate-x-0 opacity-100" : `pointer-events-none z-0 opacity-0 ${side}`
-                }`}
-              >
-                {s.paper ? (
-                  <div className="w-full overflow-hidden rounded-[3px] shadow-[0_18px_40px_-16px_rgba(14,27,44,.45)] ring-1 ring-[#0E1B2C]/10">
-                    {s.node}
+      <ToolButton label="Phóng to" icon={<Search className="size-4" />} onClick={() => setZoom(true)} />
+      <ToolButton
+        label={playing ? "Dừng lật" : "Tự động lật"}
+        icon={playing ? <Pause className="size-4" /> : <Play className="size-4" />}
+        onClick={() => setPlaying((p) => !p)}
+        active={playing}
+      />
+      <ToolButton label="Xem lại" icon={<RotateCcw className="size-4" />} onClick={() => { setPlaying(false); setIndex(0); }} />
+    </div>
+  );
+
+  return (
+    <>
+      <section
+        aria-roledescription="carousel"
+        aria-label={`Các mặt của thiệp ${template.name}`}
+        onKeyDown={onKeyDown}
+        tabIndex={0}
+        className="group mx-auto w-full max-w-[440px] outline-none focus-visible:ring-2 focus-visible:ring-[#27548A]/40 lg:flex lg:max-w-none lg:items-start lg:gap-4"
+      >
+        {toolbar}
+
+        <div className="min-w-0 flex-1">
+          <div className="rounded-2xl bg-porcelain px-4 py-5 sm:px-6 sm:py-6 lg:px-5 lg:py-5" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+            {/* Các slide cùng một ô lưới: chiều cao khung không nhảy khi đổi slide */}
+            <div className="grid">
+              {slides.map((s, k) => {
+                const active = k === index;
+                const side = k < index ? "-translate-x-8" : "translate-x-8";
+                const cap = s.key === "envelope" ? CAP_ENVELOPE : s.wide ? CAP_SPREAD : CAP_SINGLE;
+                return (
+                  <div
+                    key={s.key}
+                    aria-hidden={!active}
+                    className={`col-start-1 row-start-1 flex items-center justify-center transition-all duration-500 ease-out ${
+                      active ? "z-10 translate-x-0 opacity-100" : `pointer-events-none z-0 opacity-0 ${side}`
+                    }`}
+                  >
+                    {s.paper ? (
+                      <div className={`w-full overflow-hidden rounded-[3px] shadow-[0_18px_40px_-16px_rgba(14,27,44,.45)] ring-1 ring-[#0E1B2C]/10 ${cap}`}>
+                        {s.node}
+                      </div>
+                    ) : (
+                      <div className={`w-full ${cap}`}>{s.node}</div>
+                    )}
                   </div>
-                ) : (
-                  <div className="w-full">{s.node}</div>
-                )}
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center justify-between gap-4">
+            <button
+              type="button"
+              onClick={() => go(-1)}
+              aria-label="Mặt trước"
+              className="grid size-9 place-items-center rounded-sm border border-line bg-white transition-colors hover:bg-porcelain"
+            >
+              <span aria-hidden className="text-lg leading-none">‹</span>
+            </button>
+
+            <div className="text-center">
+              <p className="text-sm font-semibold text-ink">{slides[index].label}</p>
+              <div className="mt-2 flex justify-center gap-2" role="tablist" aria-label="Chọn mặt thiệp">
+                {slides.map((s, k) => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={k === index}
+                    aria-label={s.label}
+                    onClick={() => setIndex(k)}
+                    className={`h-1.5 rounded-sm transition-all ${k === index ? "w-5" : "w-1.5 bg-line hover:bg-muted"}`}
+                    style={k === index ? { background: BLUE } : undefined}
+                  />
+                ))}
               </div>
-            );
-          })}
-        </div>
-      </div>
+            </div>
 
-      <div className="mt-4 flex items-center justify-between gap-4">
-        <button
-          type="button"
-          onClick={() => go(-1)}
-          aria-label="Mặt trước"
-          className="grid size-9 place-items-center rounded-sm border border-line bg-white transition-colors hover:bg-porcelain"
-        >
-          <span aria-hidden className="text-lg leading-none">‹</span>
-        </button>
-
-        <div className="text-center">
-          <p className="text-sm font-semibold text-ink">{slides[index].label}</p>
-          <div className="mt-2 flex justify-center gap-2" role="tablist" aria-label="Chọn mặt thiệp">
-            {slides.map((s, k) => (
-              <button
-                key={s.key}
-                type="button"
-                role="tab"
-                aria-selected={k === index}
-                aria-label={s.label}
-                onClick={() => setIndex(k)}
-                className={`h-1.5 rounded-sm transition-all ${k === index ? "w-5" : "w-1.5 bg-line hover:bg-muted"}`}
-                style={k === index ? { background: BLUE } : undefined}
-              />
-            ))}
+            <button
+              type="button"
+              onClick={() => go(1)}
+              aria-label="Mặt sau"
+              className="grid size-9 place-items-center rounded-sm border border-line bg-white transition-colors hover:bg-porcelain"
+            >
+              <span aria-hidden className="text-lg leading-none">›</span>
+            </button>
           </div>
         </div>
+      </section>
 
-        <button
-          type="button"
-          onClick={() => go(1)}
-          aria-label="Mặt sau"
-          className="grid size-9 place-items-center rounded-sm border border-line bg-white transition-colors hover:bg-porcelain"
+      {zoom && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Xem phóng to: ${current.label}`}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0E1B2C]/85 p-4"
+          onClick={() => setZoom(false)}
         >
-          <span aria-hidden className="text-lg leading-none">›</span>
-        </button>
-      </div>
-    </section>
+          <button
+            type="button"
+            onClick={() => setZoom(false)}
+            aria-label="Đóng"
+            className="absolute right-4 top-4 grid size-11 place-items-center rounded-sm bg-white text-ink"
+          >
+            <X className="size-5" />
+          </button>
+          <div
+            className={`max-h-[92svh] overflow-y-auto rounded-sm ${
+              current.wide ? "w-[min(94vw,calc(88svh*10/7))]" : "w-[min(94vw,calc(88svh*5/7))]"
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="overflow-hidden rounded-[3px] bg-white">{current.node}</div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

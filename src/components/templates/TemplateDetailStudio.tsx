@@ -2,30 +2,40 @@
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
-import { Check, Copy, QrCode } from "lucide-react";
+import { Check, Copy, MessageCircle, Phone, QrCode, Link2 } from "lucide-react";
 import { CREATE_EVENT_HREF, formatPrice, type InvitationTemplate } from "@/lib/templates";
 import { TemplateCarousel } from "./TemplateCarousel";
 
 type ShareItem = {
   label: string;
+  short: string;
   color: string;
-  mark?: string;
-  icon?: ReactNode;
+  icon: ReactNode;
   href?: string;
   action?: "copy" | "qr";
 };
+
+/** Logo Facebook (chữ "f") vẽ bằng SVG để đúng nhận diện thương hiệu. */
+function FacebookIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-5" fill="currentColor" aria-hidden focusable="false">
+      <path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12z" />
+    </svg>
+  );
+}
 
 /** Chỉ giữ các nền tảng lớn và hai tính năng riêng: sao chép link và mã QR. */
 function buildShareItems(url: string, text: string): ShareItem[] {
   const u = encodeURIComponent(url);
   const ut = encodeURIComponent(`${text} ${url}`);
   return [
-    { label: "Facebook", mark: "f", color: "#1877F2", href: `https://www.facebook.com/sharer/sharer.php?u=${u}` },
-    { label: "Messenger", mark: "m", color: "#0084FF", href: `fb-messenger://share/?link=${u}` },
-    { label: "Zalo", mark: "Z", color: "#0068FF", href: `https://zalo.me/share?u=${u}` },
-    { label: "WhatsApp", mark: "W", color: "#25D366", href: `https://wa.me/?text=${ut}` },
-    { label: "Sao chép link", color: "#14233F", icon: <Copy className="size-4" />, action: "copy" },
-    { label: "Mã QR", color: "#14233F", icon: <QrCode className="size-4" />, action: "qr" },
+    { label: "Facebook", short: "Facebook", color: "#1877F2", icon: <FacebookIcon />, href: `https://www.facebook.com/sharer/sharer.php?u=${u}` },
+    { label: "Messenger", short: "Messenger", color: "#0084FF", icon: <MessageCircle className="size-5" />, href: `fb-messenger://share/?link=${u}` },
+    // Zalo không có icon trong bộ lucide, dùng chữ "Zalo" làm logo
+    { label: "Zalo", short: "Zalo", color: "#0068FF", icon: <span className="text-[12px] font-extrabold leading-none tracking-tight">Zalo</span>, href: `https://zalo.me/share?u=${u}` },
+    { label: "WhatsApp", short: "WhatsApp", color: "#25D366", icon: <Phone className="size-5" />, href: `https://wa.me/?text=${ut}` },
+    { label: "Sao chép link", short: "Sao chép", color: "#14233F", icon: <Link2 className="size-5" />, action: "copy" },
+    { label: "Mã QR", short: "Mã QR", color: "#14233F", icon: <QrCode className="size-5" />, action: "qr" },
   ];
 }
 
@@ -51,9 +61,9 @@ function ShareRow({ template, url }: { template: InvitationTemplate; url: string
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      <span className="text-xs font-medium text-muted">Chia sẻ</span>
-      <ul className="flex flex-wrap items-center gap-1.5">
+    <div>
+      <p className="text-xs font-semibold text-muted">Chia sẻ mẫu thiệp này</p>
+      <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-3">
         {items.map((item) => {
           const isCopied = copied && item.action === "copy";
           return (
@@ -63,16 +73,22 @@ function ShareRow({ template, url }: { template: InvitationTemplate; url: string
                 onClick={() => run(item)}
                 aria-label={item.label}
                 title={item.label}
-                className="grid size-9 place-items-center rounded-sm text-white transition-opacity hover:opacity-85"
-                style={{ background: item.color }}
+                className="group flex w-[60px] flex-col items-center gap-1.5 text-center"
               >
-                {isCopied ? <Check className="size-4" /> : item.icon ?? <span className="text-[13px] font-bold leading-none">{item.mark}</span>}
+                <span
+                  className="grid size-10 place-items-center rounded-sm text-white transition-opacity group-hover:opacity-85"
+                  style={{ background: item.color }}
+                >
+                  {isCopied ? <Check className="size-5" /> : item.icon}
+                </span>
+                <span className="text-[11px] leading-tight text-muted group-hover:text-ink">
+                  {isCopied ? "Đã chép" : item.short}
+                </span>
               </button>
             </li>
           );
         })}
       </ul>
-      {copied && <span className="text-xs font-medium text-[#27548A]">Đã chép link</span>}
     </div>
   );
 }
