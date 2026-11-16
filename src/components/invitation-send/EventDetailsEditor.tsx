@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Be_Vietnam_Pro, Cormorant_Garamond, Space_Mono, Great_Vibes, Oswald } from "@/lib/fonts";
 import { EventSettings } from "./EventSettings";
+import { VenueMap } from "./VenueMap";
 
 /* Font: tất cả đều có subset "vietnamese" */
 const fSerif = Cormorant_Garamond({ subsets: ["latin", "vietnamese"], weight: ["400", "500", "600"], style: ["normal", "italic"], variable: "--ev-serif", display: "swap" });
@@ -156,7 +157,11 @@ async function imageToDataUrl(file: File, max = 1600): Promise<string | null> {
 /* ------------------------------------------------------------------ */
 /*  DỮ LIỆU                                                            */
 /* ------------------------------------------------------------------ */
-export type EventInfo = { title: string; description: string; host: string; date: string; time: string; venue: string; address: string };
+export type EventInfo = {
+  title: string; description: string; host: string; date: string; time: string; venue: string; address: string;
+  /** toạ độ ghim trên bản đồ (MapTiler). Lưu cùng `info` nên trang công khai đọc lại được */
+  lat?: number | null; lng?: number | null;
+};
 export type GuestLists = { attending: string[]; pending: string[] };
 
 const DEFAULT_INFO: EventInfo = {
@@ -294,6 +299,14 @@ export function EventDetailsEditor({
   const underline: CSSProperties = { borderBottom: "1px dotted var(--ev-accent)" };
 
   const set = <K extends keyof EventInfo>(k: K) => (v: string) => setInfo((s) => ({ ...s, [k]: v }));
+  /** chọn / bỏ ghim trên bản đồ; địa chỉ gợi ý chỉ điền khi ô địa chỉ đang trống */
+  const pickVenue = (lat: number | null, lng: number | null, suggestedAddress?: string) =>
+    setInfo((s) => ({
+      ...s,
+      lat,
+      lng,
+      ...(suggestedAddress && !s.address.trim() ? { address: suggestedAddress } : {}),
+    }));
   const patchBlock = (id: string, p: Partial<Block>) => setBlocks((bs) => bs.map((b) => (b.id === id ? { ...b, ...p } : b)));
   const moveBlock = (id: string, dir: -1 | 1) =>
     setBlocks((bs) => {
@@ -508,6 +521,16 @@ export function EventDetailsEditor({
               </InfoCol>
             </div>
           </div>
+
+          <VenueMap
+            styleId={styleId}
+            lat={info.lat ?? null}
+            lng={info.lng ?? null}
+            address={info.address}
+            readOnly={preview}
+            labelStyle={label}
+            onPick={pickVenue}
+          />
 
           {showGuests && !(preview && g.attending.length + g.pending.length === 0) && (
             <section className="mx-auto mt-24 max-w-4xl text-center">

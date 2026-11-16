@@ -39,3 +39,8 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 ## Kết nối backend
 - Mặc định gọi `https://api.icards.com.vn/api`. Dev local: tạo `.env.local` với `NEXT_PUBLIC_API_URL=http://localhost:5000/api`.
 - Không còn `output: 'export'`: deploy cần Node server hoặc Vercel. Workflow GitHub Pages cũ (`deploy.yml`) không còn tương thích.
+
+## Bản đồ chọn địa điểm (MapTiler)
+- Tạo khoá tại https://cloud.maptiler.com/account/keys/ rồi đặt vào `.env.local`: `NEXT_PUBLIC_MAPTILER_KEY=...` (xem `.env.example`).
+- Nên giới hạn khoá theo domain (icards.com.vn, localhost) trong trang quản lý khoá của MapTiler vì khoá dùng ở trình duyệt.
+- Mỗi kiểu trang có một thiết kế bản đồ riêng (style, khung, hình ghim): sửa trong `src/components/invitation-send/venueMapThemes.ts`.
