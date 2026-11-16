@@ -264,6 +264,8 @@ export type EventDetailsEditorProps = {
   /** bấm "Thêm khách mời": nhận luôn cấu hình trang hiện tại để lưu trước khi chuyển bước */
   onAddGuests?: (data: EventPageData) => void;
   onReplay?: () => void;
+  /** đang lưu thiệp (chờ chạy animation + chuyển trang): khoá hai nút Lưu / Thêm khách mời */
+  busy?: boolean;
   /** chế độ xem cho khách mời: ẩn thanh công cụ, chỉ hiện nội dung thiệp */
   readOnly?: boolean;
   defaultShowRsvp?: boolean;
@@ -275,7 +277,7 @@ export type EventDetailsEditorProps = {
 };
 
 export function EventDetailsEditor({
-  initial, guests, onClose, onSave, onAddGuests, onReplay,
+  initial, guests, onClose, onSave, onAddGuests, onReplay, busy = false,
   readOnly = false, defaultShowRsvp = true, defaultShowGuests = false, initialPage, initialSettings,
 }: EventDetailsEditorProps) {
   const [info, setInfo] = useState<EventInfo>({ ...DEFAULT_INFO, ...initial });
@@ -355,12 +357,12 @@ export function EventDetailsEditor({
             <span className="max-sm:sr-only">{preview ? "Tiếp tục chỉnh sửa" : "Xem trước"}</span>
           </button>
           {onSave && (
-            <button type="button" onClick={() => onSave({ info, styleId, accent, bg, blocks, showRsvp, showGuests })} className="hover:underline">
+            <button type="button" disabled={busy} onClick={() => onSave({ info, styleId, accent, bg, blocks, showRsvp, showGuests })} className="hover:underline disabled:opacity-50">
               Lưu
             </button>
           )}
-          <button type="button" onClick={() => onAddGuests?.({ info, styleId, accent, bg, blocks, showRsvp, showGuests })} className="whitespace-nowrap rounded-full px-5 py-2 text-white max-sm:px-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" style={{ background: CRIMSON, outlineColor: CRIMSON }}>
-            Thêm khách mời
+          <button type="button" disabled={busy} onClick={() => onAddGuests?.({ info, styleId, accent, bg, blocks, showRsvp, showGuests })} className="whitespace-nowrap rounded-full px-5 py-2 text-white disabled:opacity-60 max-sm:px-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" style={{ background: CRIMSON, outlineColor: CRIMSON }}>
+            {busy ? "Đang lưu…" : "Thêm khách mời"}
           </button>
         </div>
       </header>

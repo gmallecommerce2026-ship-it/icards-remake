@@ -8,11 +8,24 @@
  */
 
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
-import { Map as MapLibreMap, Marker, NavigationControl } from "maplibre-gl";
+import { Map as MapLibreMap, Marker, NavigationControl, setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Navigation, Search } from "lucide-react";
 import { directionsUrl, geocode, hasMapTilerKey, mapStyleUrl, reverseGeocode, type GeoResult } from "@/lib/maptiler";
 import { venueMapTheme, type MapFrame, type MapMarker } from "./venueMapThemes";
+
+/**
+ * maplibre-gl v6 tự suy ra đường dẫn worker từ import.meta.url của chính nó. Sau khi Next gộp file,
+ * đường dẫn đó trỏ vào /_next/static/chunks/... (không có file worker) nên báo
+ * "Worker failed to load". Ta chỉ thẳng tới bản worker đã chép vào public/ (scripts/copy-maplibre-worker.mjs).
+ */
+const WORKER_URL = "/maplibre/maplibre-gl-worker.mjs";
+let workerUrlSet = false;
+function ensureWorkerUrl() {
+  if (workerUrlSet) return;
+  setWorkerUrl(new URL(WORKER_URL, window.location.origin).href);
+  workerUrlSet = true;
+}
 
 /** Hà Nội: điểm bắt đầu khi chưa ghim địa điểm nào */
 const DEFAULT_CENTER: [number, number] = [105.8342, 21.0278];
@@ -116,6 +129,7 @@ export function VenueMap({ styleId, lat, lng, address, readOnly, onPick }: Venue
     if (!el) return;
     if (!hasMapTilerKey()) return; // thông báo lỗi được hiển thị từ loadError
     const start = pointRef.current;
+    ensureWorkerUrl();
     const map = new MapLibreMap({
       container: el,
       style: mapStyleUrl(styleRef.current),

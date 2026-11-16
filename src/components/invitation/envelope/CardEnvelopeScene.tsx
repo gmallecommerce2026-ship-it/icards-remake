@@ -1,7 +1,7 @@
 // src/components/invitation/envelope/CardEnvelopeScene.tsx
 // Cảnh "gói thiệp" cho thiệp 2 mặt (format = card): phong bì cùng hướng với thiệp, hình học lấy từ
 // envelope.geometry (cardCluster) để khớp với trang mẫu. Thiệp không xoay: lơ lửng → trượt thẳng vào túi
-// → nắp gập xuống → dấu sáp đóng. Tiến độ `send` (0..1) do InvitationSendFlow điều khiển, như EnvelopeScene.
+// → nắp gập xuống → dấu sáp đóng. Tiến độ `send` (0..1) do EnvelopeSealAnimation điều khiển, như EnvelopeScene.
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
@@ -49,7 +49,7 @@ type Props = {
   envelopeColor: string;   // hex 6 ký tự
   liner: string;           // giá trị CSS background
   send: MotionValue<number>;
-  /** cảnh đã mount + đo xong → cha (InvitationSendFlow) mới bàn giao cảnh và tự cuộn xuống phần cấu hình */
+  /** cảnh đã mount + đo xong → cha (EnvelopeSealAnimation) mới hiện cảnh và bắt đầu chạy */
   onReady?: () => void;
 };
 
