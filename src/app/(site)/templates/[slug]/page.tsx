@@ -38,14 +38,14 @@ export default async function TemplateDetailPage({ params }: Props) {
   return (
     <SideAdsShell>
       <main className="min-h-screen bg-white pt-[72px] text-ink">
-        <Container className="py-6 sm:py-10">
+        <Container className="py-6 sm:py-8 lg:py-5">
           <nav aria-label="Đường dẫn" className="text-sm text-muted">
             <Link href="/templates" className="hover:text-ink hover:underline hover:underline-offset-4">Mẫu thiệp</Link>
             <span className="mx-2" aria-hidden>/</span>
             <span className="font-medium text-ink">{template.name}</span>
           </nav>
 
-          <div className="mt-8">
+          <div className="mt-6 lg:mt-4">
             <TemplateDetailStudio template={template} categoryLabel={categoryLabel} />
           </div>
 

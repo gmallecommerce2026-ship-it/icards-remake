@@ -134,9 +134,9 @@ export function TemplateCarousel({ template }: { template: InvitationTemplate })
       aria-label={`Các mặt của thiệp ${template.name}`}
       onKeyDown={onKeyDown}
       tabIndex={0}
-      className="group mx-auto w-full max-w-[440px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[#27548A]/40"
+      className="group mx-auto w-full max-w-[440px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[#27548A]/40 lg:max-w-[min(340px,max(240px,calc((100svh-240px)*5/7)))]"
     >
-      <div className="rounded-2xl bg-porcelain px-4 py-6 sm:px-8 sm:py-8" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div className="rounded-2xl bg-porcelain px-4 py-5 sm:px-6 sm:py-6 lg:px-5 lg:py-5" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {/* Các slide cùng một ô lưới: chiều cao khung không nhảy khi đổi slide */}
         <div className="grid">
           {slides.map((s, k) => {
@@ -163,12 +163,12 @@ export function TemplateCarousel({ template }: { template: InvitationTemplate })
         </div>
       </div>
 
-      <div className="mt-5 flex items-center justify-between gap-4">
+      <div className="mt-4 flex items-center justify-between gap-4">
         <button
           type="button"
           onClick={() => go(-1)}
           aria-label="Mặt trước"
-          className="grid size-11 place-items-center rounded-full border border-line bg-white transition-colors hover:bg-porcelain"
+          className="grid size-9 place-items-center rounded-sm border border-line bg-white transition-colors hover:bg-porcelain"
         >
           <span aria-hidden className="text-lg leading-none">‹</span>
         </button>
@@ -184,7 +184,7 @@ export function TemplateCarousel({ template }: { template: InvitationTemplate })
                 aria-selected={k === index}
                 aria-label={s.label}
                 onClick={() => setIndex(k)}
-                className={`h-2 rounded-full transition-all ${k === index ? "w-6" : "w-2 bg-line hover:bg-muted"}`}
+                className={`h-1.5 rounded-sm transition-all ${k === index ? "w-5" : "w-1.5 bg-line hover:bg-muted"}`}
                 style={k === index ? { background: BLUE } : undefined}
               />
             ))}
@@ -195,7 +195,7 @@ export function TemplateCarousel({ template }: { template: InvitationTemplate })
           type="button"
           onClick={() => go(1)}
           aria-label="Mặt sau"
-          className="grid size-11 place-items-center rounded-full border border-line bg-white transition-colors hover:bg-porcelain"
+          className="grid size-9 place-items-center rounded-sm border border-line bg-white transition-colors hover:bg-porcelain"
         >
           <span aria-hidden className="text-lg leading-none">›</span>
         </button>

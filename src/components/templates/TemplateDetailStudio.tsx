@@ -29,7 +29,7 @@ function buildShareItems(url: string, text: string): ShareItem[] {
   ];
 }
 
-function ShareRail({ template, url }: { template: InvitationTemplate; url: string }) {
+function ShareRow({ template, url }: { template: InvitationTemplate; url: string }) {
   const [copied, setCopied] = useState(false);
   const items = buildShareItems(url, `Mẫu thiệp ${template.name} trên iCards`);
 
@@ -51,8 +51,9 @@ function ShareRail({ template, url }: { template: InvitationTemplate; url: strin
   }
 
   return (
-    <aside aria-label="Chia sẻ mẫu thiệp" className="lg:sticky lg:top-28">
-      <ul className="flex flex-wrap justify-center gap-x-5 gap-y-5 lg:flex-col lg:items-center lg:gap-y-6">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <span className="text-xs font-medium text-muted">Chia sẻ</span>
+      <ul className="flex flex-wrap items-center gap-1.5">
         {items.map((item) => {
           const isCopied = copied && item.action === "copy";
           return (
@@ -61,75 +62,76 @@ function ShareRail({ template, url }: { template: InvitationTemplate; url: strin
                 type="button"
                 onClick={() => run(item)}
                 aria-label={item.label}
-                className="group flex w-[72px] flex-col items-center gap-2 text-center"
+                title={item.label}
+                className="grid size-9 place-items-center rounded-sm text-white transition-opacity hover:opacity-85"
+                style={{ background: item.color }}
               >
-                <span
-                  className="grid size-11 place-items-center rounded-full text-white transition-transform duration-200 group-hover:-translate-y-0.5 group-focus-visible:-translate-y-0.5"
-                  style={{ background: item.color }}
-                >
-                  {isCopied ? <Check className="size-4" /> : item.icon ?? <span className="text-[13px] font-bold leading-none">{item.mark}</span>}
-                </span>
-                <span className="text-[11px] leading-tight text-muted group-hover:text-ink">{isCopied ? "Đã chép" : item.label}</span>
+                {isCopied ? <Check className="size-4" /> : item.icon ?? <span className="text-[13px] font-bold leading-none">{item.mark}</span>}
               </button>
             </li>
           );
         })}
       </ul>
-    </aside>
+      {copied && <span className="text-xs font-medium text-[#27548A]">Đã chép link</span>}
+    </div>
   );
 }
 
-function Details({ template, categoryLabel }: { template: InvitationTemplate; categoryLabel: string }) {
+function Details({ template, categoryLabel, url }: { template: InvitationTemplate; categoryLabel: string; url: string }) {
   const free = template.price === 0;
   return (
-    <div className="flex flex-col gap-6">
-      <div>
+    <div className="flex flex-col gap-5">
+      <header>
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#27548A]">{categoryLabel}</p>
-        <h1 className="mt-2 text-3xl font-semibold leading-tight tracking-tight">{template.name}</h1>
-        <p className="mt-3 text-[15px] leading-relaxed text-muted">{template.tagline}</p>
-      </div>
+        <h1 className="mt-1.5 text-2xl font-semibold leading-tight tracking-tight lg:text-[28px]">{template.name}</h1>
+        <p className="mt-2 text-sm leading-relaxed text-muted lg:line-clamp-2">{template.tagline}</p>
+      </header>
 
-      <div className="rounded-xl border border-line bg-white p-5">
+      <div className="rounded-sm border border-line bg-white p-4">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-2xl font-semibold text-[#27548A]">{free ? "Miễn phí" : formatPrice(template.price)}</span>
+          <span className="text-xl font-semibold text-[#27548A]">{free ? "Miễn phí" : formatPrice(template.price)}</span>
           <span className="text-xs text-muted">{free ? "dùng ngay" : "trả khi xuất bản"}</span>
         </div>
-        <div className="mt-5 flex flex-col gap-2.5">
+        <div className="mt-4 grid grid-cols-2 gap-2">
           <Link
             href={`${CREATE_EVENT_HREF}?template=${template.slug}`}
-            className="inline-flex h-12 items-center justify-center rounded-xl bg-[#27548A] px-6 text-base font-semibold text-white transition-colors hover:bg-[#1F4573]"
+            className="inline-flex h-11 items-center justify-center rounded-sm bg-[#27548A] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#1F4573]"
           >
             Dùng mẫu này
           </Link>
           <Link
             href="/templates"
-            className="inline-flex h-11 items-center justify-center rounded-xl border border-line bg-white px-5 text-sm font-medium transition-colors hover:bg-porcelain"
+            className="inline-flex h-11 items-center justify-center rounded-sm border border-line bg-white px-4 text-sm font-medium transition-colors hover:bg-porcelain"
           >
             Xem mẫu khác
           </Link>
         </div>
       </div>
 
-      <dl className="grid grid-cols-3 divide-x divide-line rounded-xl border border-line bg-porcelain text-center">
-        <div className="p-3">
+      <div className="border-b border-line pb-5">
+        <ShareRow template={template} url={url} />
+      </div>
+
+      <dl className="grid grid-cols-3 divide-x divide-line rounded-sm border border-line bg-porcelain text-center">
+        <div className="px-2 py-2.5">
           <dt className="text-xs text-muted">Số phần</dt>
-          <dd className="mt-1 font-semibold">{template.features.length}</dd>
+          <dd className="mt-0.5 text-sm font-semibold">{template.features.length}</dd>
         </div>
-        <div className="p-3">
+        <div className="px-2 py-2.5">
           <dt className="text-xs text-muted">Đã dùng</dt>
-          <dd className="mt-1 font-semibold">{new Intl.NumberFormat("vi-VN").format(template.popularity)}</dd>
+          <dd className="mt-0.5 text-sm font-semibold">{new Intl.NumberFormat("vi-VN").format(template.popularity)}</dd>
         </div>
-        <div className="p-3">
+        <div className="px-2 py-2.5">
           <dt className="text-xs text-muted">Phát hành</dt>
-          <dd className="mt-1 text-sm font-semibold">{new Date(template.createdAt).toLocaleDateString("vi-VN")}</dd>
+          <dd className="mt-0.5 text-sm font-semibold">{new Date(template.createdAt).toLocaleDateString("vi-VN")}</dd>
         </div>
       </dl>
 
       <section aria-labelledby="features-title">
-        <h2 id="features-title" className="text-base font-semibold">Thiệp này có</h2>
-        <ul className="mt-3 space-y-2.5">
+        <h2 id="features-title" className="text-sm font-semibold">Thiệp này có</h2>
+        <ul className="mt-2.5 grid grid-cols-1 gap-x-4 gap-y-2 min-[480px]:grid-cols-2">
           {template.features.map((f) => (
-            <li key={f} className="flex gap-3 text-[15px]">
+            <li key={f} className="flex gap-2.5 text-sm">
               <Check className="mt-0.5 size-4 shrink-0 text-[#27548A]" aria-hidden />
               <span>{f}</span>
             </li>
@@ -138,9 +140,9 @@ function Details({ template, categoryLabel }: { template: InvitationTemplate; ca
       </section>
 
       {template.description && (
-        <section aria-labelledby="about-title" className="border-t border-line pt-5">
-          <h2 id="about-title" className="text-base font-semibold">Về mẫu này</h2>
-          <p className="mt-2 text-[15px] leading-relaxed text-muted">{template.description}</p>
+        <section aria-labelledby="about-title" className="border-t border-line pt-4">
+          <h2 id="about-title" className="text-sm font-semibold">Về mẫu này</h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted lg:line-clamp-3">{template.description}</p>
         </section>
       )}
     </div>
@@ -155,19 +157,15 @@ export function TemplateDetailStudio({ template, categoryLabel }: { template: In
   }, []);
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[104px_minmax(0,1fr)_340px] lg:gap-12">
-      {/* Mobile: carousel -> chia sẻ -> chi tiết. Desktop: chia sẻ | carousel | chi tiết */}
-      <div className="order-2 lg:order-1">
-        <ShareRail template={template} url={url} />
-      </div>
-
-      <div className="order-1 min-w-0 lg:order-2">
-        <p className="mb-4 text-center text-sm text-muted">Lật qua các mặt của thiệp để xem chi tiết</p>
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:gap-14">
+      {/* Mobile: carousel -> thông tin. Desktop: carousel | thông tin, vừa một màn hình */}
+      <div className="min-w-0">
+        <p className="mb-3 text-center text-xs text-muted lg:text-sm">Lật qua các mặt của thiệp để xem chi tiết</p>
         <TemplateCarousel template={template} />
       </div>
 
-      <div className="order-3 lg:sticky lg:top-28 lg:self-start">
-        <Details template={template} categoryLabel={categoryLabel} />
+      <div className="min-w-0">
+        <Details template={template} categoryLabel={categoryLabel} url={url} />
       </div>
     </div>
   );
