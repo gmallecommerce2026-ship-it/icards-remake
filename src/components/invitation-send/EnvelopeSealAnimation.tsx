@@ -20,21 +20,63 @@ import { EVENT_FONT_VARS } from "./EventDetailsEditor";
 const INK = "#F5F1E8";
 const STAGE_BG = "linear-gradient(to bottom, #454547 0%, #1c1c1c 55%, #000 100%)";
 
-/** thời gian chạy toàn bộ hiệu ứng (giây) - tăng/giảm tuỳ ý, các mốc camera tự co giãn theo */
-const AUTO_SECONDS = 12;
+/** thời gian chạy toàn bộ hiệu ứng (giây) - đã rút gọn từ 12s; các đoạn vẫn chậm/nhanh khác nhau theo SPEED_NODES */
+const AUTO_SECONDS = 6.5;
 /** dừng lại ở khung cuối (phong bì đã niêm phong) trước khi gọi onDone (ms) */
 const HOLD_MS = 900;
 const FADE_IN_SECONDS = 0.45;
 
-/** tốc độ ĐỀU suốt hành trình, chỉ tăng/giảm tốc êm ở 7% đầu và cuối */
-const AUTO_EASE = (t: number) => {
-  const a = 0.07;
-  if (t <= 0) return 0;
-  if (t >= 1) return 1;
-  if (t < a) return (t * t) / (2 * a * (1 - a));
-  if (t > 1 - a) { const r = 1 - t; return 1 - (r * r) / (2 * a * (1 - a)); }
-  return (t - a / 2) / (1 - a);
-};
+/**
+ * Đường tốc độ theo tiến độ p: [mốc tiến độ, tốc độ tương đối].
+ * >1 = nhanh, <1 = chậm. Chuyển giữa các mốc bằng smoothstep nên không bị giật khi đổi nhịp.
+ *  - 0.10 thiệp lơ lửng, máy quay tiến vào: nhịp vừa
+ *  - 0.35 thiệp trượt vào túi: nhanh nhất
+ *  - 0.65 nắp gập xuống: khá nhanh
+ *  - 0.85 dấu sáp đóng: chậm lại để nhìn rõ
+ */
+const SPEED_NODES: ReadonlyArray<readonly [number, number]> = [
+  [0, 0.7],
+  [0.1, 0.8],
+  [0.35, 2.6],
+  [0.65, 1.4],
+  [0.85, 0.5],
+  [1, 0.8],
+];
+
+const smoothstep01 = (x: number) => { const c = Math.min(1, Math.max(0, x)); return c * c * (3 - 2 * c); };
+
+function speedAt(p: number): number {
+  if (p <= SPEED_NODES[0][0]) return SPEED_NODES[0][1];
+  for (let i = 0; i < SPEED_NODES.length - 1; i++) {
+    const [a, va] = SPEED_NODES[i];
+    const [b, vb] = SPEED_NODES[i + 1];
+    if (p <= b) return va + (vb - va) * smoothstep01((p - a) / (b - a));
+  }
+  return SPEED_NODES[SPEED_NODES.length - 1][1];
+}
+
+/** bảng thời gian đã chuẩn hoá: WARP_T[i] = thời điểm (0..1) khi tiến độ đạt i / WARP_N */
+const WARP_N = 400;
+const WARP_T: number[] = (() => {
+  const t = [0];
+  for (let i = 1; i <= WARP_N; i++) t.push(t[i - 1] + 1 / speedAt((i - 0.5) / WARP_N) / WARP_N);
+  const total = t[WARP_N];
+  return t.map((v) => v / total);
+})();
+
+/** u = thời gian (0..1, đã qua easing) → p = tiến độ hiệu ứng (0..1) */
+function warp(u: number): number {
+  if (u <= 0) return 0;
+  if (u >= 1) return 1;
+  let lo = 0, hi = WARP_N;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (WARP_T[mid] <= u) lo = mid; else hi = mid;
+  }
+  const span = WARP_T[hi] - WARP_T[lo];
+  const f = span > 0 ? (u - WARP_T[lo]) / span : 0;
+  return (lo + f) / WARP_N;
+}
 
 export type EnvelopeSealAnimationProps = {
   /** mặt ngoài của thiệp (đặt sẵn `absolute inset-0`) - thường là <CardFaceStatic /> */
@@ -72,13 +114,6 @@ export function EnvelopeSealAnimation({
     onDoneRef.current();
   }, []);
 
-  // khoá cuộn trang phía sau
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
-  }, []);
-
   // Esc = bỏ qua
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") finish(); };
@@ -107,8 +142,8 @@ export function EnvelopeSealAnimation({
     const startTimer = setTimeout(() => {
       play.current = animate(0, 1, {
         duration: AUTO_SECONDS,
-        ease: AUTO_EASE,
-        onUpdate: (v) => p.set(v),
+        ease: "easeInOut",
+        onUpdate: (u) => p.set(warp(u)),
         onComplete: () => { holdTimer = setTimeout(finish, HOLD_MS); },
       });
     }, FADE_IN_SECONDS * 1000 + 100);
