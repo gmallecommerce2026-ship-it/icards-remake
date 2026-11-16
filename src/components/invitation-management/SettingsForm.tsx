@@ -15,8 +15,8 @@ type Form = {
 function fromInvitation(inv: ApiInvitation): Form {
   const s = inv.settings as unknown as Record<string, unknown>;
   return {
-    title: String(s.title ?? inv.title ?? ""),
-    description: String(s.description ?? ""),
+    title: String(s.emailSubject ?? inv.title ?? ""),
+    description: String(s.emailMessage ?? ""),
     salutationStyle: String(s.salutationStyle ?? "Thân gửi"),
     useGlobalSalutation: Boolean(s.useGlobalSalutation),
     wishesTitle: String(s.wishesTitle ?? "Sổ Lưu Bút"),
@@ -48,8 +48,18 @@ export function SettingsForm({ id }: { id: string }) {
     setSaving(true);
     setMsg("");
     try {
+      // Chỉ gửi đúng các trường backend khai báo (trước đây gửi thừa nên bị bỏ lặng lẽ, cài đặt không lưu)
       await invitationsApi.updateSettings(id, {
-        ...f,
+        emailSubject: f.title,
+        emailMessage: f.description,
+        salutationStyle: f.salutationStyle,
+        useGlobalSalutation: f.useGlobalSalutation,
+        wishesTitle: f.wishesTitle,
+        wishesSubtitle: f.wishesSubtitle,
+        allowRsvp: f.allowRsvp,
+        allowWishes: f.allowWishes,
+        moderateWishes: f.moderateWishes,
+        showGuestList: f.showGuestList,
         maxCompanions: Number(f.maxCompanions),
         rsvpDeadline: f.rsvpDeadline ? new Date(f.rsvpDeadline).toISOString() : undefined,
       });
