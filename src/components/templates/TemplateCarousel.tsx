@@ -12,14 +12,16 @@ const DISPLAY = { fontFamily: "var(--font-tpl-display), Georgia, serif" } as con
 const BLUE = "#27548A";
 
 /*
- * Kích thước khung xem: nhỏ gọn để cả khung + nút Trước/Sau nằm trong màn hình đầu tiên.
- * Trên desktop, khung được co theo chiều cao màn hình (340px = đầu trang + nhãn + nút điều hướng).
- * Trên điện thoại, giới hạn chiều rộng 320px. Khung preview được ghim (sticky) khi cuộn cột thông tin.
+ * Kích thước khung xem: cả cụm (thiệp + nút Trước/Sau) nằm trọn trong màn hình đầu tiên.
+ * 460px = phần đầu trang phía trên khung (thông báo, header, menu, breadcrumb, nhãn) + phần đệm và nút dưới khung.
+ * Trên điện thoại, giới hạn chiều rộng 320px.
+ *
+ * LƯU Ý: Tailwind chỉ nhận các class viết đầy đủ trong mã nguồn. Không được ghép class bằng template string
+ * (ví dụ `lg:max-w-[calc(${X}*5/7)]`), vì khi đó class không được sinh ra và khung sẽ rộng cả cột.
  */
-const FRAME_H = "max(300px,100svh-340px)";
-const CAP_SINGLE = `max-w-[min(320px,calc(${FRAME_H}*5/7))] lg:max-w-[calc(${FRAME_H}*5/7)]`;
-const CAP_SPREAD = `max-w-[min(320px,calc(${FRAME_H}*10/7))] lg:max-w-[calc(${FRAME_H}*10/7)]`;
-const CAP_ENVELOPE = "max-w-[min(320px,100svh-380px)] lg:max-w-[max(280px,calc(100svh-380px))]";
+const CAP_SINGLE = "max-w-[min(320px,calc(max(280px,100svh-460px)*5/7))] lg:max-w-[calc(max(280px,100svh-460px)*5/7)]";
+const CAP_SPREAD = "max-w-[min(320px,calc(max(280px,100svh-460px)*10/7))] lg:max-w-[calc(max(280px,100svh-460px)*10/7)]";
+const CAP_ENVELOPE = "max-w-[min(320px,calc(max(280px,100svh-460px)*6/5))] lg:max-w-[calc(max(280px,100svh-460px)*6/5)]";
 const AUTOPLAY_MS = 3500;
 
 /* ---------- Dự phòng khi mẫu chưa có thiết kế canvas (template.design) ---------- */
