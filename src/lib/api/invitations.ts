@@ -14,6 +14,8 @@ export const updateInvitation = (id: string, form: FormData) => api.put(inv(id),
 export const deleteInvitation = (id: string) => api.delete(inv(id));
 export const publishInvitation = (id: string, published: boolean) => api.put(`${inv(id)}/publish`, { published });
 export const updateSettings = (id: string, body: Body) => api.put(`${inv(id)}/settings`, body);
+export const getReminders = (id: string) => api.get(`${inv(id)}/reminders`);
+export const saveReminders = (id: string, body: Body) => api.put(`${inv(id)}/reminders`, body);
 export const updateBudgetRequest = (id: string, body: Body) => api.put(`${inv(id)}/budgetRequest`, body);
 
 // --- Tasks ---
