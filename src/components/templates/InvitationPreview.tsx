@@ -19,7 +19,7 @@ type Props = {
 // nên cùng một component co giãn đúng ở cả thẻ nhỏ lẫn khung điện thoại.
 const display = { fontFamily: "var(--font-tpl-display), Georgia, serif" } satisfies CSSProperties;
 
-function Motif({ template }: { template: InvitationTemplate }) {
+export function Motif({ template }: { template: InvitationTemplate }) {
   const { accent, soft } = template.palette;
   switch (template.motif) {
     case "arch":
@@ -155,7 +155,7 @@ function FaceElementView({ el, p }: { el: FaceElement; p: InvitationTemplate["pa
   );
 }
 
-function CardFace({ template, face }: { template: InvitationTemplate; face: "front" | "back" }) {
+export function CardFace({ template, face }: { template: InvitationTemplate; face: "front" | "back" }) {
   const p = template.palette;
   const orientation = template.orientation ?? "portrait";
   return (
