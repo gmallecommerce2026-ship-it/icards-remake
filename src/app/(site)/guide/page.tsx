@@ -132,10 +132,12 @@ const SECTIONS: Section[] = [
       "Nhập từ Excel: tải “Tải file mẫu”, điền khách rồi nhập lại. “Xuất danh sách” để tải danh sách hiện tại.",
       "Thống kê: tổng khách, tham dự, từ chối, chưa trả lời, tổng người đi và tiền mừng.",
       "Lọc: tìm theo tên hoặc email, lọc theo trạng thái và trạng thái email.",
+      "Gửi thiệp qua email: bấm “Gửi” ở từng khách, hoặc chọn nhiều khách rồi bấm “Gửi email”. Khách có email sẽ nhận thư mời kèm nút “Xem thiệp mời & xác nhận tham dự”.",
     ],
     images: [
       img("08-khach-moi.png", "Tab khách mời", "Tab Khách mời (chưa có khách)"),
       img("09-khach-moi-vi-du.png", "Tab khách mời của thiệp khác", "Tab Khách mời của một thiệp khác"),
+      img("08b-email-thiep-moi.png", "Email thiệp mời gửi tới khách", "Email thiệp mời khách nhận được, bấm nút để mở thiệp và xác nhận tham dự"),
     ],
   },
   {
@@ -156,7 +158,10 @@ const SECTIONS: Section[] = [
       "Bấm “Lưu thiết lập sự kiện”.",
     ],
     note: "Email nhắc chỉ gửi cho khách chưa xác nhận tham dự và có email, lúc 08:00 sáng theo giờ Việt Nam.",
-    images: [img("11-su-kien.png", "Tab sự kiện", "Tab Sự kiện và lịch nhắc")],
+    images: [
+      img("11-su-kien.png", "Tab sự kiện", "Tab Sự kiện và lịch nhắc"),
+      img("11b-email-nhac-lich.png", "Email nhắc xác nhận tham dự", "Email nhắc lịch gửi tới khách còn 7 ngày nữa đến sự kiện"),
+    ],
   },
   {
     id: "ke-hoach",
