@@ -1,15 +1,18 @@
 "use client";
 
-import { useRef, type KeyboardEvent, type ReactNode, type TouchEvent } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from "react";
+import { CardFaceStatic } from "@/components/invitation/editor/CardFaceStatic";
+import { useEditorStore, type PageId, type Snap } from "@/components/invitation/editor/useEditorStore";
+import type { InvitationTemplate } from "@/lib/templates";
 import { CardFace, InvitationPreview, Motif } from "./InvitationPreview";
 import { TemplateShowcase } from "./TemplateShowcase";
-import type { InvitationTemplate } from "@/lib/templates";
 
 const DISPLAY = { fontFamily: "var(--font-tpl-display), Georgia, serif" } as const;
+const BLUE = "#27548A";
 
-/** Trang bên trong thiệp gập: lời mời, thời gian, địa điểm, nút xác nhận. Mọi cỡ chữ theo cqw nên co giãn theo khung. */
-function InsideFace({ t }: { t: InvitationTemplate }) {
+/* ---------- Dự phòng khi mẫu chưa có thiết kế canvas (template.design) ---------- */
+
+function FallbackInside({ t }: { t: InvitationTemplate }) {
   const p = t.palette;
   const s = t.sample;
   const block = (title: string, body: ReactNode) => (
@@ -19,86 +22,93 @@ function InsideFace({ t }: { t: InvitationTemplate }) {
     </section>
   );
   return (
-    <div
-      role="img"
-      aria-label={`Bên trong thiệp ${t.name}`}
-      className="h-full w-full overflow-y-auto"
-      style={{ aspectRatio: "5 / 7", background: p.bg, color: p.ink, containerType: "inline-size" }}
-    >
+    <div style={{ aspectRatio: "5 / 7", background: p.bg, color: p.ink, containerType: "inline-size" }} className="w-full overflow-y-auto">
       <div style={{ padding: "10cqw 8cqw 4cqw", textAlign: "center" }}>
-        <p style={{ fontSize: "3.6cqw", letterSpacing: "0.03em", opacity: 0.8 }}>Lời mời</p>
-        <p style={{ fontSize: "4.2cqw", marginTop: "3cqw", lineHeight: 1.6 }}>{s.message}</p>
+        <p style={{ fontSize: "4.2cqw", lineHeight: 1.6 }}>{s.message}</p>
       </div>
       {block("Thời gian", <><p style={{ fontWeight: 600 }}>{s.date}</p><p>Lúc {s.time}</p></>)}
       {block("Địa điểm", <><p style={{ fontWeight: 600 }}>{s.place}</p><p>{s.address}</p></>)}
-      <section style={{ padding: "7cqw 8cqw 12cqw", textAlign: "center", borderTop: `0.3cqw solid ${p.soft}` }}>
-        <span
-          style={{
-            display: "inline-block",
-            background: p.accent,
-            color: p.bg,
-            fontSize: "3.8cqw",
-            fontWeight: 600,
-            padding: "2.8cqw 7cqw",
-            borderRadius: "999px",
-          }}
-        >
-          Xác nhận tham dự
-        </span>
-      </section>
     </div>
   );
 }
 
-/** Mặt sau thiệp gập: nền màu phụ, họa tiết và tên cặp đôi. */
-function BackFace({ t }: { t: InvitationTemplate }) {
+function FallbackBack({ t }: { t: InvitationTemplate }) {
   const p = t.palette;
   return (
     <div
-      role="img"
-      aria-label={`Mặt sau thiệp ${t.name}`}
       className="flex w-full flex-col items-center justify-center text-center"
       style={{ aspectRatio: "5 / 7", background: p.soft, color: p.ink, containerType: "inline-size", padding: "10cqw 8cqw", gap: "5cqw" }}
     >
       <Motif template={t} />
-      <p style={{ fontSize: "3.4cqw", letterSpacing: "0.12em", textTransform: "uppercase", opacity: 0.75 }}>{t.sample.kicker}</p>
       <p style={{ ...DISPLAY, fontSize: "7cqw", lineHeight: 1.2 }}>{t.sample.titleLines.join(" ")}</p>
     </div>
   );
 }
 
+/* ---------- Carousel ---------- */
+
 type Slide = { key: string; label: string; paper: boolean; node: ReactNode };
+
+/** Khung 5:7 chứa một mặt thiết kế (lấy từ canvas của mẫu, đúng như trong trình thiết kế). */
+function DesignFace({ page, ready }: { page: PageId; ready: boolean }) {
+  return (
+    <div className="relative aspect-[5/7] w-full overflow-hidden bg-white">
+      {ready && <CardFaceStatic pageId={page} />}
+    </div>
+  );
+}
 
 export function TemplateCarousel({ template }: { template: InvitationTemplate }) {
   const isCard = template.format === "card" && !!template.layout;
+  const design = template.design;
+  const useDesign = !isCard && !!design?.pages && !!design?.backdrops;
 
-  const slides: Slide[] = [
-    {
-      key: "envelope",
-      label: "Phong bì",
-      paper: false,
-      node: (
-        <div className="px-2 py-6">
-          <TemplateShowcase template={template} />
-        </div>
-      ),
-    },
-    {
-      key: "cover",
-      label: "Mặt ngoài",
-      paper: true,
-      node: <InvitationPreview template={template} variant="card" ratio="tall" />,
-    },
-    ...(isCard
-      ? []
-      : [{ key: "inside", label: "Bên trong", paper: true, node: <InsideFace t={template} /> }]),
-    {
-      key: "back",
-      label: "Mặt sau",
-      paper: true,
-      node: isCard ? <CardFace template={template} face="back" /> : <BackFace t={template} />,
-    },
-  ];
+  // Nạp thiết kế canvas của mẫu vào store (cùng cách trình thiết kế đang làm) để các mặt hiển thị đúng bố cục.
+  const [ready, setReady] = useState(!useDesign);
+  useEffect(() => {
+    if (!useDesign || !design) return;
+    useEditorStore.getState().hydrate({
+      pages: design.pages,
+      backdrops: design.backdrops,
+      format: design.format,
+      orientation: design.orientation,
+    } as unknown as Snap);
+    setReady(true);
+  }, [useDesign, design]);
+
+  const envelope: Slide = {
+    key: "envelope",
+    label: "Phong bì",
+    paper: false,
+    node: (
+      <div className="px-2 py-6">
+        <TemplateShowcase template={template} />
+      </div>
+    ),
+  };
+
+  let faces: Slide[];
+  if (useDesign) {
+    faces = [
+      { key: "cover", label: "Mặt ngoài", paper: true, node: <DesignFace page="cover" ready={ready} /> },
+      { key: "insideLeft", label: "Trang trái", paper: true, node: <DesignFace page="insideLeft" ready={ready} /> },
+      { key: "inside", label: "Trang phải", paper: true, node: <DesignFace page="inside" ready={ready} /> },
+      { key: "back", label: "Mặt sau", paper: true, node: <DesignFace page="back" ready={ready} /> },
+    ];
+  } else if (isCard) {
+    faces = [
+      { key: "cover", label: "Mặt ngoài", paper: true, node: <InvitationPreview template={template} variant="card" /> },
+      { key: "back", label: "Mặt sau", paper: true, node: <CardFace template={template} face="back" /> },
+    ];
+  } else {
+    faces = [
+      { key: "cover", label: "Mặt ngoài", paper: true, node: <InvitationPreview template={template} variant="card" ratio="tall" /> },
+      { key: "inside", label: "Bên trong", paper: true, node: <FallbackInside t={template} /> },
+      { key: "back", label: "Mặt sau", paper: true, node: <FallbackBack t={template} /> },
+    ];
+  }
+
+  const slides: Slide[] = [envelope, ...faces];
 
   const [index, setIndex] = useState(0);
   const count = slides.length;
@@ -110,7 +120,6 @@ export function TemplateCarousel({ template }: { template: InvitationTemplate })
     if (e.key === "ArrowRight") go(1);
     if (e.key === "ArrowLeft") go(-1);
   };
-
   const onTouchStart = (e: TouchEvent<HTMLDivElement>) => {
     touchX.current = e.touches[0].clientX;
   };
@@ -125,10 +134,10 @@ export function TemplateCarousel({ template }: { template: InvitationTemplate })
       aria-label={`Các mặt của thiệp ${template.name}`}
       onKeyDown={onKeyDown}
       tabIndex={0}
-      className="group mx-auto w-full max-w-[440px] outline-none focus-visible:ring-2 focus-visible:ring-lacquer/40 rounded-2xl"
+      className="group mx-auto w-full max-w-[440px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[#27548A]/40"
     >
       <div className="rounded-2xl bg-porcelain px-4 py-6 sm:px-8 sm:py-8" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        {/* Các slide cùng nằm trong một ô lưới: chiều cao khung = slide cao nhất, không bị nhảy khi đổi slide */}
+        {/* Các slide cùng một ô lưới: chiều cao khung không nhảy khi đổi slide */}
         <div className="grid">
           {slides.map((s, k) => {
             const active = k === index;
@@ -175,7 +184,8 @@ export function TemplateCarousel({ template }: { template: InvitationTemplate })
                 aria-selected={k === index}
                 aria-label={s.label}
                 onClick={() => setIndex(k)}
-                className={`h-2 rounded-full transition-all ${k === index ? "w-6 bg-lacquer" : "w-2 bg-line hover:bg-muted"}`}
+                className={`h-2 rounded-full transition-all ${k === index ? "w-6" : "w-2 bg-line hover:bg-muted"}`}
+                style={k === index ? { background: BLUE } : undefined}
               />
             ))}
           </div>

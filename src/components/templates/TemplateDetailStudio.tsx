@@ -84,20 +84,20 @@ function Details({ template, categoryLabel }: { template: InvitationTemplate; ca
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lacquer">{categoryLabel}</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#27548A]">{categoryLabel}</p>
         <h1 className="mt-2 text-3xl font-semibold leading-tight tracking-tight">{template.name}</h1>
         <p className="mt-3 text-[15px] leading-relaxed text-muted">{template.tagline}</p>
       </div>
 
       <div className="rounded-xl border border-line bg-white p-5">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-2xl font-semibold text-lacquer">{free ? "Miễn phí" : formatPrice(template.price)}</span>
+          <span className="text-2xl font-semibold text-[#27548A]">{free ? "Miễn phí" : formatPrice(template.price)}</span>
           <span className="text-xs text-muted">{free ? "dùng ngay" : "trả khi xuất bản"}</span>
         </div>
         <div className="mt-5 flex flex-col gap-2.5">
           <Link
             href={`${CREATE_EVENT_HREF}?template=${template.slug}`}
-            className="inline-flex h-12 items-center justify-center rounded-xl bg-lacquer px-6 text-base font-semibold text-white transition-colors hover:bg-lacquer-dark"
+            className="inline-flex h-12 items-center justify-center rounded-xl bg-[#27548A] px-6 text-base font-semibold text-white transition-colors hover:bg-[#1F4573]"
           >
             Dùng mẫu này
           </Link>
@@ -130,7 +130,7 @@ function Details({ template, categoryLabel }: { template: InvitationTemplate; ca
         <ul className="mt-3 space-y-2.5">
           {template.features.map((f) => (
             <li key={f} className="flex gap-3 text-[15px]">
-              <Check className="mt-0.5 size-4 shrink-0 text-lacquer" aria-hidden />
+              <Check className="mt-0.5 size-4 shrink-0 text-[#27548A]" aria-hidden />
               <span>{f}</span>
             </li>
           ))}

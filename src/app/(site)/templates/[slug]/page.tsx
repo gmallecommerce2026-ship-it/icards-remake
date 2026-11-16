@@ -54,7 +54,7 @@ export default async function TemplateDetailPage({ params }: Props) {
             <ol className="mt-10 grid gap-5 md:grid-cols-3">
               {STEPS.map((s, i) => (
                 <li key={s.title} className="rounded-xl border border-line bg-white p-6 text-center">
-                  <span className="mx-auto grid size-10 place-items-center rounded-full bg-lacquer-soft text-sm font-semibold text-lacquer">{i + 1}</span>
+                  <span className="mx-auto grid size-10 place-items-center rounded-full bg-[#E8EEF6] text-sm font-semibold text-[#27548A]">{i + 1}</span>
                   <h3 className="mt-4 font-semibold">{s.title}</h3>
                   <p className="mt-2 text-[15px] leading-relaxed text-muted">{s.text}</p>
                 </li>
@@ -66,7 +66,7 @@ export default async function TemplateDetailPage({ params }: Props) {
             <section className="mt-20 border-t border-line pt-14" aria-labelledby="related-title">
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <h2 id="related-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">Mẫu bạn có thể thích</h2>
-                <Link href="/templates" className="text-sm font-medium text-lacquer hover:underline hover:underline-offset-4">Xem tất cả mẫu →</Link>
+                <Link href="/templates" className="text-sm font-medium text-[#27548A] hover:underline hover:underline-offset-4">Xem tất cả mẫu →</Link>
               </div>
               <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4 lg:gap-x-6">
                 {related.map((t) => (
