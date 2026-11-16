@@ -10,6 +10,7 @@ import {
   Eye,
   Flower2,
   Image as ImageIcon,
+  MapPin,
   Mic,
   Palette,
   Pencil,
@@ -102,10 +103,11 @@ const isDark = (hex: string) => {
 /* ------------------------------------------------------------------ */
 /*  KHỐI (tab Add Blocks)                                              */
 /* ------------------------------------------------------------------ */
-type BlockType = "video" | "speakers" | "wedding-party" | "sponsors" | "gallery" | "details";
+type BlockType = "video" | "speakers" | "wedding-party" | "sponsors" | "gallery" | "details" | "map";
 type Person = { id: string; name: string; role: string };
 type Photo = { id: string; src: string };
-type Block = { id: string; type: BlockType; title: string; text: string; url: string; people: Person[]; photos: Photo[] };
+/** lat/lng: vị trí ghim của khối bản đồ (chỉ dùng khi type === "map") */
+type Block = { id: string; type: BlockType; title: string; text: string; url: string; people: Person[]; photos: Photo[]; lat: number | null; lng: number | null };
 
 const BLOCK_DEFS: Record<BlockType, { desc: string; icon: LucideIcon; title: string }> = {
   video: { title: "Video", desc: "Nhúng liên kết YouTube hoặc Vimeo.", icon: Play },
@@ -114,6 +116,7 @@ const BLOCK_DEFS: Record<BlockType, { desc: string; icon: LucideIcon; title: str
   sponsors: { title: "Nhà tài trợ", desc: "Tôn vinh các đơn vị đồng hành.", icon: Award },
   gallery: { title: "Thư viện ảnh", desc: "Tải ảnh lên để khách mời xem từng tấm.", icon: ImageIcon },
   details: { title: "Chi tiết", desc: "Chỉ đường, bãi đỗ xe, trang phục…", icon: AlignLeft },
+  map: { title: "Vị trí", desc: "Ghim địa điểm trên bản đồ để khách mời chỉ đường.", icon: MapPin },
 };
 const PEOPLE_TYPES: BlockType[] = ["speakers", "wedding-party", "sponsors"];
 
@@ -125,6 +128,8 @@ const makeBlock = (type: BlockType): Block => ({
   url: "",
   people: PEOPLE_TYPES.includes(type) ? [0, 1, 2].map(() => ({ id: uid(), name: "", role: "" })) : [],
   photos: [],
+  lat: null,
+  lng: null,
 });
 
 function toEmbed(url: string): string | null {
@@ -157,11 +162,7 @@ async function imageToDataUrl(file: File, max = 1600): Promise<string | null> {
 /* ------------------------------------------------------------------ */
 /*  DỮ LIỆU                                                            */
 /* ------------------------------------------------------------------ */
-export type EventInfo = {
-  title: string; description: string; host: string; date: string; time: string; venue: string; address: string;
-  /** toạ độ ghim trên bản đồ (MapTiler). Lưu cùng `info` nên trang công khai đọc lại được */
-  lat?: number | null; lng?: number | null;
-};
+export type EventInfo = { title: string; description: string; host: string; date: string; time: string; venue: string; address: string };
 export type GuestLists = { attending: string[]; pending: string[] };
 
 const DEFAULT_INFO: EventInfo = {
@@ -185,6 +186,9 @@ export type EventPageConfig = Pick<EventPageData, "styleId" | "accent" | "bg" | 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const SAFE_SRC = /^(?:https?:\/\/|\/|data:image\/(?:jpeg|png|webp|gif);base64,)/;
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
+/** toạ độ hợp lệ hoặc null */
+const coord = (v: unknown, limit: number): number | null =>
+  typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= limit ? v : null;
 const objs = (v: unknown) => (Array.isArray(v) ? v : []).filter((x): x is Record<string, unknown> => !!x && typeof x === "object");
 
 /**
@@ -208,6 +212,8 @@ export function normalizePage(raw: unknown): EventPageConfig {
       url: str(b.url, 500),
       people: objs(b.people).slice(0, 60).map((p) => ({ id: str(p.id, 40) || uid(), name: str(p.name, 120), role: str(p.role, 120) })),
       photos: objs(b.photos).slice(0, 60).map((p) => ({ id: str(p.id, 40) || uid(), src: str(p.src, 3_000_000) })).filter((p) => SAFE_SRC.test(p.src)),
+      lat: coord(b.lat, 90),
+      lng: coord(b.lng, 180),
     }));
   return { styleId, accent, bg, blocks };
 }
@@ -299,14 +305,8 @@ export function EventDetailsEditor({
   const underline: CSSProperties = { borderBottom: "1px dotted var(--ev-accent)" };
 
   const set = <K extends keyof EventInfo>(k: K) => (v: string) => setInfo((s) => ({ ...s, [k]: v }));
-  /** chọn / bỏ ghim trên bản đồ; địa chỉ gợi ý chỉ điền khi ô địa chỉ đang trống */
-  const pickVenue = (lat: number | null, lng: number | null, suggestedAddress?: string) =>
-    setInfo((s) => ({
-      ...s,
-      lat,
-      lng,
-      ...(suggestedAddress && !s.address.trim() ? { address: suggestedAddress } : {}),
-    }));
+  /** khối bản đồ lấy địa chỉ gợi ý: chỉ điền khi ô địa chỉ đang trống */
+  const suggestAddress = (addr: string) => setInfo((s) => (s.address.trim() ? s : { ...s, address: addr }));
   const patchBlock = (id: string, p: Partial<Block>) => setBlocks((bs) => bs.map((b) => (b.id === id ? { ...b, ...p } : b)));
   const moveBlock = (id: string, dir: -1 | 1) =>
     setBlocks((bs) => {
@@ -522,16 +522,6 @@ export function EventDetailsEditor({
             </div>
           </div>
 
-          <VenueMap
-            styleId={styleId}
-            lat={info.lat ?? null}
-            lng={info.lng ?? null}
-            address={info.address}
-            readOnly={preview}
-            labelStyle={label}
-            onPick={pickVenue}
-          />
-
           {showGuests && !(preview && g.attending.length + g.pending.length === 0) && (
             <section className="mx-auto mt-24 max-w-4xl text-center">
               <h3 style={label}>Danh sách khách mời</h3>
@@ -540,7 +530,10 @@ export function EventDetailsEditor({
             </section>
           )}
 
-          {blocks.map((b, i) => (
+          {blocks.map((b, i) => {
+            // khối bản đồ chưa ghim: khách mời không thấy khối trống
+            if (b.type === "map" && preview && (b.lat === null || b.lng === null)) return null;
+            return (
             <section key={b.id} id={`block-${b.id}`} className="group relative mx-auto mt-24 max-w-3xl scroll-mt-24 text-center">
               <div hidden={preview} className="absolute -top-9 right-0 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 max-md:opacity-100">
                 <MiniBtn label="Chuyển lên" disabled={i === 0} onClick={() => moveBlock(b.id, -1)} icon={ArrowUp} />
@@ -549,10 +542,11 @@ export function EventDetailsEditor({
               </div>
               <Editable value={b.title} onChange={(v) => patchBlock(b.id, { title: v })} placeholder="Tiêu đề khối" style={{ ...head, fontSize: "clamp(1.4rem,3vw,2rem)" }} />
               <div className="mt-8">
-                <BlockBody b={b} patch={(p) => patchBlock(b.id, p)} />
+                <BlockBody b={b} patch={(p) => patchBlock(b.id, p)} styleId={styleId} address={info.address} onSuggestAddress={suggestAddress} />
               </div>
             </section>
-          ))}
+            );
+          })}
           </ReadOnlyCtx.Provider>
         </main>
       </div>
@@ -736,10 +730,34 @@ function AutoTextarea({ id, value, placeholder, onChange, readOnly, className, s
   );
 }
 
-function BlockBody({ b, patch }: { b: Block; patch: (p: Partial<Block>) => void }) {
+function BlockBody({
+  b, patch, styleId, address, onSuggestAddress,
+}: {
+  b: Block;
+  patch: (p: Partial<Block>) => void;
+  styleId: string;
+  address: string;
+  onSuggestAddress: (addr: string) => void;
+}) {
   const ro = useContext(ReadOnlyCtx);
   const addBtn = "mt-6 inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed px-4 py-2 text-xs font-semibold";
   const addStyle: CSSProperties = { borderColor: "var(--ev-accent)", color: "var(--ev-accent)" };
+
+  if (b.type === "map") {
+    return (
+      <VenueMap
+        styleId={styleId}
+        lat={b.lat}
+        lng={b.lng}
+        address={address}
+        readOnly={ro}
+        onPick={(la, ln, suggested) => {
+          patch({ lat: la, lng: ln });
+          if (suggested) onSuggestAddress(suggested);
+        }}
+      />
+    );
+  }
 
   if (b.type === "video") {
     const embed = toEmbed(b.url);

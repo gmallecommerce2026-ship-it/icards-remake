@@ -72,13 +72,11 @@ export type VenueMapProps = {
   /** địa chỉ đang nhập: nếu đang trống, chọn vị trí sẽ điền địa chỉ gợi ý vào */
   address: string;
   readOnly: boolean;
-  /** kiểu nhãn nhỏ (tiêu đề mục) lấy từ kiểu trang */
-  labelStyle: CSSProperties;
   /** gọi khi người dùng chọn / đổi / bỏ ghim. suggestedAddress chỉ có khi lấy được địa chỉ từ bản đồ */
   onPick: (lat: number | null, lng: number | null, suggestedAddress?: string) => void;
 };
 
-export function VenueMap({ styleId, lat, lng, address, readOnly, labelStyle, onPick }: VenueMapProps) {
+export function VenueMap({ styleId, lat, lng, address, readOnly, onPick }: VenueMapProps) {
   const theme = venueMapTheme(styleId);
   const hasPoint = isNum(lat) && isNum(lng);
   const pt = hasPoint ? { lat: lat as number, lng: lng as number } : null;
@@ -242,12 +240,10 @@ export function VenueMap({ styleId, lat, lng, address, readOnly, labelStyle, onP
     onPick(p.lat, p.lng, addressRef.current.trim() ? undefined : r.label);
   }
 
-  const showSection = !readOnly || hasPoint;
   const faintLine = { borderColor: "color-mix(in srgb, var(--ev-ink) 25%, transparent)" };
 
   return (
-    <section hidden={!showSection} className="mx-auto mt-16 w-full max-w-3xl text-center">
-      <h3 style={labelStyle}>Vị trí trên bản đồ</h3>
+    <div className="mx-auto w-full max-w-3xl text-center">
 
       {!readOnly && (
         <div className="mx-auto mt-5 max-w-xl text-left">
@@ -320,6 +316,6 @@ export function VenueMap({ styleId, lat, lng, address, readOnly, labelStyle, onP
           </a>
         )}
       </div>
-    </section>
+    </div>
   );
 }

@@ -21,7 +21,7 @@ type PublicInv = {
   page?: unknown;
   /** chỉ có khi chủ thiệp bật "Hiện danh sách khách mời" */
   guests?: { attending: string[]; pending: string[] } | null;
-  info?: { title?: string; description?: string; host?: string; date?: string; time?: string; venue?: string; address?: string; lat?: number | null; lng?: number | null };
+  info?: { title?: string; description?: string; host?: string; date?: string; time?: string; venue?: string; address?: string };
   settings: Settings;
   guest: Guest;
   design?: PublicDesign;
@@ -94,9 +94,6 @@ export function PublicInvitation() {
     time: info.time ?? "",
     venue: info.venue ?? "",
     address: info.address ?? "",
-    // toạ độ ghim từ trang chỉnh sửa (để bản đồ trên trang sự kiện hiển thị đúng vị trí)
-    lat: typeof info.lat === "number" && Number.isFinite(info.lat) ? info.lat : null,
-    lng: typeof info.lng === "number" && Number.isFinite(info.lng) ? info.lng : null,
   };
 
   async function onRsvp(e: FormEvent<HTMLFormElement>) {
