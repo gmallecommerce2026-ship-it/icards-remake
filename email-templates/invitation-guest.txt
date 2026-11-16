@@ -1,0 +1,18 @@
+{TiêuĐềThiệp}
+==============================
+
+{LờiXưngHô} {TênKháchMời},
+
+{LờiNhắn}
+
+Thời gian: {NgàyGiờ}
+Địa điểm:  {ĐịaĐiểm}
+Địa chỉ:   {ĐịaChỉ}
+
+Xem thiệp mời tại:
+{LinkThiệp}
+
+------------------------------
+Bạn nhận được thư này vì {TênChủTiệc} đã mời bạn qua iCards.
+Cần hỗ trợ? Chỉ cần trả lời email này.
+© 2026 iCards.com.vn
