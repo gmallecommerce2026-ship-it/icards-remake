@@ -174,8 +174,8 @@ export function TemplateDetailStudio({ template, categoryLabel }: { template: In
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:gap-14">
-      {/* Mobile: carousel -> thông tin. Desktop: carousel | thông tin, vừa một màn hình */}
-      <div className="min-w-0">
+      {/* Mobile: carousel -> thông tin. Desktop: carousel (ghim khi cuộn) | thông tin */}
+      <div className="min-w-0 lg:sticky lg:top-24">
         <p className="mb-3 text-center text-xs text-muted lg:text-sm">Lật qua các mặt của thiệp để xem chi tiết</p>
         <TemplateCarousel template={template} />
       </div>

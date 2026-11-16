@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from "react";
-import { Pause, Play, RotateCcw, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw, Search, X } from "lucide-react";
 import { CardFaceStatic } from "@/components/invitation/editor/CardFaceStatic";
 import { useEditorStore, type PageId, type Snap } from "@/components/invitation/editor/useEditorStore";
 import type { InvitationTemplate } from "@/lib/templates";
@@ -12,13 +12,14 @@ const DISPLAY = { fontFamily: "var(--font-tpl-display), Georgia, serif" } as con
 const BLUE = "#27548A";
 
 /*
- * Kích thước khung xem: trên desktop, mọi mặt được co theo chiều cao màn hình để cả thiệp
- * nằm trọn trong khung nhìn đầu tiên (không cần cuộn). 280px = đầu trang + nhãn + nút điều hướng.
+ * Kích thước khung xem: nhỏ gọn để cả khung + nút Trước/Sau nằm trong màn hình đầu tiên.
+ * Trên desktop, khung được co theo chiều cao màn hình (340px = đầu trang + nhãn + nút điều hướng).
+ * Trên điện thoại, giới hạn chiều rộng 320px. Khung preview được ghim (sticky) khi cuộn cột thông tin.
  */
-const FRAME_H = "(100svh-280px)";
-const CAP_SINGLE = `lg:max-w-[calc(${FRAME_H}*5/7)]`;
-const CAP_SPREAD = `lg:max-w-[calc(${FRAME_H}*10/7)]`;
-const CAP_ENVELOPE = "lg:max-w-[calc(100svh-340px)]";
+const FRAME_H = "max(300px,100svh-340px)";
+const CAP_SINGLE = `max-w-[min(320px,calc(${FRAME_H}*5/7))] lg:max-w-[calc(${FRAME_H}*5/7)]`;
+const CAP_SPREAD = `max-w-[min(320px,calc(${FRAME_H}*10/7))] lg:max-w-[calc(${FRAME_H}*10/7)]`;
+const CAP_ENVELOPE = "max-w-[min(320px,100svh-380px)] lg:max-w-[max(280px,calc(100svh-380px))]";
 const AUTOPLAY_MS = 3500;
 
 /* ---------- Dự phòng khi mẫu chưa có thiết kế canvas (template.design) ---------- */
@@ -263,19 +264,20 @@ export function TemplateCarousel({ template }: { template: InvitationTemplate })
             </div>
           </div>
 
-          <div className="mt-4 flex items-center justify-between gap-4">
+          <div className="mt-4 flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={() => go(-1)}
               aria-label="Mặt trước"
-              className="grid size-9 place-items-center rounded-sm border border-line bg-white transition-colors hover:bg-porcelain"
+              title="Mặt trước"
+              className="grid size-12 shrink-0 place-items-center rounded-sm border border-line bg-white text-ink shadow-sm transition-colors hover:bg-porcelain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#27548A]/50 active:scale-95"
             >
-              <span aria-hidden className="text-lg leading-none">‹</span>
+              <ChevronLeft aria-hidden className="size-6" />
             </button>
 
-            <div className="text-center">
+            <div className="min-w-0 text-center">
               <p className="text-sm font-semibold text-ink">{slides[index].label}</p>
-              <div className="mt-2 flex justify-center gap-2" role="tablist" aria-label="Chọn mặt thiệp">
+              <div className="mt-1 flex justify-center gap-1" role="tablist" aria-label="Chọn mặt thiệp">
                 {slides.map((s, k) => (
                   <button
                     key={s.key}
@@ -284,9 +286,14 @@ export function TemplateCarousel({ template }: { template: InvitationTemplate })
                     aria-selected={k === index}
                     aria-label={s.label}
                     onClick={() => setIndex(k)}
-                    className={`h-1.5 rounded-sm transition-all ${k === index ? "w-5" : "w-1.5 bg-line hover:bg-muted"}`}
-                    style={k === index ? { background: BLUE } : undefined}
-                  />
+                    className="group flex h-8 w-6 items-center justify-center rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#27548A]/50"
+                  >
+                    <span
+                      aria-hidden
+                      className={`h-1.5 rounded-sm transition-all ${k === index ? "w-5" : "w-1.5 bg-line group-hover:bg-muted"}`}
+                      style={k === index ? { background: BLUE } : undefined}
+                    />
+                  </button>
                 ))}
               </div>
             </div>
@@ -294,10 +301,11 @@ export function TemplateCarousel({ template }: { template: InvitationTemplate })
             <button
               type="button"
               onClick={() => go(1)}
-              aria-label="Mặt sau"
-              className="grid size-9 place-items-center rounded-sm border border-line bg-white transition-colors hover:bg-porcelain"
+              aria-label="Mặt tiếp theo"
+              title="Mặt tiếp theo"
+              className="grid size-12 shrink-0 place-items-center rounded-sm border border-line bg-white text-ink shadow-sm transition-colors hover:bg-porcelain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#27548A]/50 active:scale-95"
             >
-              <span aria-hidden className="text-lg leading-none">›</span>
+              <ChevronRight aria-hidden className="size-6" />
             </button>
           </div>
         </div>
