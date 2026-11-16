@@ -7,6 +7,7 @@ import { errorText, formatEventDate } from "@/lib/invitation-flow";
 import { asList } from "@/components/invitation-management/shared";
 import { EVENT_FONT_VARS, EventDetailsEditor, buttonStyle, getPageStyle, labelStyle, normalizePage, pageTheme } from "@/components/invitation-send/EventDetailsEditor";
 import { PublicEnvelopeIntro, type PublicDesign } from "./PublicEnvelopeIntro";
+import { GoogleCalendarCard } from "./GoogleCalendarCard";
 
 type Guest = { name: string; status: "pending" | "attending" | "declined"; companions: number } | null;
 type Settings = { allowRsvp: boolean; allowWishes: boolean; moderateWishes?: boolean; showGuestList?: boolean; maxCompanions: number; rsvpDeadline?: string | null };
@@ -156,6 +157,22 @@ export function PublicInvitation() {
           initialPage={inv.page}
           initialSettings={{ showRsvp: false, showGuests: !!inv.settings.showGuestList }}
           guests={inv.guests ?? undefined}
+        />
+
+        {/* Nhắc lịch: khối riêng, tách hẳn khỏi nội dung thiệp và phần cài đặt sự kiện */}
+        <GoogleCalendarCard
+          labelStyle={LABEL}
+          buttonStyle={buttonStyle(st)}
+          input={{
+            title: eventInfo.title,
+            eventDate: inv.eventDate,
+            dateText: info.date,
+            timeText: info.time,
+            venue: info.venue,
+            address: info.address,
+            host: info.host,
+            pageUrl: typeof window !== "undefined" ? window.location.href : "",
+          }}
         />
 
         <main className="mx-auto max-w-xl px-5 pb-28 text-center" style={{ fontFamily: "var(--ev-sans), system-ui, sans-serif" }}>

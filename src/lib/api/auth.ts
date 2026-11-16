@@ -10,3 +10,6 @@ export const register = (username: string, email: string, password: string) =>
 export const forgotPassword = (email: string) => api.post("/auth/forgot-password", { email });
 export const resetPassword = (token: string, body: Record<string, unknown>) =>
   api.patch(`/auth/reset-password/${token}`, body);
+/** Bước 2 quên mật khẩu: xác nhận mã OTP 6 số, nhận resetToken để gọi resetPassword. */
+export const verifyResetOtp = (email: string, code: string) =>
+  api.post<{ resetToken: string; expiresInSeconds: number }>("/auth/verify-reset-otp", { email, code });

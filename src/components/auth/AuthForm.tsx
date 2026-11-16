@@ -79,6 +79,14 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
           />
         </label>
 
+        {!isSignUp && (
+          <div className="-mt-2 text-right">
+            <Link href="/forgot-password" className="text-sm font-semibold text-[#27548A] hover:underline">
+              Quên mật khẩu?
+            </Link>
+          </div>
+        )}
+
         {error && (
           <p role="alert" className="rounded-lg border border-[#F1C2C9] bg-[#FBEDEE] px-4 py-3 text-sm text-[#8E2B3B]">
             {error}
