@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
 import {
   cubicBezier,
   motion,
@@ -104,7 +104,16 @@ export type IntroInfo = {
 };
 
 /* ------------------------------------------------------------------ */
-export function PublicEnvelopeIntro({ info, design, guestName }: { info: IntroInfo; design?: PublicDesign; guestName?: string }) {
+export function PublicEnvelopeIntro({
+  info, design, guestName, scrollRoot, fitFrame = false,
+}: {
+  info: IntroInfo; design?: PublicDesign; guestName?: string;
+  /** Vùng cuộn riêng (khung giả lập). Không truyền thì cuộn theo window như trang thật. */
+  scrollRoot?: RefObject<HTMLElement | null>;
+  /** true: intro lấp đầy khung chứa thay vì 100vh */
+  fitFrame?: boolean;
+}) {
+  const scrollOpts = scrollRoot ? { container: scrollRoot as RefObject<HTMLElement> } : {};
   const containerRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const probeRef = useRef<HTMLDivElement>(null);
@@ -144,8 +153,8 @@ export function PublicEnvelopeIntro({ info, design, guestName }: { info: IntroIn
     return () => ro.disconnect();
   }, [vwMV, vhMV, cwMV]);
 
-  const { scrollYProgress } = useScroll({ target: containerRef, offset: ["start start", "end end"] });
-  const { scrollYProgress: exit } = useScroll({ target: containerRef, offset: ["end end", "end start"] });
+  const { scrollYProgress } = useScroll({ target: containerRef, offset: ["start start", "end end"], ...scrollOpts });
+  const { scrollYProgress: exit } = useScroll({ target: containerRef, offset: ["end end", "end start"], ...scrollOpts });
   const exitOpacity = useTransform(exit, [0, 0.7], [1, 0]);
   const exitY = useTransform(exit, [0, 1], ["0svh", "14svh"]);
   const p = useSpring(scrollYProgress, { stiffness: 70, damping: 24, mass: 0.7 });
@@ -239,20 +248,30 @@ export function PublicEnvelopeIntro({ info, design, guestName }: { info: IntroIn
   const hintOpacity = useTransform(p, [0, 0.04], [1, 0]);
   const blendOpacity = useTransform(p, [0.9, 1], [0, 1]);
 
-  const vars = { ["--cw" as string]: "min(62vw, 300px, 30svh)", ["--ratio" as string]: String(ratioHW) } as CSSProperties;
+  const vars = { ["--cw" as string]: (fitFrame ? "min(62cqw, 300px, 30cqh)" : "min(62vw, 300px, 30svh)"), ["--ratio" as string]: String(ratioHW) } as CSSProperties;
 
   const goTo = (i: number) => {
     const el = containerRef.current;
     if (!el) return;
+    const at = CHAPTERS[i].range[0] + (i === 0 ? 0 : 0.06);
+    const root = scrollRoot?.current;
+    if (root) {
+      const top = el.getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop;
+      const distance = el.offsetHeight - root.clientHeight;
+      root.scrollTo({ top: top + distance * at, behavior: reduceMotion ? "auto" : "smooth" });
+      return;
+    }
     const top = el.getBoundingClientRect().top + window.scrollY;
     const distance = el.offsetHeight - window.innerHeight;
-    const at = CHAPTERS[i].range[0] + (i === 0 ? 0 : 0.06);
     window.scrollTo({ top: top + distance * at, behavior: reduceMotion ? "auto" : "smooth" });
   };
 
   return (
     <section ref={containerRef} className={`relative h-[700vh] ${FONT_VARS}`} style={{ background: BG }}>
-      <motion.div className="sticky top-0 h-[100svh] w-full" style={{ opacity: exitOpacity, y: exitY }}>
+      <motion.div
+        className={`sticky top-0 w-full ${fitFrame ? "h-full" : "h-[100svh]"}`}
+        style={{ opacity: exitOpacity, y: exitY, ...(fitFrame ? { containerType: "size" as const } : {}) }}
+      >
         <div
           ref={stageRef}
           className="relative h-full w-full overflow-hidden"
