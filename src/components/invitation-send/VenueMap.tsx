@@ -130,11 +130,17 @@ export function VenueMap({ styleId, lat, lng, address, readOnly, onPick }: Venue
       pickRef.current(e.lngLat.lat, e.lngLat.lng);
     });
     map.on("error", (e) => {
-      const status = (e as unknown as { error?: { status?: number } }).error?.status;
+      // Ghi đầy đủ lỗi (style hoặc ô tiles) ra console để dễ chẩn đoán
+      const err = (e as unknown as { error?: { status?: number; message?: string; url?: string } }).error;
+      console.error("[VenueMap] MapTiler error:", err?.status, err?.message, err?.url ?? "");
+      const status = err?.status;
       if (status === 401 || status === 403) {
-        setMapError("MapTiler từ chối khoá. Kiểm tra NEXT_PUBLIC_MAPTILER_KEY và danh sách domain được phép.");
+        setMapError("MapTiler từ chối khoá (HTTP " + status + "). Kiểm tra NEXT_PUBLIC_MAPTILER_KEY và danh sách domain được phép trong MapTiler.");
+      } else if (status && status >= 400) {
+        setMapError("Không tải được dữ liệu bản đồ (HTTP " + status + ").");
       }
     });
+    map.on("load", () => console.info("[VenueMap] style loaded:", styleRef.current));
     mapRef.current = map;
 
     // Khi vùng bản đồ đổi kích thước (mở/ẩn, đổi màn hình) thì vẽ lại cho khớp
