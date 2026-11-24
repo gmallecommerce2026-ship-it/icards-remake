@@ -1,58 +1,215 @@
-/* Thanh thông báo phía trên header. Class đều có tiền tố .ann- để dùng được cả ở trang admin (xem trước) lẫn trang chủ. */
+/* Thanh thông báo phía trên header. Class đều có tiền tố .ann- để dùng được cả ở trang admin (xem trước) lẫn trang chủ.
+   --ann-h là chiều cao thanh; phải khớp BAR_H trong AnnouncementBar.tsx. */
 .ann-bar {
+  --ann-h: 34px;
   position: relative;
   overflow: hidden;
-  font-size: 14px;
+  height: var(--ann-h);
+  font-size: 13px;
   font-weight: 500;
-  line-height: 1.4;
+  line-height: 1;
+  letter-spacing: 0.01em;
   background-size: cover;
   background-position: center;
 }
+
 .ann-overlay {
   position: absolute;
   inset: 0;
+  z-index: 0;
   background: rgba(0, 0, 0, 0.3);
 }
+
 .ann-inner {
   position: relative;
-  padding: 10px 20px;
+  z-index: 1;
+  height: 100%;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
 }
 .ann-bar--closable .ann-inner { padding-right: 44px; }
-.ann-bar--marquee .ann-inner { padding-left: 0; }
 
-.ann-static { text-align: center; margin: 0; }
+.ann-static {
+  width: 100%;
+  margin: 0;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .ann-link { color: inherit; text-decoration: none; }
 .ann-link:hover, .ann-link:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
 
-/* Chữ chạy liền mạch: hai nửa giống hệt nhau nối đuôi, dịch đúng -50% rồi lặp nên không có khoảng trống.
-   Thời lượng do JS tính từ độ rộng thật và tốc độ (px/giây) admin chọn. */
-.ann-viewport { overflow: hidden; }
+.ann-bar--image .ann-inner { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45); }
+
+/* ---------- Đoàn xe kéo banner ---------- */
+
+/* Nền núi/đường ray cuộn đúng tốc độ đoàn xe: một ô nền rộng SCENE_TILES × chiều cao thanh */
+.ann-ground {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-repeat: repeat-x;
+  background-size: auto 100%;
+  background-position: 0 0;
+  animation: ann-ground linear infinite;
+  will-change: background-position;
+}
+@keyframes ann-ground {
+  from { background-position: 0 0; }
+  to { background-position: calc(var(--ann-h) * -9) 0; }
+}
+
+.ann-bar--convoy .ann-overlay { background: rgba(0, 0, 0, 0.15); }
+
+.ann-convoy-view {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* Một đoàn: xe + dây + banner. Đi từ mép phải ra mép trái, thời lượng do JS tính theo tốc độ admin chọn. */
+.ann-convoy {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  width: max-content;
+  transform: translate3d(var(--ann-from), 0, 0);
+  animation: ann-convoy linear infinite;
+  animation-duration: var(--ann-dur);
+  will-change: transform;
+}
+@keyframes ann-convoy {
+  from { transform: translate3d(var(--ann-from), 0, 0); }
+  to { transform: translate3d(var(--ann-to), 0, 0); }
+}
+
+.ann-train-set {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  flex: none;
+  white-space: nowrap;
+}
+
+/* Bản đo chiều rộng: không hiển thị, không chặn chuột */
+.ann-measure {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.ann-vehicle { display: block; flex: none; overflow: visible; }
+
+.ann-wheel {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ann-spin linear infinite;
+}
+@keyframes ann-spin { to { transform: rotate(-360deg); } }
+
+.ann-puff {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ann-puff 1.6s linear infinite;
+}
+@keyframes ann-puff {
+  0% { transform: translate(0, 0) scale(0.6); opacity: 0.9; }
+  100% { transform: translate(-7px, -12px) scale(1.5); opacity: 0; }
+}
+
+.ann-rope {
+  flex: none;
+  width: 6px;
+  height: 1px;
+  background: rgba(232, 238, 246, 0.75);
+}
+
+/* Banner: chữ nằm trên đúng mảnh vải được kéo sau xe, đung đưa nhẹ */
+.ann-banner {
+  display: block;
+  flex: none;
+  box-sizing: border-box;
+  height: 22px;
+  max-width: 62vw;
+  padding: 0 12px;
+  line-height: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  font-weight: 600;
+  color: inherit;
+  background: rgba(14, 27, 44, 0.6);
+  border: 1px solid rgba(232, 238, 246, 0.45);
+  transform-origin: left center;
+  animation: ann-flap 1.2s ease-in-out infinite alternate;
+}
+@keyframes ann-flap {
+  from { transform: skewY(-1.5deg); }
+  to { transform: skewY(1.5deg); }
+}
+
+/* Khi rê chuột vào: dừng cả đoàn, bánh xe và khói */
+.ann-bar--convoy:hover .ann-convoy,
+.ann-bar--convoy:hover .ann-ground,
+.ann-bar--convoy:hover .ann-wheel,
+.ann-bar--convoy:hover .ann-puff,
+.ann-bar--convoy:hover .ann-banner { animation-play-state: paused; }
+
+/* Chữ thay thế khi giảm chuyển động (ẩn mặc định) */
+.ann-reduced-only { display: none; }
+
+/* ---------- Chữ chạy thuần (nền màu hoặc ảnh tuỳ chỉnh) ---------- */
+.ann-viewport { position: relative; overflow: hidden; height: 100%; width: 100%; display: flex; align-items: center; }
 .ann-track {
   display: flex;
+  height: 100%;
   width: max-content;
   animation: ann-scroll linear infinite;
   will-change: transform;
 }
 .ann-bar:hover .ann-track,
 .ann-bar:focus-within .ann-track { animation-play-state: paused; }
-.ann-half { display: flex; flex: none; }
-.ann-item { flex: none; white-space: nowrap; padding-right: 4rem; }
+.ann-half { display: flex; flex: none; align-items: center; }
+.ann-unit { display: inline-flex; align-items: center; flex: none; white-space: nowrap; }
+.ann-item { flex: none; white-space: nowrap; }
+.ann-sep {
+  flex: none;
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 2.5rem;
+  background: currentColor;
+  opacity: 0.85;
+  transform: rotate(45deg);
+}
+@keyframes ann-scroll { to { transform: translateX(-50%); } }
 
-@keyframes ann-scroll {
-  to { transform: translateX(-50%); }
+/* Ảnh nền tuỳ chỉnh dạng lặp ngang (nền động không chạy) */
+.ann-bar--preset {
+  background-repeat: repeat-x;
+  background-size: auto 100%;
+  background-position: left center;
 }
 
 .ann-close {
   position: absolute;
   top: 50%;
-  right: 12px;
+  right: 10px;
   transform: translateY(-50%);
   z-index: 2;
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   font-size: 22px;
   line-height: 1;
   color: inherit;
@@ -64,10 +221,15 @@
 }
 .ann-close:hover, .ann-close:focus-visible { opacity: 1; }
 
-/* Người dùng giảm chuyển động: không chạy, chữ xuống dòng và căn giữa */
+/* Người dùng giảm chuyển động: không chạy; chữ hiển thị đứng yên */
 @media (prefers-reduced-motion: reduce) {
   .ann-track { animation: none; width: auto; justify-content: center; }
   .ann-half[aria-hidden="true"] { display: none; }
-  .ann-item { white-space: normal; padding-right: 0; text-align: center; }
+  .ann-unit { white-space: normal; }
+  .ann-item { white-space: normal; text-align: center; }
+  .ann-sep { display: none; }
   .ann-bar--marquee .ann-inner { padding-left: 20px; }
+  .ann-ground, .ann-convoy-view { display: none; }
+  .ann-reduced-only { display: block; }
+  .ann-bar--convoy .ann-overlay { background: rgba(0, 0, 0, 0.3); }
 }

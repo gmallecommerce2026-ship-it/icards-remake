@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getAdminSettings, saveAdminAnnouncementBar } from "@/lib/api/admin";
-import { AnnouncementBarView, DEFAULT_ANNOUNCEMENT_BG, type AnnouncementBarData } from "@/components/home/AnnouncementBar";
+import { ANNOUNCEMENT_PRESET_SRC, AnnouncementBarView, DEFAULT_ANNOUNCEMENT_BG, type AnnouncementBarData, type AnnouncementPreset } from "@/components/home/AnnouncementBar";
 import { ImageField } from "@/components/admin/ImageField";
 import { ErrorBox, btnCls, errorMessage, inputCls } from "@/components/admin/ui";
 
@@ -17,6 +17,48 @@ const EMPTY: Required<Pick<AnnouncementBarData, "isEnabled" | "text" | "isMarque
 };
 
 const HEX6 = /^#[0-9a-f]{6}$/i;
+
+const PRESETS: { value: AnnouncementPreset; label: string; hint: string }[] = [
+  { value: "train", label: "Tàu hỏa kéo banner", hint: "Mặc định" },
+  { value: "truck", label: "Xe tải kéo banner", hint: "Lặp vô hạn" },
+  { value: "none", label: "Chỉ màu nền", hint: "Không chuyển động" },
+];
+
+/** Thẻ chọn nền động: xem trước chính ảnh GIF, khung vuông, viền sáng khi đang chọn. */
+function PresetPicker({ value, disabled, onChange }: { value: AnnouncementPreset; disabled: boolean; onChange: (v: AnnouncementPreset) => void }) {
+  return (
+    <div role="radiogroup" aria-label="Nền động" className="grid gap-3 sm:grid-cols-3">
+      {PRESETS.map((p) => {
+        const active = value === p.value;
+        return (
+          <button
+            key={p.value}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            disabled={disabled}
+            onClick={() => onChange(p.value)}
+            className={`grid gap-2 border bg-white p-2 text-left transition-colors ${active ? "border-[#27548A] ring-1 ring-[#27548A]" : "border-[#C5D0DE] hover:border-[#27548A]"}`}
+          >
+            <span className="relative block h-12 w-full overflow-hidden bg-[#27548A]">
+              {p.value === "none" ? (
+                <span className="absolute inset-0 grid place-items-center text-xs text-white/80">Màu nền</span>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={ANNOUNCEMENT_PRESET_SRC[p.value]} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              )}
+            </span>
+            <span className="flex items-center justify-between gap-2 text-sm font-medium">
+              {p.label}
+              {active && <span className="text-xs text-[#27548A]">Đang dùng</span>}
+            </span>
+            <span className="text-xs text-[#5B6B7F]">{p.hint}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 /** Ô chọn màu: bảng màu của trình duyệt + ô nhập mã hex. */
 function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
@@ -155,8 +197,25 @@ export default function AnnouncementAdmin() {
             <ColorField label="Màu nền" value={bar.backgroundColor ?? ""} onChange={(v) => set({ backgroundColor: v })} />
             <ColorField label="Màu chữ" value={bar.textColor ?? ""} onChange={(v) => set({ textColor: v })} />
           </div>
-          <ImageField label="Ảnh nền (không bắt buộc)" value={bar.backgroundImage ?? ""} onChange={(url) => set({ backgroundImage: url })} />
-          <p className="text-xs text-[#5B6B7F]">Có ảnh nền thì ảnh phủ lên màu nền và được làm tối nhẹ để chữ dễ đọc. Xoá ảnh để dùng màu nền.</p>
+          <div className="grid gap-2">
+            <h4 className="text-sm font-medium">Nền động</h4>
+            <PresetPicker
+              value={bar.backgroundPreset ?? "train"}
+              disabled={!!bar.backgroundImage}
+              onChange={(v) => set({ backgroundPreset: v })}
+            />
+            <p className="text-xs text-[#5B6B7F]">
+              {bar.backgroundImage
+                ? "Đang dùng ảnh nền tuỳ chỉnh bên dưới nên nền động tạm không áp dụng. Xoá ảnh tuỳ chỉnh để chọn lại nền động."
+                : "Nền động được cuộn liên tục phía sau chữ. Chọn “Chỉ màu nền” để dùng màu nền ở trên."}
+            </p>
+          </div>
+          <ImageField
+            label="Ảnh nền tuỳ chỉnh (ghi đè nền động, không bắt buộc)"
+            value={bar.backgroundImage ?? ""}
+            onChange={(url) => set({ backgroundImage: url })}
+          />
+          <p className="text-xs text-[#5B6B7F]">Ảnh tuỳ chỉnh được phủ lên và làm tối nhẹ để chữ dễ đọc. Xoá ảnh để quay lại nền động hoặc màu nền.</p>
         </div>
       </section>
     </div>
