@@ -82,21 +82,20 @@ function loadPromoProducts(): Promise<Product[]> {
   return promoCache;
 }
 
-/* Dải dưới của menu: luôn là khối full-bleed, giãn hết phần còn lại của khung nên không để lại khoảng trắng. */
-const MegaPromo = ({ items, onNavigate }: { items: Product[]; onNavigate: (path: string) => void }) => (
-  <div className="mega-band mega-reveal" style={{ ["--i" as string]: 6 }}>
-    <div className="container mega-band-inner mega-promo">
-      <div className="mega-promo-text">
-        <p className="mega-promo-eyebrow">Cửa hàng iCards</p>
-        <h4 className="mega-promo-title">Cửa hàng &amp; dịch vụ</h4>
-        <p className="mega-promo-desc">Phụ kiện trang trí, quà tặng và dịch vụ tổ chức trọn gói cho ngày vui của bạn.</p>
-        <button type="button" className="mega-promo-cta" onClick={() => onNavigate(SHOP)}>
-          Xem cửa hàng <ArrowRight size={16} aria-hidden />
-        </button>
-      </div>
-      {items.length > 0 && (
-        <div className="mega-tiles">
-          {items.map((p) => {
+/* Dải dưới menu cửa hàng: tiêu đề nhỏ + "Xem tất cả", lưới sản phẩm (không hiển thị nếu chưa có sản phẩm). */
+const MegaPromo = ({ items, onNavigate }: { items: Product[]; onNavigate: (path: string) => void }) => {
+  if (items.length === 0) return null;
+  return (
+    <div className="mega-band mega-reveal" style={{ ["--i" as string]: 5 }}>
+      <div className="container">
+        <div className="mega-band-head">
+          <p className="mega-band-label">Sản phẩm nổi bật</p>
+          <a href={SHOP} className="mega-band-more" onClick={(e) => { e.preventDefault(); onNavigate(SHOP); }}>
+            Xem tất cả <ArrowRight size={14} aria-hidden />
+          </a>
+        </div>
+        <div className="mega-tiles mega-tiles-shop">
+          {items.slice(0, 4).map((p) => {
             const from = priceFrom(p);
             const off = discountPercent(p);
             return (
@@ -125,26 +124,27 @@ const MegaPromo = ({ items, onNavigate }: { items: Product[]; onNavigate: (path:
             );
           })}
         </div>
-      )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
-/* Dải dưới của menu danh mục thiệp: banner + các thẻ mẫu thiệp (tên ở trên, ảnh bên dưới, giống khối "Những dịp lan tỏa niềm vui").
-   Lưới chỉ một hàng, tự bỏ các thẻ không vừa chiều ngang; thẻ giãn theo chiều cao còn lại nên luôn lấp kín tới đáy màn hình. */
+/* Dải dưới của menu danh mục thiệp: tiêu đề nhỏ + "Xem tất cả", một banner phẳng và các thẻ mẫu (ảnh trước, tên dưới ảnh). */
 const MegaFeature = ({ title, path, items, onNavigate }: { title: string; path: string; items: Featured[]; onNavigate: (path: string) => void }) => (
   <div className="mega-band mega-reveal" style={{ ["--i" as string]: 5 }}>
-    <div className="container mega-band-inner">
+    <div className="container">
+      <div className="mega-band-head">
+        <p className="mega-band-label">Mẫu nổi bật</p>
+        <a href={path} className="mega-band-more" onClick={(e) => { e.preventDefault(); onNavigate(path); }}>
+          Xem tất cả <ArrowRight size={14} aria-hidden />
+        </a>
+      </div>
       <div className="mega-tiles mega-tiles-feature">
-        <a
-          href={path}
-          className="mega-banner"
-          onClick={(e) => { e.preventDefault(); onNavigate(path); }}
-        >
+        <a href={path} className="mega-banner" onClick={(e) => { e.preventDefault(); onNavigate(path); }}>
           <span className="mega-banner-eyebrow">Bộ sưu tập</span>
           <span className="mega-banner-title">{title}</span>
-          <span className="mega-banner-desc">Khám phá các mẫu thiệp được cập nhật thường xuyên, chỉnh sửa online và gửi đi chỉ trong vài phút.</span>
-          <span className="mega-banner-cta">Xem tất cả <ArrowRight size={16} aria-hidden /></span>
+          <span className="mega-banner-desc">Cập nhật thường xuyên, chỉnh sửa online và gửi đi chỉ trong vài phút.</span>
+          <span className="mega-banner-cta">Khám phá <ArrowRight size={15} aria-hidden /></span>
         </a>
         {items.slice(0, 4).map((t) => (
           <a
@@ -153,10 +153,10 @@ const MegaFeature = ({ title, path, items, onNavigate }: { title: string; path: 
             className="mega-tile mega-tile-card"
             onClick={(e) => { e.preventDefault(); onNavigate(`${TEMPLATES}/${t.slug}`); }}
           >
-            <span className="mega-tile-name">{t.name}</span>
             <span className="mega-tile-media">
               {t.image && <img src={t.image} alt={t.name} className="mega-tile-img" loading="lazy" />}
             </span>
+            <span className="mega-tile-name">{t.name}</span>
           </a>
         ))}
       </div>
@@ -226,7 +226,20 @@ const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, o
       {shown && (
         <div key={shown.key} className="mega-inner">
           <div className="container mega-top">
-            <div className="mega-cols" style={{ ["--cols" as string]: Math.min(cols.length, 5) }}>
+            <div className="mega-layout">
+            <aside className="mega-intro mega-reveal" style={{ ["--i" as string]: 0 }}>
+              <p className="mega-intro-eyebrow">{showPromo ? "Mua sắm" : "Danh mục"}</p>
+              <h2 className="mega-intro-title">{shown.data.title}</h2>
+              <p className="mega-intro-desc">
+                {showPromo
+                  ? "Phụ kiện trang trí, quà tặng và dịch vụ tổ chức trọn gói cho ngày vui."
+                  : "Khám phá mẫu thiệp theo phong cách, dịp và nhu cầu của bạn."}
+              </p>
+              <button type="button" className="mega-intro-cta" onClick={() => go(shown.data.path)}>
+                Xem tất cả <ArrowRight size={15} aria-hidden />
+              </button>
+            </aside>
+            <div className="mega-cols">
               {cols.map((column, index) => (
                 <section key={index} className="mega-col mega-reveal" style={{ ["--i" as string]: index }}>
                   <a href={column.path} onClick={(e) => handleLinkClick(e, column.path)} className="mega-col-head">
@@ -244,6 +257,7 @@ const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, o
                   </ul>
                 </section>
               ))}
+            </div>
             </div>
           </div>
           {showPromo ? (
