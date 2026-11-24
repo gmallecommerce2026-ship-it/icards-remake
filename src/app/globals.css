@@ -150,6 +150,8 @@ body { background: var(--color-porcelain); color: var(--color-ink); font-family:
 .animate-marquee { animation: marquee 38s linear infinite; }
 .animate-drift { animation: drift 14s ease-in-out infinite; }
 
+/* Giảm chuyển động: tắt các animation lặp/tự chạy và cuộn mượt, nhưng GIỮ các transition ngắn khi hover
+   (đổi màu, bóng, nâng nhẹ) để thao tác vẫn mượt. Các chuyển động lớn được tắt riêng ở từng component. */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  *, *::before, *::after { animation: none !important; scroll-behavior: auto !important; }
 }

@@ -48,7 +48,13 @@
   }
 }
 
-/* Không có hover thật (cảm ứng) hoặc người dùng giảm chuyển động: chỉ đổi bóng nhẹ, không dịch chuyển */
+/* Người dùng giảm chuyển động: vẫn có hover mượt nhưng nhẹ: nâng nhỏ, đổ bóng, không xoay/phóng to/vệt sáng */
 @media (prefers-reduced-motion: reduce) {
-  .group:is(:hover, :focus-visible) .tpl-sc__card { box-shadow: 0 18px 28px -14px rgba(14, 27, 44, .5); }
+  .tpl-sc__stage { transition: transform .35s ease; }
+  .tpl-sc__card { transition: transform .35s ease, box-shadow .35s ease; }
+  .group:is(:hover, :focus-visible) .tpl-sc__stage { transform: translateY(-3px); }
+  .group:is(:hover, :focus-visible) .tpl-sc__card {
+    transform: translateY(-2%);
+    box-shadow: 0 18px 28px -14px rgba(14, 27, 44, .5);
+  }
 }
