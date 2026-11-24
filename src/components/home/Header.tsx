@@ -4,7 +4,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, X, ChevronRight, Search, ArrowRight } from "lucide-react";
+import { Menu, X, ChevronRight, Search, ArrowRight, Sparkles, Send, Headset } from "lucide-react";
 import { productsApi, settingsApi, templatesApi } from "@/lib/api";
 import { ProductThumb } from "@/components/shop/ProductThumb";
 import { discountPercent, priceFrom, type Product } from "@/lib/shop";
@@ -32,10 +32,6 @@ const SHOP = "/shop";
 const IPRO_PATH = "/professional";
 /* Số link tối đa mỗi cột khi dựng menu từ cây mẫu thiệp (chỉ dùng khi chưa có menu admin) */
 const MAX_LINKS = 4;
-/* Chiều cao ô mẫu (px): co theo màn hình, kẹp trong khoảng này. MEGA_BAND_CHROME = phần cố định của dải dưới (tiêu đề, đệm, tên mẫu). */
-const MEGA_MEDIA_MIN = 150;
-const MEGA_MEDIA_MAX = 300;
-const MEGA_BAND_CHROME = 130;
 
 const UserMenu = ({ name, email, initial, onLogout }: { name: string; email: string; initial: string; onLogout: () => void }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -133,44 +129,39 @@ const MegaPromo = ({ items, onNavigate }: { items: Product[]; onNavigate: (path:
   );
 };
 
-/* Dải dưới của menu danh mục thiệp: tiêu đề nhỏ + "Xem tất cả", một banner phẳng và các thẻ mẫu (ảnh trước, tên dưới ảnh). */
-const MegaFeature = ({ title, path, items, onNavigate }: { title: string; path: string; items: Featured[]; onNavigate: (path: string) => void }) => (
-  <div className="mega-band mega-reveal" style={{ ["--i" as string]: 5 }}>
-    <div className="container">
-      <div className="mega-band-head">
-        <p className="mega-band-label">Mẫu nổi bật</p>
-        <a href={path} className="mega-band-more" onClick={(e) => { e.preventDefault(); onNavigate(path); }}>
-          Xem tất cả <ArrowRight size={14} aria-hidden />
-        </a>
-      </div>
-      <div className="mega-tiles mega-tiles-feature">
-        <a href={path} className="mega-banner" onClick={(e) => { e.preventDefault(); onNavigate(path); }}>
-          <span className="mega-banner-eyebrow">Bộ sưu tập</span>
-          <span className="mega-banner-title">{title}</span>
-          <span className="mega-banner-desc">Cập nhật thường xuyên, chỉnh sửa online và gửi đi chỉ trong vài phút.</span>
-          <span className="mega-banner-cta">Khám phá <ArrowRight size={15} aria-hidden /></span>
-        </a>
-        {items.slice(0, 4).map((t) => (
-          <a
-            key={t.slug}
-            href={`${TEMPLATES}/${t.slug}`}
-            className="mega-tile mega-tile-card"
-            onClick={(e) => { e.preventDefault(); onNavigate(`${TEMPLATES}/${t.slug}`); }}
-          >
-            <span className={`mega-tile-media${t.image ? "" : " is-placeholder"}`}>
-              {t.image ? (
-                <img src={t.image} alt={t.name} className="mega-tile-img" loading="lazy" />
-              ) : (
-                <span className="mega-tile-initial" aria-hidden>{t.name.charAt(0)}</span>
-              )}
-            </span>
-            <span className="mega-tile-name">{t.name}</span>
-          </a>
-        ))}
+/* Dải dưới của menu danh mục thiệp: ba thẻ hành động giúp người dùng bắt đầu nhanh, lấp khoảng trống dưới phần danh mục. */
+const MegaFooter = ({ onNavigate }: { onNavigate: (path: string) => void }) => {
+  const cards = [
+    { key: "start", tone: "primary", icon: Sparkles, eyebrow: "Bắt đầu nhanh", title: "Tự thiết kế thiệp trong vài phút", desc: "Đổi chữ, ảnh, màu và nhạc ngay trên trình chỉnh sửa online.", cta: "Chọn mẫu", path: TEMPLATES },
+    { key: "send", tone: "light", icon: Send, eyebrow: "Gửi & theo dõi", title: "Gửi thiệp, quản lý khách mời", desc: "Chia sẻ link qua Zalo, Messenger hoặc email và xem ai đã mở thiệp.", cta: "Quản lí thiệp", path: "/invitation-management" },
+    { key: "help", tone: "light", icon: Headset, eyebrow: "Cần làm riêng?", title: "Nhờ đội ngũ thiết kế", desc: "Thiệp theo yêu cầu riêng về bố cục, phong cách và thời gian gấp.", cta: "Liên hệ tư vấn", path: "/contact" },
+  ];
+  return (
+    <div className="mega-foot mega-reveal" style={{ ["--i" as string]: 4 }}>
+      <div className="container">
+        <div className="mega-foot-grid">
+          {cards.map((c) => {
+            const Icon = c.icon;
+            return (
+              <a
+                key={c.key}
+                href={c.path}
+                className={`mega-foot-card mega-foot-${c.tone}`}
+                onClick={(e) => { e.preventDefault(); onNavigate(c.path); }}
+              >
+                <span className="mega-foot-icon" aria-hidden><Icon size={20} /></span>
+                <span className="mega-foot-eyebrow">{c.eyebrow}</span>
+                <span className="mega-foot-title">{c.title}</span>
+                <span className="mega-foot-desc">{c.desc}</span>
+                <span className="mega-foot-cta">{c.cta} <ArrowRight size={15} aria-hidden /></span>
+              </a>
+            );
+          })}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, onClose }: {
   activeKey: string | null; activeMenuData: MenuNode | null; onMouseEnter: () => void; onMouseLeave: () => void; onClose: () => void;
@@ -209,30 +200,6 @@ const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, o
       window.removeEventListener("scroll", measure);
     };
   }, [isVisible]);
-
-  // Căn chiều cao ô mẫu theo phần màn hình còn lại dưới phần danh mục: menu vừa khít, không phải cuộn.
-  const shownKey = shown?.key;
-  const shownData = shown?.data;
-  useLayoutEffect(() => {
-    const pane = paneRef.current;
-    if (!isVisible || !pane) return;
-    const fit = () => {
-      const topH = pane.querySelector<HTMLElement>(".mega-top")?.offsetHeight ?? 0;
-      const paneTop = Math.max(0, pane.getBoundingClientRect().top);
-      const avail = window.innerHeight - paneTop - topH - MEGA_BAND_CHROME;
-      const h = Math.round(Math.min(MEGA_MEDIA_MAX, Math.max(MEGA_MEDIA_MIN, avail)));
-      pane.style.setProperty("--mega-media-h", `${h}px`);
-    };
-    fit();
-    const top = pane.querySelector<HTMLElement>(".mega-top");
-    const ro = typeof ResizeObserver !== "undefined" && top ? new ResizeObserver(fit) : null;
-    if (ro && top) ro.observe(top);
-    window.addEventListener("resize", fit);
-    return () => {
-      ro?.disconnect();
-      window.removeEventListener("resize", fit);
-    };
-  }, [isVisible, shownKey, shownData]);
 
   // Esc để đóng
   useEffect(() => {
@@ -295,12 +262,7 @@ const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, o
           {showPromo ? (
             <MegaPromo items={promoItems} onNavigate={go} />
           ) : (
-            <MegaFeature
-              title={shown.data.title || ""}
-              path={shown.data.path}
-              items={shown.data.featured ?? []}
-              onNavigate={go}
-            />
+            <MegaFooter onNavigate={go} />
           )}
         </div>
       )}
