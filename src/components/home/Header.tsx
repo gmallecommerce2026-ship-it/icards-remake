@@ -32,6 +32,8 @@ const SHOP = "/shop";
 const IPRO_PATH = "/professional";
 /* Số link tối đa mỗi cột khi dựng menu từ cây mẫu thiệp (chỉ dùng khi chưa có menu admin) */
 const MAX_LINKS = 4;
+/* Khoảng đệm trên + dưới của phần danh mục (khớp .mega-inner > .mega-top trong CSS). */
+const MEGA_TOP_PAD = 68;
 
 const UserMenu = ({ name, email, initial, onLogout }: { name: string; email: string; initial: string; onLogout: () => void }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -163,6 +165,29 @@ const MegaFooter = ({ onNavigate }: { onNavigate: (path: string) => void }) => {
   );
 };
 
+/* Nút "Xem thêm" cuối cột: các mục còn lại hiện ra thành popup bên cạnh khi hover (không làm cột dài thêm). */
+const MegaMore = ({ links, title, openLeft, onNavigate }: { links: Link[]; title: string; openLeft: boolean; onNavigate: (path: string) => void }) => (
+  <li className="mega-more">
+    <button type="button" className="mega-more-btn">
+      <span>Xem thêm ({links.length})</span>
+      <ChevronRight size={15} aria-hidden />
+    </button>
+    <div className={`mega-more-pop${openLeft ? " is-left" : ""}`}>
+      <p className="mega-more-title">{title}</p>
+      <ul>
+        {links.map((link, i) => (
+          <li key={i}>
+            <a href={link.href} onClick={(e) => { e.preventDefault(); onNavigate(link.href); }}>
+              <span>{link.text}</span>
+              <ArrowRight className="mega-link-arrow" size={14} aria-hidden />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </li>
+);
+
 const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, onClose }: {
   activeKey: string | null; activeMenuData: MenuNode | null; onMouseEnter: () => void; onMouseLeave: () => void; onClose: () => void;
 }) => {
@@ -200,6 +225,30 @@ const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, o
       window.removeEventListener("scroll", measure);
     };
   }, [isVisible]);
+
+  // Đo chiều cao còn trống để tính số mục tối đa mỗi cột: phần thừa đưa vào nút "Xem thêm", menu không bao giờ phải cuộn.
+  const [maxRows, setMaxRows] = useState<number | null>(null);
+  const shownKey = shown?.key;
+  const shownData = shown?.data;
+  useLayoutEffect(() => {
+    const pane = paneRef.current;
+    if (!isVisible || !pane) return;
+    const fit = () => {
+      const head = pane.querySelector<HTMLElement>(".mega-col-head");
+      const row = pane.querySelector<HTMLElement>(".mega-col > ul > li");
+      if (!head || !row) { setMaxRows(null); return; }
+      const inner = pane.querySelector(".mega-inner");
+      const below = Array.from(inner?.children ?? [])
+        .filter((el) => !el.classList.contains("mega-top"))
+        .reduce((h, el) => h + (el as HTMLElement).offsetHeight, 0);
+      const innerH = pane.clientHeight - below - MEGA_TOP_PAD;
+      const rowH = row.offsetHeight || 40;
+      setMaxRows(Math.max(4, Math.floor((innerH - head.offsetHeight - 14) / rowH)));
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [isVisible, shownKey, shownData]);
 
   // Esc để đóng
   useEffect(() => {
@@ -239,23 +288,32 @@ const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, o
               </button>
             </aside>
             <div className="mega-cols">
-              {cols.map((column, index) => (
-                <section key={index} className="mega-col mega-reveal" style={{ ["--i" as string]: index }}>
-                  <a href={column.path} onClick={(e) => handleLinkClick(e, column.path)} className="mega-col-head">
-                    <h3>{column.title}</h3>
-                  </a>
-                  <ul>
-                    {column.links.map((link, i) => (
-                      <li key={i}>
-                        <a href={link.href} onClick={(e) => handleLinkClick(e, link.href)}>
-                          <span>{link.text}</span>
-                          <ArrowRight className="mega-link-arrow" size={14} aria-hidden />
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ))}
+              {cols.map((column, index) => {
+                const limit = maxRows ?? Infinity;
+                const more = column.links.length > limit;
+                const visibleLinks = more ? column.links.slice(0, Math.max(1, limit - 1)) : column.links;
+                const hiddenLinks = more ? column.links.slice(visibleLinks.length) : [];
+                return (
+                  <section key={index} className="mega-col mega-reveal" style={{ ["--i" as string]: index }}>
+                    <a href={column.path} onClick={(e) => handleLinkClick(e, column.path)} className="mega-col-head">
+                      <h3>{column.title}</h3>
+                    </a>
+                    <ul>
+                      {visibleLinks.map((link, i) => (
+                        <li key={i}>
+                          <a href={link.href} onClick={(e) => handleLinkClick(e, link.href)}>
+                            <span>{link.text}</span>
+                            <ArrowRight className="mega-link-arrow" size={14} aria-hidden />
+                          </a>
+                        </li>
+                      ))}
+                      {more && (
+                        <MegaMore links={hiddenLinks} title={column.title} openLeft={index === cols.length - 1} onNavigate={go} />
+                      )}
+                    </ul>
+                  </section>
+                );
+              })}
             </div>
             </div>
           </div>
