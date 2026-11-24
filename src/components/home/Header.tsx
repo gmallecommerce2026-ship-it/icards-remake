@@ -53,8 +53,8 @@ const UserMenu = ({ name, email, initial, onLogout }: { name: string; email: str
 
   return (
     <div className="user-menu" ref={menuRef}>
-      <button className="avatar-button" onClick={() => setIsOpen(!isOpen)}>
-        <img src={`https://placehold.co/40x40/CDD7E5/333?text=${encodeURIComponent(initial)}`} alt="User Avatar" />
+      <button className="avatar-button" onClick={() => setIsOpen(!isOpen)} aria-haspopup="menu" aria-expanded={isOpen} aria-label={`Tài khoản ${name}`}>
+        {initial}
       </button>
       {isOpen && (
         <div className="dropdown-menu">
@@ -646,14 +646,18 @@ const MainHeader = ({
             </div>
             <div className="header-section right">
               <form className="search-bar-wrapper" onSubmit={handleSearchSubmit}>
-                <Search className="search-icon" />
+                <Search className="search-icon" aria-hidden />
                 <input
                   type="text"
                   className="search-input"
-                  placeholder="Tìm kiếm sản phẩm, mẫu thiệp..."
+                  placeholder="Tìm sản phẩm, mẫu thiệp"
+                  aria-label="Tìm sản phẩm, mẫu thiệp"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
+                <button type="submit" className="search-submit" aria-label="Tìm kiếm">
+                  <ArrowRight size={16} aria-hidden />
+                </button>
               </form>
               {isAuthenticated && user ? (
                 <UserMenu name={user.name} email={user.email} initial={(user.name || "A").charAt(0).toUpperCase()} onLogout={logout} />

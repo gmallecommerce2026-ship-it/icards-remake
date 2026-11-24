@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { ArrowRight } from "lucide-react";
 import ShopClient from "./ShopClient";
 import ServiceCover from "@/components/services/ServiceCover";
 import { getBannerGroups, getPageCopy, getProducts, getServices, getShopCategories } from "@/lib/catalog";
@@ -17,86 +18,102 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const [products, categories, services, copy, bannerGroups] = await Promise.all([getProducts(), getShopCategories(), getServices(), getPageCopy(), getBannerGroups()]);
+  const [products, categories, services, copy, bannerGroups] = await Promise.all([
+    getProducts(),
+    getShopCategories(),
+    getServices(),
+    getPageCopy(),
+    getBannerGroups(),
+  ]);
   // Banner đầu trang do admin quản lý (trang "shop")
   const heroGroups = groupsFor(bannerGroups, "shop", "top");
+
   return (
     <SideAdsShell>
-    <>
-      <BannerGroupList groups={heroGroups} heroFirst />
+      <>
+        <BannerGroupList groups={heroGroups} heroFirst />
 
-      <header className="mx-auto w-full max-w-[1520px] px-5 pb-8 pt-12 lg:pt-16">
-        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[#27548A]">Cửa hàng</p>
-        <div className="mt-3 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-4xl font-semibold tracking-tight text-[#0E1B2C] lg:text-5xl">Cửa hàng & Dịch vụ</h1>
-            <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#5B6B7F]">
+        <header className="border-b border-line bg-paper">
+          <div className="mx-auto max-w-[1520px] px-5 pb-16 pt-16 text-center lg:pt-20">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lacquer">Cửa hàng iCards</p>
+            <h1 className="mt-4 font-display text-5xl font-medium leading-tight sm:text-6xl">Cửa hàng & Dịch vụ</h1>
+            <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-muted">
               Thiệp in, phong bì, hộp quà, standee QR và các dịch vụ hỗ trợ sự kiện, đồng bộ với thiệp mời online.
             </p>
+            <nav aria-label="Chuyển nhanh" className="mt-9 flex justify-center gap-10 text-sm">
+              <a href="#san-pham" className="border-b border-ink pb-1 font-medium transition-colors hover:border-lacquer hover:text-lacquer">
+                Sản phẩm
+              </a>
+              <a href="#dich-vu" className="border-b border-ink pb-1 font-medium transition-colors hover:border-lacquer hover:text-lacquer">
+                Dịch vụ
+              </a>
+            </nav>
           </div>
-          <nav aria-label="Chuyển nhanh" className="flex shrink-0 gap-2">
-            <a href="#san-pham" className="rounded-full border border-[#DDE4EE] bg-white px-4 py-2 text-sm font-medium transition hover:border-[#27548A] hover:text-[#27548A]">
-              Sản phẩm
-            </a>
-            <a href="#dich-vu" className="rounded-full border border-[#DDE4EE] bg-white px-4 py-2 text-sm font-medium transition hover:border-[#27548A] hover:text-[#27548A]">
-              Dịch vụ
-            </a>
-          </nav>
-        </div>
-      </header>
+        </header>
 
-      <Suspense fallback={null}>
-        <ShopClient products={products} categories={categories} />
-      </Suspense>
+        <Suspense fallback={null}>
+          <ShopClient products={products} categories={categories} />
+        </Suspense>
 
-      {copy.shop.adTitle && (
-        <div className="mx-auto w-full max-w-[1520px] px-5 pt-20 lg:pt-24">
-          <AdBanner title={copy.shop.adTitle} text={copy.shop.adText} cta={copy.shop.adCta} href="/shop" />
-        </div>
-      )}
-
-      {/* Dịch vụ: thẻ có ảnh, giá và thời lượng */}
-      {services.length > 0 && (
-        <section id="dich-vu" className="mx-auto w-full max-w-[1520px] scroll-mt-24 px-5 pb-24 pt-20 lg:pt-24">
-          <div className="mb-10">
-            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[#27548A]">Dịch vụ</p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-[#0E1B2C] lg:text-4xl">
-              {copy.shop.servicesHeading || "Dịch vụ hỗ trợ sự kiện"}
-            </h2>
-            <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#5B6B7F]">
-              Trọn gói từ thiết kế đến in ấn và tổ chức, để ngày vui của bạn gọn gàng hơn.
-            </p>
+        {copy.shop.adTitle && (
+          <div className="mx-auto w-full max-w-[1520px] px-5 pb-24">
+            <AdBanner title={copy.shop.adTitle} text={copy.shop.adText} cta={copy.shop.adCta} href="/shop" />
           </div>
-          <div className="grid w-full grid-cols-3 gap-6 max-[1000px]:grid-cols-2 max-[640px]:grid-cols-1">
-            {services.map((s) => (
-              <Link
-                key={s.slug}
-                href={`/services/${s.slug}`}
-                className="group flex flex-col overflow-hidden rounded-2xl border border-[#E3E9F2] bg-white transition duration-300 hover:-translate-y-1 hover:shadow-[0_22px_40px_-26px_rgba(14,27,44,0.45)]"
-              >
-                <div className="relative aspect-[16/10] w-full overflow-hidden">
-                  <ServiceCover
-                    service={s}
-                    className="h-full w-full rounded-none transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-                <div className="flex flex-1 flex-col gap-3 p-6">
-                  <h3 className="text-lg font-semibold leading-snug text-[#0E1B2C] transition-colors group-hover:text-[#27548A]">{s.name}</h3>
-                  <p className="line-clamp-2 text-sm leading-relaxed text-[#5B6B7F]">{s.summary}</p>
-                  <div className="mt-auto flex items-center justify-between gap-3 border-t border-[#EEF2F7] pt-4">
-                    <div>
-                      <p className="text-xs text-[#8A97A8]">Giá từ</p>
-                      <p className="font-bold text-[#27548A]">{formatPrice(s.priceFrom)}</p>
-                    </div>
-                    <span className="rounded-full bg-[#EEF2F7] px-3 py-1 text-xs font-medium text-[#27548A]">{s.duration}</span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-    </>
+        )}
+
+        {/* Dịch vụ: danh sách dạng hàng kẻ, ảnh vuông bên trái, giá và thời lượng bên phải */}
+        {services.length > 0 && (
+          <section id="dich-vu" className="scroll-mt-28 border-t border-line bg-paper">
+            <div className="mx-auto grid max-w-[1520px] gap-14 px-5 py-24 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-20">
+              <div className="lg:sticky lg:top-28 lg:self-start">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lacquer">Dịch vụ</p>
+                <h2 className="mt-4 font-display text-4xl font-medium leading-tight sm:text-5xl">
+                  {copy.shop.servicesHeading || "Dịch vụ hỗ trợ sự kiện"}
+                </h2>
+                <p className="mt-5 leading-relaxed text-muted">
+                  Trọn gói từ thiết kế đến in ấn và tổ chức, để ngày vui của bạn gọn gàng hơn.
+                </p>
+              </div>
+
+              <ul className="border-t border-ink">
+                {services.map((s, i) => (
+                  <li key={s.slug} className="border-b border-line">
+                    <Link
+                      href={`/services/${s.slug}`}
+                      className="group grid grid-cols-[104px_minmax(0,1fr)_auto] items-center gap-6 py-7 sm:grid-cols-[150px_minmax(0,1fr)_auto] sm:gap-8"
+                    >
+                      <div className="relative aspect-square overflow-hidden bg-white">
+                        <ServiceCover
+                          service={s}
+                          className="h-full w-full rounded-none transition-transform duration-700 group-hover:scale-105"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs tabular-nums text-muted">0{i + 1}</p>
+                        <h3 className="mt-1 font-display text-2xl font-medium leading-snug transition-colors group-hover:text-lacquer">
+                          {s.name}
+                        </h3>
+                        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted">{s.summary}</p>
+                        <p className="mt-3 text-sm">
+                          <span className="text-muted">Từ </span>
+                          <span className="font-semibold text-ink">{formatPrice(s.priceFrom)}</span>
+                          <span className="mx-2 text-line">|</span>
+                          <span className="text-muted">{s.duration}</span>
+                        </p>
+                      </div>
+                      <ArrowRight
+                        size={20}
+                        aria-hidden
+                        className="text-ink transition-transform duration-300 group-hover:translate-x-1 group-hover:text-lacquer"
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
+      </>
     </SideAdsShell>
   );
 }

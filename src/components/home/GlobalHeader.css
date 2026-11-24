@@ -132,36 +132,81 @@ button {
 }
 
 /* ----- SEARCH & AUTH ----- */
+/* Ô tìm kiếm: khung vuông, viền mảnh, nút tìm vuông gắn bên phải (cùng chiều cao với avatar) */
 .search-bar-wrapper {
     position: relative;
-    width: 280px;
+    width: 320px;
 }
 
 .search-icon {
     position: absolute;
-    left: 16px;
+    left: 14px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--color-text-light);
-    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #8A97A8;
+    pointer-events: none;
+    transition: color 0.2s ease;
 }
 
 .search-input {
+    display: block;
     width: 100%;
-    height: 40px;
-    padding: 10px 16px 10px 45px;
-    border: 1px solid #ccc;
-    border-radius: 20px;
-    font-size: 15px;
+    height: 42px;
+    padding: 0 56px 0 42px;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    font-size: 14px;
+    letter-spacing: 0.01em;
     color: var(--color-text-dark);
-    background-color: #f5f5f5;
-    transition: all 0.3s ease;
+    background-color: #ffffff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-input::placeholder {
+    color: #8A97A8;
+    opacity: 1;
+}
+
+.search-input:hover {
+    border-color: #B9C3D1;
 }
 
 .search-input:focus {
     outline: none;
-    border-color: var(--color-accent);
-    background-color: var(--color-background);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(39, 84, 138, 0.12);
+}
+
+.search-bar-wrapper:focus-within .search-icon {
+    color: var(--color-primary);
+}
+
+.search-submit {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    bottom: 4px;
+    width: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 2px;
+    background-color: var(--color-primary);
+    color: #ffffff;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.search-submit:hover {
+    background-color: #1F426B;
+}
+
+.search-submit:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
 }
 
 .auth-actions {
@@ -1029,18 +1074,34 @@ button {
     position: relative;
 }
 
+/* Avatar: ô vuông màu thương hiệu, chữ cái đầu của tên, cùng chiều cao với ô tìm kiếm */
 .avatar-button {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 2px solid var(--color-border);
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 2px;
+    background-color: var(--color-primary);
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.avatar-button img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+.avatar-button:hover,
+.avatar-button[aria-expanded="true"] {
+    background-color: #1F426B;
+    box-shadow: 0 0 0 3px rgba(39, 84, 138, 0.16);
+}
+
+.avatar-button:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
 }
 
 .dropdown-menu {
@@ -1048,10 +1109,9 @@ button {
     top: calc(100% + 15px);
     right: 0;
     background-color: var(--color-background-light);
-    /* ++ THAY ĐỔI: Chuyển sang màu nền xám nhạt ++ */
-    border-radius: 8px;
-    box-shadow: var(--shadow-medium);
-    width: 260px;
+    border-radius: 2px;
+    box-shadow: 0 16px 32px -14px rgba(14, 27, 44, 0.22);
+    width: 240px;
     z-index: 1001;
     border: 1px solid var(--color-border);
     overflow: hidden;
