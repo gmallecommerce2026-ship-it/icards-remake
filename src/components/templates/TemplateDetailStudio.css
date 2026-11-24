@@ -482,14 +482,14 @@ p.fs-muted { margin: 0 0 14px; line-height: 1.5; }
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: 50px;
-    border: none;
-    border-radius: 999px;
+    height: 48px;
+    border: 1px solid var(--idp-primary);
+    border-radius: var(--r-sm, 2px);
     background: var(--idp-primary);
     color: #fff;
     font: inherit;
-    font-size: 17px;
-    font-weight: 500;
+    font-size: 16px;
+    font-weight: 600;
     text-decoration: none;
     cursor: pointer;
     transition: background-color .2s;
@@ -504,13 +504,14 @@ p.fs-muted { margin: 0 0 14px; line-height: 1.5; }
     gap: 8px;
     width: 100%;
     margin-top: 10px;
-    height: 46px;
-    border: 1px solid #D4D4DA;
-    border-radius: 999px;
+    height: 48px;
+    border: 1px solid #C9CDD6;
+    border-radius: var(--r-sm, 2px);
     background: #fff;
     color: var(--idp-ink);
     font: inherit;
-    font-size: 15px;
+    font-size: 16px;
+    font-weight: 600;
     text-decoration: none;
     cursor: pointer;
 }
