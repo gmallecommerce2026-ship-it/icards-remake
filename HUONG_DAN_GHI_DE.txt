@@ -1,8 +1,5 @@
-Giải nén zip này vào thư mục gốc dự án icards-remake-main, chọn ghi đè.
+Giải nén vào thư mục gốc dự án icards-remake-main, chọn ghi đè.
 File:
-- src/app/(site)/templates/[slug]/page.tsx
-- src/components/templates/TemplateDetailStudio.tsx
-- src/components/templates/TemplateDetailStudio.css
-- src/components/templates/TemplateShowcaseStage.tsx
-- src/components/templates/TemplatePreviewScreen.tsx
-Không cần cài thêm thư viện.
+- src/components/home/Header.tsx
+- src/components/home/GlobalHeader.css
+Không cần cài thêm thư viện. Khối "Cửa hàng" lấy sản phẩm từ API /products (limit 2).

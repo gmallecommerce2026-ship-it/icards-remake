@@ -5,7 +5,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, X, ChevronRight, Search } from "lucide-react";
-import { settingsApi, templatesApi } from "@/lib/api";
+import { productsApi, settingsApi, templatesApi } from "@/lib/api";
+import { ProductThumb } from "@/components/shop/ProductThumb";
+import { priceFrom, type Product } from "@/lib/shop";
+import { formatPrice } from "@/lib/templates";
 import { FALLBACK_ROOTS, flattenTemplates, rootOf, type TreeNode } from "@/lib/templates-tree";
 import { useAuth } from "@/providers/AuthProvider";
 import "./GlobalHeader.css";
@@ -64,34 +67,93 @@ const UserMenu = ({ name, email, initial, onLogout }: { name: string; email: str
   );
 };
 
+/* Khối "Cửa hàng" dưới menu: lấy vài sản phẩm thật từ API. Chỉ tải một lần khi mở menu cửa hàng lần đầu. */
+let promoCache: Promise<Product[]> | null = null;
+function loadPromoProducts(): Promise<Product[]> {
+  promoCache ??= productsApi
+    .getProducts({ limit: 2 })
+    .then((res) => {
+      const d = res.data?.data ?? res.data;
+      return Array.isArray(d) ? (d as Product[]).slice(0, 2) : [];
+    })
+    .catch(() => []);
+  return promoCache;
+}
+
+const MegaPromo = ({ items, onNavigate }: { items: Product[]; onNavigate: (path: string) => void }) => (
+  <div className="mega-promo">
+    <div className="mega-promo-text">
+      <p className="mega-promo-eyebrow">Cửa hàng iCards</p>
+      <h4 className="mega-promo-title">Cửa hàng &amp; dịch vụ</h4>
+      <p className="mega-promo-desc">Phụ kiện trang trí, quà tặng và dịch vụ tổ chức trọn gói cho ngày vui của bạn.</p>
+      <button type="button" className="mega-promo-cta" onClick={() => onNavigate(SHOP)}>
+        Xem cửa hàng <span aria-hidden>→</span>
+      </button>
+    </div>
+    <div className="mega-promo-items">
+      {items.map((p) => (
+        <a
+          key={p.slug}
+          href={`${SHOP}/${p.slug}`}
+          className="mega-promo-card"
+          onClick={(e) => { e.preventDefault(); onNavigate(`${SHOP}/${p.slug}`); }}
+        >
+          <ProductThumb product={p} className="mega-promo-thumb" />
+          <span className="mega-promo-info">
+            <b>{p.name}</b>
+            <span className="mega-promo-price">Từ {formatPrice(priceFrom(p))}</span>
+            <span className="mega-promo-more">Xem sản phẩm <span aria-hidden>→</span></span>
+          </span>
+        </a>
+      ))}
+    </div>
+  </div>
+);
+
 const MegaMenuPane = ({ activeMenuData, onMouseEnter, onMouseLeave }: { activeMenuData: MenuNode | null; onMouseEnter: () => void; onMouseLeave: () => void }) => {
   const router = useRouter();
   const isVisible = !!activeMenuData && activeMenuData.columns?.length > 0;
+  const showPromo = isVisible && !!activeMenuData?.path?.startsWith(SHOP);
+  const [promoItems, setPromoItems] = useState<Product[]>([]);
+
+  useEffect(() => {
+    if (!showPromo) return;
+    let alive = true;
+    loadPromoProducts().then((items) => { if (alive) setPromoItems(items); });
+    return () => { alive = false; };
+  }, [showPromo]);
+
   const handleLinkClick = (e: React.MouseEvent, path: string) => {
     e.preventDefault();
     router.push(path);
     onMouseLeave();
   };
+  const go = (path: string) => { router.push(path); onMouseLeave(); };
+
+  const cols = activeMenuData?.columns ?? [];
   return (
     <div className={`mega-menu-pane ${isVisible ? "visible" : ""}`} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       <div className="container">
         {isVisible && (
-          <div className="mega-menu-content">
-            {activeMenuData!.columns.map((column, index) => (
-              <div key={index} className="mega-menu-column">
-                <a href={column.path} onClick={(e) => handleLinkClick(e, column.path)} className="mega-menu-title-link">
-                  <h3 className="mega-menu-title">{column.title}</h3>
-                </a>
-                <ul className="mega-menu-links">
-                  {column.links.map((link, i) => (
-                    <li key={i}>
-                      <a href={link.href} onClick={(e) => handleLinkClick(e, link.href)}>{link.text}</a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+          <>
+            <div className="mega-cols" style={{ gridTemplateColumns: `repeat(${Math.min(cols.length, 5)}, minmax(0, 1fr))` }}>
+              {cols.map((column, index) => (
+                <section key={index} className="mega-col">
+                  <a href={column.path} onClick={(e) => handleLinkClick(e, column.path)} className="mega-col-head">
+                    <h3>{column.title}</h3>
+                  </a>
+                  <ul>
+                    {column.links.map((link, i) => (
+                      <li key={i}>
+                        <a href={link.href} onClick={(e) => handleLinkClick(e, link.href)}>{link.text}</a>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+            {showPromo && promoItems.length > 0 && <MegaPromo items={promoItems} onNavigate={go} />}
+          </>
         )}
       </div>
     </div>
@@ -508,6 +570,7 @@ export function Header({ className }: { className?: string }) {
         companyName={settings?.theme?.companyName || "iCards.com.vn"}
         logoUrl={settings?.theme?.logoUrl}
       />
+      {activeMenu && <div className="mega-backdrop" aria-hidden="true" onMouseEnter={() => setActiveMenu(null)} />}
       <MobileNav isOpen={isMenuOpen} onMenuToggle={() => setIsMenuOpen(false)} menuData={menuData} mainNavItems={mainNavItems} />
     </header>
   );
