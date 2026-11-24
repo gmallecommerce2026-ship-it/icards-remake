@@ -4,10 +4,10 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, X, ChevronRight, Search } from "lucide-react";
+import { Menu, X, ChevronRight, Search, ArrowRight } from "lucide-react";
 import { productsApi, settingsApi, templatesApi } from "@/lib/api";
 import { ProductThumb } from "@/components/shop/ProductThumb";
-import { priceFrom, type Product } from "@/lib/shop";
+import { discountPercent, priceFrom, type Product } from "@/lib/shop";
 import { formatPrice } from "@/lib/templates";
 import { FALLBACK_ROOTS, flattenTemplates, rootOf, type TreeNode } from "@/lib/templates-tree";
 import { useAuth } from "@/providers/AuthProvider";
@@ -81,38 +81,59 @@ function loadPromoProducts(): Promise<Product[]> {
 }
 
 const MegaPromo = ({ items, onNavigate }: { items: Product[]; onNavigate: (path: string) => void }) => (
-  <div className="mega-promo">
+  <div className="mega-promo mega-reveal" style={{ ["--i" as string]: 6 }}>
     <div className="mega-promo-text">
       <p className="mega-promo-eyebrow">Cửa hàng iCards</p>
       <h4 className="mega-promo-title">Cửa hàng &amp; dịch vụ</h4>
       <p className="mega-promo-desc">Phụ kiện trang trí, quà tặng và dịch vụ tổ chức trọn gói cho ngày vui của bạn.</p>
       <button type="button" className="mega-promo-cta" onClick={() => onNavigate(SHOP)}>
-        Xem cửa hàng <span aria-hidden>→</span>
+        Xem cửa hàng <ArrowRight size={16} aria-hidden />
       </button>
     </div>
     <div className="mega-promo-items">
-      {items.map((p) => (
-        <a
-          key={p.slug}
-          href={`${SHOP}/${p.slug}`}
-          className="mega-promo-card"
-          onClick={(e) => { e.preventDefault(); onNavigate(`${SHOP}/${p.slug}`); }}
-        >
-          <ProductThumb product={p} className="mega-promo-thumb" />
-          <span className="mega-promo-info">
-            <b>{p.name}</b>
-            <span className="mega-promo-price">Từ {formatPrice(priceFrom(p))}</span>
-            <span className="mega-promo-more">Xem sản phẩm <span aria-hidden>→</span></span>
-          </span>
-        </a>
-      ))}
+      {items.map((p) => {
+        const from = priceFrom(p);
+        const off = discountPercent(p);
+        return (
+          <a
+            key={p.slug}
+            href={`${SHOP}/${p.slug}`}
+            className="mega-promo-card"
+            onClick={(e) => { e.preventDefault(); onNavigate(`${SHOP}/${p.slug}`); }}
+          >
+            {p.image ? (
+              <img src={p.image} alt="" className="mega-promo-thumb mega-promo-img" loading="lazy" />
+            ) : (
+              <ProductThumb product={p} className="mega-promo-thumb" />
+            )}
+            <span className="mega-promo-info">
+              <b>{p.name}</b>
+              <span className="mega-promo-priceRow">
+                {off > 0 && <del className="mega-promo-old">{formatPrice(p.compareAtPrice!)}</del>}
+                <span className="mega-promo-price">{off > 0 ? "" : "Từ "}{formatPrice(from)}</span>
+                {off > 0 && <span className="mega-promo-badge">-{off}%</span>}
+              </span>
+              <span className="mega-promo-more">Xem sản phẩm <ArrowRight size={14} aria-hidden /></span>
+            </span>
+          </a>
+        );
+      })}
     </div>
   </div>
 );
 
-const MegaMenuPane = ({ activeMenuData, onMouseEnter, onMouseLeave }: { activeMenuData: MenuNode | null; onMouseEnter: () => void; onMouseLeave: () => void }) => {
+const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, onClose }: {
+  activeKey: string | null; activeMenuData: MenuNode | null; onMouseEnter: () => void; onMouseLeave: () => void; onClose: () => void;
+}) => {
   const router = useRouter();
   const isVisible = !!activeMenuData && activeMenuData.columns?.length > 0;
+  // Giữ nội dung lần mở gần nhất để animation đóng không bị trống
+  const [last, setLast] = useState<{ key: string; data: MenuNode } | null>(null);
+  if (isVisible && activeKey && (last?.key !== activeKey || last.data !== activeMenuData)) {
+    setLast({ key: activeKey, data: activeMenuData! });
+  }
+  const shown = isVisible ? { key: activeKey!, data: activeMenuData! } : last;
+
   const showPromo = isVisible && !!activeMenuData?.path?.startsWith(SHOP);
   const [promoItems, setPromoItems] = useState<Product[]>([]);
 
@@ -123,29 +144,42 @@ const MegaMenuPane = ({ activeMenuData, onMouseEnter, onMouseLeave }: { activeMe
     return () => { alive = false; };
   }, [showPromo]);
 
-  const handleLinkClick = (e: React.MouseEvent, path: string) => {
-    e.preventDefault();
-    router.push(path);
-    onMouseLeave();
-  };
-  const go = (path: string) => { router.push(path); onMouseLeave(); };
+  // Esc để đóng
+  useEffect(() => {
+    if (!isVisible) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isVisible, onClose]);
 
-  const cols = activeMenuData?.columns ?? [];
+  const go = (path: string) => { router.push(path); onClose(); };
+  const handleLinkClick = (e: React.MouseEvent, path: string) => { e.preventDefault(); go(path); };
+
+  const cols = shown?.data.columns ?? [];
   return (
-    <div className={`mega-menu-pane ${isVisible ? "visible" : ""}`} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+    <div
+      className={`mega-menu-pane ${isVisible ? "visible" : ""}`}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      aria-hidden={!isVisible}
+      inert={!isVisible}
+    >
       <div className="container">
-        {isVisible && (
-          <>
-            <div className="mega-cols" style={{ gridTemplateColumns: `repeat(${Math.min(cols.length, 5)}, minmax(0, 1fr))` }}>
+        {shown && (
+          <div key={shown.key} className="mega-inner">
+            <div className="mega-cols" style={{ ["--cols" as string]: Math.min(cols.length, 5) }}>
               {cols.map((column, index) => (
-                <section key={index} className="mega-col">
+                <section key={index} className="mega-col mega-reveal" style={{ ["--i" as string]: index }}>
                   <a href={column.path} onClick={(e) => handleLinkClick(e, column.path)} className="mega-col-head">
                     <h3>{column.title}</h3>
                   </a>
                   <ul>
                     {column.links.map((link, i) => (
                       <li key={i}>
-                        <a href={link.href} onClick={(e) => handleLinkClick(e, link.href)}>{link.text}</a>
+                        <a href={link.href} onClick={(e) => handleLinkClick(e, link.href)}>
+                          <span>{link.text}</span>
+                          <ArrowRight className="mega-link-arrow" size={14} aria-hidden />
+                        </a>
                       </li>
                     ))}
                   </ul>
@@ -153,7 +187,7 @@ const MegaMenuPane = ({ activeMenuData, onMouseEnter, onMouseLeave }: { activeMe
               ))}
             </div>
             {showPromo && promoItems.length > 0 && <MegaPromo items={promoItems} onNavigate={go} />}
-          </>
+          </div>
         )}
       </div>
     </div>
@@ -305,6 +339,9 @@ function DesktopNav({ items, menuData, activeMenu, onEnter, onLeave, onClear, on
             onClick={() => onNavigate(menuData[key]?.path || item.path || "#")}
             onMouseEnter={() => onEnter(key)}
             onMouseLeave={onLeave}
+            onFocus={() => onEnter(key)}
+            aria-haspopup={menuData[key]?.columns?.length ? "true" : undefined}
+            aria-expanded={activeMenu === key}
             className={btnClass(key)}
           >
             {item.title}
@@ -352,6 +389,9 @@ function DesktopNav({ items, menuData, activeMenu, onEnter, onLeave, onClear, on
             onClick={() => onNavigate(menuData[key]?.path || item.path || "#")}
             onMouseEnter={() => onEnter(key)}
             onMouseLeave={onLeave}
+            onFocus={() => onEnter(key)}
+            aria-haspopup={menuData[key]?.columns?.length ? "true" : undefined}
+            aria-expanded={activeMenu === key}
             className={btnClass(key)}
           >
             {item.title}
@@ -378,6 +418,7 @@ const MainHeader = ({
   const menuTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleNavigate = (path: string) => {
+    if (menuTimeoutRef.current) clearTimeout(menuTimeoutRef.current);
     router.push(path);
     setActiveMenu(null);
   };
@@ -390,12 +431,19 @@ const MainHeader = ({
     }
   };
 
+  /* Hover-intent: mở lần đầu trễ ~90ms để lướt chuột qua không bật menu; đang mở thì đổi mục ngay. */
   const handleMouseEnter = (title: string) => {
     if (menuTimeoutRef.current) clearTimeout(menuTimeoutRef.current);
-    setActiveMenu(title);
+    if (activeMenu) setActiveMenu(title);
+    else menuTimeoutRef.current = setTimeout(() => setActiveMenu(title), 90);
   };
   const handleMouseLeave = () => {
-    menuTimeoutRef.current = setTimeout(() => setActiveMenu(null), 200);
+    if (menuTimeoutRef.current) clearTimeout(menuTimeoutRef.current);
+    menuTimeoutRef.current = setTimeout(() => setActiveMenu(null), 160);
+  };
+  const closeMenu = () => {
+    if (menuTimeoutRef.current) clearTimeout(menuTimeoutRef.current);
+    setActiveMenu(null);
   };
 
   return (
@@ -454,9 +502,11 @@ const MainHeader = ({
           />
         </div>
         <MegaMenuPane
+          activeKey={activeMenu}
           activeMenuData={activeMenu ? menuData[activeMenu] ?? null : null}
           onMouseEnter={() => menuTimeoutRef.current && clearTimeout(menuTimeoutRef.current)}
           onMouseLeave={handleMouseLeave}
+          onClose={closeMenu}
         />
       </div>
     </div>

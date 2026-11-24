@@ -21,6 +21,9 @@ export type Product = {
   leadTime: string;
   highlights: string[];
   specs: { label: string; value: string }[];
+  /* Tuỳ chọn: ảnh thật và giá gốc (nếu API trả về) để hiển thị ở menu/thẻ sản phẩm */
+  image?: string;
+  compareAtPrice?: number;
 };
 
 export function getProductsByCategory(list: Product[], category?: ShopCategoryId): Product[] {
@@ -37,6 +40,13 @@ export function getVariant(product: Product, variantId: string): Variant | undef
 
 export function priceFrom(product: Product): number {
   return Math.min(...product.variants.map((v) => v.price));
+}
+
+/* % giảm so với giá gốc; 0 nếu không có giá gốc hợp lệ */
+export function discountPercent(product: Product): number {
+  const from = priceFrom(product);
+  const base = product.compareAtPrice ?? 0;
+  return base > from ? Math.round((1 - from / base) * 100) : 0;
 }
 
 export function getRelatedProducts(list: Product[], slug: string, limit = 3): Product[] {
