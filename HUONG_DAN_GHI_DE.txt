@@ -1,0 +1,10 @@
+Cách áp dụng:
+Giải nén zip này vào thư mục gốc dự án (icards-remake-main), chọn ghi đè.
+Các file (đường dẫn tương đối so với gốc dự án):
+- src/app/(site)/templates/[slug]/page.tsx                 (sửa: phần gợi ý dùng TemplateRecommendations)
+- src/components/templates/TemplateDetailStudio.tsx         (viết lại: bố cục 3 cột, modal xem trước, gợi ý)
+- src/components/templates/TemplateDetailStudio.css         (mới: CSS trang chi tiết)
+- src/components/templates/TemplateShowcaseStage.tsx        (mới: thanh biểu tượng + khung trình diễn)
+- src/components/templates/TemplatePreviewScreen.tsx        (sửa 1 dòng: ép kiểu design, để dùng được trong modal)
+Không cần cài thêm thư viện. Sau khi ghi đè: npm run dev rồi mở /templates/<slug>.
+Lưu ý: TemplateCarousel.tsx không còn được dùng ở trang chi tiết; có thể giữ hoặc xoá.

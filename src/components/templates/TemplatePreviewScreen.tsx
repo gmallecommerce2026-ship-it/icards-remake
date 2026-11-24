@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { PublicEnvelopeIntro, type IntroInfo } from "@/components/invitation/public/PublicEnvelopeIntro";
+import { PublicEnvelopeIntro, type IntroInfo, type PublicDesign } from "@/components/invitation/public/PublicEnvelopeIntro";
 import { EVENT_FONT_VARS, EventDetailsEditor } from "@/components/invitation-send/EventDetailsEditor";
 import type { InvitationTemplate } from "@/lib/templates";
 
@@ -54,7 +54,7 @@ export function TemplatePreviewScreen({ template, device }: { template: Invitati
         }`}
         style={{ scrollbarWidth: "thin" }}
       >
-        <PublicEnvelopeIntro info={info} design={template.design} scrollRoot={scrollRef} fitFrame />
+        <PublicEnvelopeIntro info={info} design={template.design as unknown as PublicDesign | undefined} scrollRoot={scrollRef} fitFrame />
         <div className={`${EVENT_FONT_VARS} min-h-full`} style={{ background: "var(--ev-bg)", color: "var(--ev-ink)" }}>
           <EventDetailsEditor readOnly initial={info} initialSettings={{ showRsvp: false, showGuests: false }} />
         </div>

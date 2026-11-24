@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { TemplateCard } from "@/components/templates/TemplateCard";
-import { TemplateDetailStudio } from "@/components/templates/TemplateDetailStudio";
+import { TemplateDetailStudio, TemplateRecommendations } from "@/components/templates/TemplateDetailStudio";
 import { getRelatedTemplates } from "@/lib/templates";
 import { getTemplate, getTemplateCategories, getTemplates } from "@/lib/catalog";
 import { Container } from "@/components/ui/Primitives";
@@ -62,21 +61,9 @@ export default async function TemplateDetailPage({ params }: Props) {
             </ol>
           </section>
 
-          {related.length > 0 && (
-            <section className="mt-20 border-t border-line pt-14" aria-labelledby="related-title">
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                <h2 id="related-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">Mẫu bạn có thể thích</h2>
-                <Link href="/templates" className="text-sm font-medium text-[#27548A] hover:underline hover:underline-offset-4">Xem tất cả mẫu →</Link>
-              </div>
-              <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4 lg:gap-x-6">
-                {related.map((t) => (
-                  <li key={t.slug}>
-                    <TemplateCard template={t} categoryName={categories.find((c) => c.id === t.category)?.label} />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+          <TemplateRecommendations
+            items={related.map((t) => ({ template: t, categoryName: categories.find((c) => c.id === t.category)?.label }))}
+          />
         </Container>
       </main>
     </SideAdsShell>
