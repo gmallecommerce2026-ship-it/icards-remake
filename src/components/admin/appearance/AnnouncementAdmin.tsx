@@ -174,10 +174,16 @@ export default function AnnouncementAdmin() {
         </label>
 
         <div className="grid gap-3 border-t border-[#EEF2F7] pt-5">
-          <Toggle checked={!!bar.isMarquee} onChange={(v) => set({ isMarquee: v })} hint="Chữ chạy liên tục từ phải sang trái, dừng lại khi rê chuột vào.">
+          <Toggle
+            checked={!!bar.isMarquee || ((bar.backgroundPreset ?? "train") !== "none" && !bar.backgroundImage)}
+            onChange={(v) => set({ isMarquee: v })}
+            hint={(bar.backgroundPreset ?? "train") !== "none" && !bar.backgroundImage
+              ? "Đang dùng nền tàu/xe tải: đoàn xe luôn chạy kèm banner chữ. Chọn “Chỉ màu nền” ở trên để chữ đứng yên."
+              : "Chữ chạy liên tục từ phải sang trái, dừng lại khi rê chuột vào."}
+          >
             Chữ chạy
           </Toggle>
-          {bar.isMarquee && (
+          {(bar.isMarquee || ((bar.backgroundPreset ?? "train") !== "none" && !bar.backgroundImage)) && (
             <label className="grid max-w-md gap-1.5 text-sm font-medium">
               <span className="flex justify-between">
                 Tốc độ <span className="tabular-nums text-[#5B6B7F]">{bar.speed ?? 60} px/giây</span>

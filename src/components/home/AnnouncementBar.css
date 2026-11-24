@@ -62,7 +62,8 @@
   to { background-position: calc(var(--ann-h) * -9) 0; }
 }
 
-.ann-bar--convoy .ann-overlay { background: rgba(0, 0, 0, 0.15); }
+/* Đoàn xe trên nền trắng: không phủ tối, nút đóng cùng màu xanh thương hiệu */
+.ann-bar--convoy .ann-close { color: #27548A; }
 
 .ann-convoy-view {
   position: absolute;
@@ -129,7 +130,7 @@
   flex: none;
   width: 6px;
   height: 1px;
-  background: rgba(232, 238, 246, 0.75);
+  background: #27548A;
 }
 
 /* Banner: chữ nằm trên đúng mảnh vải được kéo sau xe, đung đưa nhẹ */
@@ -146,9 +147,9 @@
   text-overflow: ellipsis;
   font-size: 12px;
   font-weight: 600;
-  color: inherit;
-  background: rgba(14, 27, 44, 0.6);
-  border: 1px solid rgba(232, 238, 246, 0.45);
+  color: #ffffff;
+  background: #27548A;
+  border: 0;
   transform-origin: left center;
   animation: ann-flap 1.2s ease-in-out infinite alternate;
 }
@@ -231,5 +232,4 @@
   .ann-bar--marquee .ann-inner { padding-left: 20px; }
   .ann-ground, .ann-convoy-view { display: none; }
   .ann-reduced-only { display: block; }
-  .ann-bar--convoy .ann-overlay { background: rgba(0, 0, 0, 0.3); }
 }

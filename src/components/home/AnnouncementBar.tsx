@@ -107,7 +107,7 @@ function Marquee({ text, link, speed }: { text: string; link?: string; speed: nu
 function Wheel({ cx, cy, dur }: { cx: number; cy: number; dur: string }) {
   return (
     <g className="ann-wheel" style={{ animationDuration: dur }}>
-      <circle cx={cx} cy={cy} r={WHEEL_R} fill="#0E1B2C" stroke="#E8EEF6" strokeWidth={1} />
+      <circle cx={cx} cy={cy} r={WHEEL_R} fill="#0E1B2C" stroke="#27548A" strokeWidth={1} />
       <path d={`M${cx} ${cy - WHEEL_R + 1}V${cy + WHEEL_R - 1}M${cx - WHEEL_R + 1} ${cy}H${cx + WHEEL_R - 1}`} stroke="#E8EEF6" strokeWidth={0.7} />
     </g>
   );
@@ -115,19 +115,20 @@ function Wheel({ cx, cy, dur }: { cx: number; cy: number; dur: string }) {
 
 /** Đầu máy hơi nước quay mặt sang trái, có khói bốc từ ống khói. */
 function Locomotive({ wheelDur }: { wheelDur: string }) {
-  const fill = "#E8EEF6";
+  const fill = "#27548A";
+  const puff = "#A9C2E2";
   return (
     <svg className="ann-vehicle" viewBox="0 0 84 34" width={84} height={34} aria-hidden focusable="false">
       <rect x={24} y={2} width={5} height={9} fill={fill} />
       <g className="ann-puffs">
-        <circle className="ann-puff" cx={26.5} cy={2} r={2.4} fill={fill} style={{ animationDelay: "0s" }} />
-        <circle className="ann-puff" cx={26.5} cy={2} r={2.4} fill={fill} style={{ animationDelay: "-0.55s" }} />
-        <circle className="ann-puff" cx={26.5} cy={2} r={2.4} fill={fill} style={{ animationDelay: "-1.1s" }} />
+        <circle className="ann-puff" cx={26.5} cy={2} r={2.4} fill={puff} style={{ animationDelay: "0s" }} />
+        <circle className="ann-puff" cx={26.5} cy={2} r={2.4} fill={puff} style={{ animationDelay: "-0.55s" }} />
+        <circle className="ann-puff" cx={26.5} cy={2} r={2.4} fill={puff} style={{ animationDelay: "-1.1s" }} />
       </g>
       <rect x={6} y={13} width={18} height={9} fill={fill} />
       <rect x={22} y={9} width={34} height={13} fill={fill} />
       <rect x={54} y={3} width={22} height={19} fill={fill} />
-      <rect x={60} y={7} width={10} height={7} fill="#0E1B2C" />
+      <rect x={60} y={7} width={10} height={7} fill="#E8EEF6" />
       <rect x={22} y={19} width={54} height={2} fill="#A9C2E2" />
       <Wheel cx={12} cy={26} dur={wheelDur} />
       <Wheel cx={28} cy={26} dur={wheelDur} />
@@ -139,15 +140,15 @@ function Locomotive({ wheelDur }: { wheelDur: string }) {
 
 /** Xe tải thùng quay mặt sang trái: cabin ở đầu, thùng phía sau. */
 function Truck({ wheelDur }: { wheelDur: string }) {
-  const fill = "#E8EEF6";
+  const fill = "#27548A";
   return (
     <svg className="ann-vehicle" viewBox="0 0 84 34" width={84} height={34} aria-hidden focusable="false">
       <rect x={4} y={11} width={20} height={11} fill={fill} />
       <rect x={6} y={6} width={14} height={7} fill={fill} />
-      <rect x={8} y={8} width={8} height={4} fill="#0E1B2C" />
+      <rect x={8} y={8} width={8} height={4} fill="#E8EEF6" />
       <rect x={26} y={3} width={54} height={21} fill={fill} />
       <rect x={26} y={19} width={54} height={2} fill="#A9C2E2" />
-      <rect x={2} y={22} width={6} height={2} fill="#FFD27A" />
+      <rect x={2} y={22} width={6} height={2} fill="#E8A33D" />
       <Wheel cx={12} cy={26} dur={wheelDur} />
       <Wheel cx={36} cy={26} dur={wheelDur} />
       <Wheel cx={68} cy={26} dur={wheelDur} />
@@ -223,11 +224,17 @@ export function AnnouncementBarView({ bar, onClose, children }: { bar: Announcem
   const preset: AnnouncementPreset = bar.backgroundPreset ?? "train";
 
   // Đoàn xe chạy khi bật chữ chạy + dùng nền động (không có ảnh tuỳ chỉnh)
-  const useConvoy = !!bar.isMarquee && !bar.backgroundImage && (preset === "train" || preset === "truck");
+  // Nền tàu/xe tải luôn chạy kèm banner (không phụ thuộc tuỳ chọn "Chữ chạy"); chọn "Chỉ màu nền" để tắt
+  const useConvoy = !bar.backgroundImage && (preset === "train" || preset === "truck");
   const presetSrc = !bar.backgroundImage && preset !== "none" ? ANNOUNCEMENT_PRESET_SRC[preset] : undefined;
   const staticImage = bar.backgroundImage || (!useConvoy ? presetSrc : undefined);
   const tiled = !bar.backgroundImage && !useConvoy && !!presetSrc;
   if (staticImage) style.backgroundImage = `url("${staticImage.replace(/"/g, "%22")}")`;
+  // Đoàn xe: nền trắng hoà vào website, chữ xanh thương hiệu (riêng banner giữ nền xanh, chữ trắng)
+  if (useConvoy) {
+    style.backgroundColor = "#FFFFFF";
+    style.color = "#27548A";
+  }
   const groundSrc = useConvoy ? ANNOUNCEMENT_PRESET_SRC[preset as "train" | "truck"] : "";
 
   return (
@@ -247,7 +254,7 @@ export function AnnouncementBarView({ bar, onClose, children }: { bar: Announcem
           }}
         />
       )}
-      {(staticImage || useConvoy) && <div className="ann-overlay" aria-hidden />}
+      {staticImage && !useConvoy && <div className="ann-overlay" aria-hidden />}
       <div className="ann-inner">
         {useConvoy ? (
           <>
