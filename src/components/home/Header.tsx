@@ -13,6 +13,7 @@ import { FALLBACK_ROOTS, flattenTemplates, rootOf, type TreeNode } from "@/lib/t
 import { useAuth } from "@/providers/AuthProvider";
 import "./GlobalHeader.css";
 import { AnnouncementBar } from "./AnnouncementBar";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 /* ---------- Kiểu & tiện ích ---------- */
 type Link = { text: string; href: string };
@@ -631,7 +632,7 @@ const MainHeader = ({
           <div className="header-top">
             <div className="header-section left">
               <div className="logo" onClick={() => handleNavigate("/")}>
-                {logoUrl ? <img src={logoUrl} alt={companyName} /> : companyName}
+                {logoUrl ? <img src={logoUrl} alt={companyName} /> : <BrandLogo name={companyName} />}
               </div>
               <span className="logo-divider" aria-hidden="true" />
               <button
@@ -663,9 +664,8 @@ const MainHeader = ({
                 <UserMenu name={user.name} email={user.email} initial={(user.name || "A").charAt(0).toUpperCase()} onLogout={logout} />
               ) : (
                 <div className="auth-actions">
-                  <button className="auth-btn" onClick={() => handleNavigate("/sign-in")}>Đăng nhập</button>
-                  <span className="separator"></span>
-                  <button className="auth-btn" onClick={() => handleNavigate("/sign-up")}>Đăng ký</button>
+                  <button type="button" className="auth-btn auth-btn-outline" onClick={() => handleNavigate("/sign-in")}>Đăng nhập</button>
+                  <button type="button" className="auth-btn auth-btn-solid" onClick={() => handleNavigate("/sign-up")}>Đăng ký</button>
                 </div>
               )}
             </div>

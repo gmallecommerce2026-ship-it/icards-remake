@@ -212,23 +212,52 @@ button {
 .auth-actions {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
+/* Nút đăng nhập/đăng ký: ô vuông, chữ hoa cỡ nhỏ, cùng chiều cao 42px với ô tìm kiếm và avatar */
 .auth-btn {
-    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 42px;
+    padding: 0 22px;
+    border-radius: 2px;
+    font-size: 13px;
     font-weight: 600;
-    color: var(--color-text-light);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.separator {
-    width: 1px;
-    height: 16px;
-    background-color: #ccc;
+.auth-btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
 }
 
-.auth-btn:hover {
+.auth-btn-outline {
+    background-color: #ffffff;
+    border: 1px solid var(--color-primary);
     color: var(--color-primary);
+}
+
+.auth-btn-outline:hover {
+    background-color: var(--color-primary);
+    color: #ffffff;
+}
+
+.auth-btn-solid {
+    background-color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    color: #ffffff;
+}
+
+.auth-btn-solid:hover {
+    background-color: #1F426B;
+    border-color: #1F426B;
+    box-shadow: 0 8px 18px -10px rgba(39, 84, 138, 0.7);
 }
 
 
