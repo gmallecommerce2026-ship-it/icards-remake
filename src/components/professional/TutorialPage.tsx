@@ -306,14 +306,6 @@ export default function TutorialPage() {
           </div>
         </Section>
 
-        {/* Trình sửa thiệp: bản demo */}
-        <Section id="trinh-sua-thiep" className="border-y border-line bg-white" label="Trình sửa thiệp">
-          <SectionHeader eyebrow="Thử ngay" title="Trình sửa thiệp" subtitle="Sửa phong bì, lật thiệp và thử các kiểu nắp, lót, viền ngay trên trang. Đây là bản demo, bạn có thể chỉnh tự do." />
-          <div className="mt-14">
-            <EditorDemo />
-          </div>
-        </Section>
-
         {/* Thông tin sự kiện */}
         <Section label="Thông tin sự kiện">
           <div className="grid grid-cols-[minmax(0,1fr)] items-center gap-14 lg:grid-cols-2 lg:gap-20">
