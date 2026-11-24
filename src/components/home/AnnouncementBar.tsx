@@ -13,11 +13,11 @@ export const ANNOUNCEMENT_PRESET_SRC: Record<Exclude<AnnouncementPreset, "none">
   truck: "/announcement/scene-truck.png",
 };
 
-/** Hai lớp nền chạy trên thanh: núi (chạy chậm, tạo chiều sâu) và đường ray (chạy nhanh, đúng tốc độ). */
+/** Hai lớp nền chạy NGƯỢC chiều xe (sang phải), chậm hơn xe: đường ray 60% tốc độ xe, núi xa 30%. */
 const LAYER_FAR = "/announcement/layer-far.png";
 const LAYER_RAILS = "/announcement/layer-rails.png";
-/** Núi chạy chậm bằng tỉ lệ này so với đường ray */
-const FAR_RATIO = 0.35;
+const RAILS_RATIO = 0.6;
+const FAR_RATIO = 0.3;
 
 export type AnnouncementBarData = {
   isEnabled?: boolean;
@@ -212,22 +212,61 @@ function Truck({ wheelDur }: { wheelDur: string }) {
   );
 }
 
-/** Đoàn xe đứng yên bên trái thanh, kéo banner chữ ra phía sau (bên phải). Nền chạy ngược lại phía sau xe. */
+/** Đoàn xe chạy vòng lặp liên tục từ mép phải sang mép trái. Banner nằm phía sau đầu máy (bên phải). */
 function Convoy({ text, link, speed, vehicle }: { text: string; link?: string; speed: number; vehicle: "train" | "truck" }) {
+  const viewport = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const [{ vw, len }, setSize] = useState({ vw: 0, len: 0 });
+
+  useLayoutEffect(() => {
+    const measure = () => setSize({ vw: viewport.current?.clientWidth ?? 0, len: measureRef.current?.offsetWidth ?? 0 });
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (viewport.current) ro.observe(viewport.current);
+    if (measureRef.current) ro.observe(measureRef.current);
+    return () => ro.disconnect();
+  }, [text, link, vehicle]);
+
   const v = Math.max(20, speed);
-  // Bánh xe lăn đúng tốc độ mặt đường: vòng quay = quãng đường / chu vi bánh
+  const ready = vw > 0 && len > 0;
+  // Thời gian để một đoàn đi hết từ mép phải tới khi khuất hẳn bên trái
+  const dur = (vw + len) / v;
+  // Bánh xe lăn đúng tốc độ xe: vòng quay = quãng đường / chu vi bánh
   const wheelDur = `${(2 * Math.PI * WHEEL_R) / v}s`;
+  const vars = {
+    ["--ann-from" as string]: `${vw}px`,
+    ["--ann-to" as string]: `${-len}px`,
+    ["--ann-dur" as string]: `${dur}s`,
+  } as CSSProperties;
+
+  const train = (withLink: boolean) => (
+    <span className="ann-train-set">
+      {vehicle === "train" ? <Locomotive wheelDur={wheelDur} /> : <Truck wheelDur={wheelDur} />}
+      <span className="ann-rope" aria-hidden />
+      <span className="ann-banner">
+        <Message text={text} link={withLink ? link : undefined} />
+      </span>
+    </span>
+  );
+
   return (
-    <div className="ann-convoy-view">
-      <div className="ann-convoy">
-        <span className="ann-train-set">
-          {vehicle === "train" ? <Locomotive wheelDur={wheelDur} /> : <Truck wheelDur={wheelDur} />}
-          <span className="ann-rope" aria-hidden />
-          <span className="ann-banner">
-            <Message text={text} link={link} />
-          </span>
-        </span>
-      </div>
+    <div ref={viewport} className="ann-convoy-view">
+      {/* bản đo: ẩn, chỉ để biết chiều rộng của một đoàn */}
+      <span ref={measureRef} className="ann-train-set ann-measure" aria-hidden>
+        {train(false)}
+      </span>
+      {/* hai đoàn cách đều nửa chu kỳ để luôn có xe trên thanh */}
+      {ready &&
+        [0, 1].map((k) => (
+          <div
+            key={k}
+            className="ann-convoy"
+            aria-hidden={k === 1 || undefined}
+            style={{ ...vars, animationDelay: k === 1 ? `calc(var(--ann-dur) * -0.5)` : undefined }}
+          >
+            {train(k === 0)}
+          </div>
+        ))}
     </div>
   );
 }
@@ -255,7 +294,7 @@ export function AnnouncementBarView({ bar, onClose, children }: { bar: Announcem
     style.backgroundColor = "#FFFFFF";
     style.color = "#27548A";
   }
-  const railsDur = `${(SCENE_TILES * BAR_H) / Math.max(20, speed)}s`;
+  const railsDur = `${(SCENE_TILES * BAR_H) / (Math.max(20, speed) * RAILS_RATIO)}s`;
   const farDur = `${(SCENE_TILES * BAR_H) / (Math.max(20, speed) * FAR_RATIO)}s`;
 
   return (

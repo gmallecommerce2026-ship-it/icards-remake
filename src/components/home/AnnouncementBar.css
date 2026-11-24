@@ -72,15 +72,32 @@
   overflow: hidden;
 }
 
-/* Đoàn xe đứng yên bên trái: xe, dây và banner chữ. Nền cuộn phía sau. */
+/* Một đoàn: xe + dây + banner. Chạy vòng lặp từ mép phải sang trái, thời lượng do JS tính theo tốc độ admin. */
 .ann-convoy {
   position: absolute;
-  left: 28px;
+  left: 0;
   top: 0;
   height: 100%;
   display: flex;
   align-items: center;
   width: max-content;
+  transform: translate3d(var(--ann-from), 0, 0);
+  animation: ann-convoy linear infinite;
+  animation-duration: var(--ann-dur);
+  will-change: transform;
+}
+@keyframes ann-convoy {
+  from { transform: translate3d(var(--ann-from), 0, 0); }
+  to { transform: translate3d(var(--ann-to), 0, 0); }
+}
+
+/* Bản đo chiều rộng: không hiển thị, không chặn chuột */
+.ann-measure {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .ann-train-set {
@@ -236,6 +253,8 @@
   .ann-bar:not(.ann-force-motion) .ann-sep { display: none; }
   .ann-bar:not(.ann-force-motion).ann-bar--marquee .ann-inner { padding-left: 20px; }
   .ann-bar:not(.ann-force-motion) .ann-ground { animation: none; background-position: 0 0; }
+  .ann-bar:not(.ann-force-motion) .ann-convoy { animation: none; left: 28px; transform: none; }
+  .ann-bar:not(.ann-force-motion) .ann-convoy[aria-hidden="true"] { display: none; }
   .ann-bar:not(.ann-force-motion) .ann-wheel,
   .ann-bar:not(.ann-force-motion) .ann-puff,
   .ann-bar:not(.ann-force-motion) .ann-banner,
