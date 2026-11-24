@@ -188,9 +188,47 @@ const MegaMore = ({ links, title, openLeft, onNavigate }: { links: Link[]; title
   </li>
 );
 
-const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, onClose }: {
-  activeKey: string | null; activeMenuData: MenuNode | null; onMouseEnter: () => void; onMouseLeave: () => void; onClose: () => void;
+/* Pane "Thiệp khác": mỗi danh mục bị gom là một khối, khối lẻ có phần giới thiệu bên trái, khối chẵn đảo lại bên phải. Cuộn được. */
+const MegaZigzag = ({ blocks, onNavigate }: { blocks: MenuNode[]; onNavigate: (path: string) => void }) => (
+  <div className="container mega-zig-list">
+    {blocks.map((b, i) => (
+      <section key={`${b.path}-${i}`} className={`mega-zig mega-reveal ${i % 2 === 1 ? "is-reverse" : ""}`} style={{ ["--i" as string]: Math.min(i, 6) }}>
+        <aside className="mega-zig-intro">
+          <p className="mega-intro-eyebrow">Danh mục</p>
+          <h2 className="mega-intro-title">{b.title}</h2>
+          <p className="mega-intro-desc">Khám phá mẫu thiệp theo phong cách, dịp và nhu cầu của bạn.</p>
+          <button type="button" className="mega-intro-cta" onClick={() => onNavigate(b.path)}>
+            Xem tất cả <ArrowRight size={15} aria-hidden />
+          </button>
+        </aside>
+        <div className="mega-cols mega-zig-cols">
+          {b.columns.map((column, index) => (
+            <div key={index} className="mega-col">
+              <a href={column.path} onClick={(e) => { e.preventDefault(); onNavigate(column.path); }} className="mega-col-head">
+                <h3>{column.title}</h3>
+              </a>
+              <ul>
+                {column.links.map((link, j) => (
+                  <li key={j}>
+                    <a href={link.href} onClick={(e) => { e.preventDefault(); onNavigate(link.href); }}>
+                      <span>{link.text}</span>
+                      <ArrowRight className="mega-link-arrow" size={14} aria-hidden />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+    ))}
+  </div>
+);
+
+const MegaMenuPane = ({ activeKey, activeMenuData, zigzag, onMouseEnter, onMouseLeave, onClose }: {
+  activeKey: string | null; activeMenuData: MenuNode | null; zigzag: MenuNode[]; onMouseEnter: () => void; onMouseLeave: () => void; onClose: () => void;
 }) => {
+  const isMore = activeKey === MORE_KEY;
   const router = useRouter();
   const paneRef = useRef<HTMLDivElement>(null);
   const isVisible = !!activeMenuData && activeMenuData.columns?.length > 0;
@@ -232,7 +270,7 @@ const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, o
   const shownData = shown?.data;
   useLayoutEffect(() => {
     const pane = paneRef.current;
-    if (!isVisible || !pane) return;
+    if (!isVisible || !pane || isMore) return;
     const fit = () => {
       const head = pane.querySelector<HTMLElement>(".mega-col-head");
       const row = pane.querySelector<HTMLElement>(".mega-col > ul > li");
@@ -248,7 +286,7 @@ const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, o
     fit();
     window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
-  }, [isVisible, shownKey, shownData]);
+  }, [isVisible, shownKey, shownData, isMore]);
 
   // Esc để đóng
   useEffect(() => {
@@ -273,6 +311,9 @@ const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, o
     >
       {shown && (
         <div key={shown.key} className="mega-inner">
+          {isMore ? (
+            <MegaZigzag blocks={zigzag} onNavigate={go} />
+          ) : (
           <div className="container mega-top">
             <div className="mega-layout">
             <aside className="mega-intro mega-reveal" style={{ ["--i" as string]: 0 }}>
@@ -317,6 +358,7 @@ const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, o
             </div>
             </div>
           </div>
+          )}
           {showPromo ? (
             <MegaPromo items={promoItems} onNavigate={go} />
           ) : (
@@ -390,6 +432,10 @@ const MobileNav = ({ isOpen, onMenuToggle, menuData, mainNavItems }: { isOpen: b
 /* Hai mục luôn đứng cuối menu và không bao giờ bị gom. */
 const PINNED_PATHS = ["/shop", "/blog"];
 const MORE_LABEL = "Thiệp khác";
+/* Khóa pane gộp của nút "Thiệp khác": hiện toàn bộ danh mục bị gom, xếp zigzag và cuộn được */
+const MORE_KEY = "__more__";
+/* Dữ liệu giả để MegaMenuPane mở đúng khi ở pane gộp (nội dung thật lấy từ danh sách danh mục bị gom) */
+const MORE_DATA: MenuNode = { path: "/templates", title: MORE_LABEL, columns: [{ title: MORE_LABEL, path: "/templates", links: [] }] };
 /* Chiều rộng dự phòng của nút "Thiệp khác" trước khi đo được */
 const MORE_FALLBACK_WIDTH = 120;
 
@@ -398,7 +444,7 @@ const splitNav = (items: NavItem[]) => ({
   pinned: items.filter((i) => PINNED_PATHS.includes(i.path ?? "")),
 });
 
-function DesktopNav({ items, menuData, activeMenu, onEnter, onLeave, onClear, onNavigate }: {
+function DesktopNav({ items, menuData, activeMenu, onEnter, onLeave, onClear, onNavigate, onOverflow }: {
   items: NavItem[];
   menuData: Record<string, MenuNode>;
   activeMenu: string | null;
@@ -406,6 +452,7 @@ function DesktopNav({ items, menuData, activeMenu, onEnter, onLeave, onClear, on
   onLeave: () => void;
   onClear: () => void;
   onNavigate: (path: string) => void;
+  onOverflow: (items: NavItem[]) => void;
 }) {
   const navRef = useRef<HTMLElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
@@ -414,7 +461,6 @@ function DesktopNav({ items, menuData, activeMenu, onEnter, onLeave, onClear, on
   const itemEls = useRef<Map<string, HTMLElement>>(new Map());
   const moreWidth = useRef(MORE_FALLBACK_WIDTH);
   const [visible, setVisible] = useState<number>(() => splitNav(items).cats.length);
-  const [moreOpen, setMoreOpen] = useState(false);
 
   const { cats, pinned } = useMemo(() => splitNav(items), [items]);
 
@@ -454,7 +500,9 @@ function DesktopNav({ items, menuData, activeMenu, onEnter, onLeave, onClear, on
 
   const shown = cats.slice(0, visible);
   const hidden = cats.slice(visible);
-  const hiddenActive = hidden.some((c) => activeMenu === menuKey(c));
+  // Báo danh sách mục bị gom lên để pane "Thiệp khác" hiện đủ các danh mục đó
+  const hiddenKey = hidden.map(menuKey).join("|");
+  useEffect(() => { onOverflow(hidden); }, [hiddenKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const btnClass = (key: string) => `nav-item-bottom ${activeMenu === key ? "active" : ""}`;
   const register = (key: string) => (el: HTMLElement | null) => {
@@ -484,34 +532,18 @@ function DesktopNav({ items, menuData, activeMenu, onEnter, onLeave, onClear, on
       })}
 
       {hidden.length > 0 && (
-        <div
-          className="more-menu-wrap"
-          onMouseEnter={() => { setMoreOpen(true); onClear(); }}
-          onMouseLeave={() => setMoreOpen(false)}
+        <button
+          ref={moreRef}
+          type="button"
+          className={`nav-item-bottom ${activeMenu === MORE_KEY ? "active" : ""}`}
+          aria-haspopup="true"
+          aria-expanded={activeMenu === MORE_KEY}
+          onMouseEnter={() => onEnter(MORE_KEY)}
+          onMouseLeave={onLeave}
+          onFocus={() => onEnter(MORE_KEY)}
         >
-          <button ref={moreRef} className={`nav-item-bottom ${hiddenActive ? "active" : ""}`} aria-haspopup="true" aria-expanded={moreOpen}>
-            {MORE_LABEL}
-          </button>
-          {moreOpen && (
-            <div className="more-menu" role="menu">
-              {hidden.map((item) => {
-                const key = menuKey(item);
-                return (
-                  <button
-                    key={key}
-                    role="menuitem"
-                    onMouseEnter={() => onEnter(key)}
-                    onMouseLeave={onLeave}
-                    onClick={() => { setMoreOpen(false); onNavigate(menuData[key]?.path || item.path || "#"); }}
-                    className={activeMenu === key ? "active" : ""}
-                  >
-                    {item.title}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+          {MORE_LABEL}
+        </button>
       )}
 
       {pinned.map((item) => {
@@ -550,6 +582,12 @@ const MainHeader = ({
   const pathname = usePathname();
   const iproActive = !!pathname?.startsWith(IPRO_PATH);
   const menuTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Các mục đang bị gom vào "Thiệp khác" và dữ liệu menu của từng mục (để hiện zigzag)
+  const [overflow, setOverflow] = useState<NavItem[]>([]);
+  const moreBlocks = useMemo(
+    () => overflow.map((i) => menuData[menuKey(i)]).filter((n): n is MenuNode => !!n?.columns?.length),
+    [overflow, menuData],
+  );
 
   const handleNavigate = (path: string) => {
     if (menuTimeoutRef.current) clearTimeout(menuTimeoutRef.current);
@@ -569,7 +607,8 @@ const MainHeader = ({
   const handleMouseEnter = (title: string) => {
     if (menuTimeoutRef.current) clearTimeout(menuTimeoutRef.current);
     // Mục không có menu thả xuống (vd "Cửa hàng & dịch vụ" chưa cấu hình cột): không mở gì, và đóng menu đang mở nếu có
-    if (!menuData[title]?.columns?.length) {
+    const hasPane = title === MORE_KEY ? moreBlocks.length > 0 : !!menuData[title]?.columns?.length;
+    if (!hasPane) {
       if (activeMenu) setActiveMenu(null);
       return;
     }
@@ -638,11 +677,13 @@ const MainHeader = ({
             onLeave={handleMouseLeave}
             onClear={() => setActiveMenu(null)}
             onNavigate={handleNavigate}
+            onOverflow={setOverflow}
           />
         </div>
         <MegaMenuPane
           activeKey={activeMenu}
-          activeMenuData={activeMenu ? menuData[activeMenu] ?? null : null}
+          activeMenuData={activeMenu === MORE_KEY ? (moreBlocks.length ? MORE_DATA : null) : activeMenu ? menuData[activeMenu] ?? null : null}
+          zigzag={moreBlocks}
           onMouseEnter={() => menuTimeoutRef.current && clearTimeout(menuTimeoutRef.current)}
           onMouseLeave={handleMouseLeave}
           onClose={closeMenu}
@@ -772,7 +813,7 @@ export function Header({ className }: { className?: string }) {
         companyName={settings?.theme?.companyName || "iCards.com.vn"}
         logoUrl={settings?.theme?.logoUrl}
       />
-      {activeMenu && !!menuData[activeMenu]?.columns?.length && <div className="mega-backdrop" aria-hidden="true" onMouseEnter={() => setActiveMenu(null)} />}
+      {activeMenu && (activeMenu === MORE_KEY || !!menuData[activeMenu]?.columns?.length) && <div className="mega-backdrop" aria-hidden="true" onMouseEnter={() => setActiveMenu(null)} />}
       <MobileNav isOpen={isMenuOpen} onMenuToggle={() => setIsMenuOpen(false)} menuData={menuData} mainNavItems={mainNavItems} />
     </header>
   );

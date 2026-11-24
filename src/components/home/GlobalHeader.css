@@ -586,7 +586,7 @@ button {
 .mega-more-pop {
     position: absolute;
     left: calc(100% + 14px);
-    bottom: 0;
+    top: 50%;
     width: 240px;
     max-height: calc(100dvh - 240px);
     overflow-y: auto;
@@ -598,7 +598,7 @@ button {
     z-index: 5;
     opacity: 0;
     visibility: hidden;
-    transform: translateX(-6px);
+    transform: translateY(-50%) translateX(-6px);
     transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.2s;
 }
 
@@ -606,7 +606,7 @@ button {
 .mega-more-pop.is-left {
     left: auto;
     right: calc(100% + 14px);
-    transform: translateX(6px);
+    transform: translateY(-50%) translateX(6px);
 }
 
 /* Cầu nối vô hình giữa nút và popup để chuột di chuyển sang không bị đóng */
@@ -628,7 +628,7 @@ button {
 .mega-more:focus-within .mega-more-pop {
     opacity: 1;
     visibility: visible;
-    transform: none;
+    transform: translateY(-50%);
     transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s;
 }
 
@@ -642,6 +642,41 @@ button {
 }
 
 .mega-more-pop ul { margin: 0; }
+
+/* ----- Pane "Thiệp khác": nhiều danh mục xếp zigzag, cuộn được ----- */
+.mega-zig-list {
+    padding-top: 32px;
+}
+
+.mega-zig {
+    display: grid;
+    grid-template-columns: 230px minmax(0, 1fr);
+    gap: 56px;
+    align-items: start;
+    padding: 32px 0;
+    border-top: 1px solid #ECE8E1;
+}
+
+.mega-zig:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+/* Khối đảo: danh mục bên trái, phần giới thiệu bên phải */
+.mega-zig.is-reverse {
+    grid-template-columns: minmax(0, 1fr) 230px;
+}
+
+.mega-zig.is-reverse .mega-zig-intro { grid-column: 2; grid-row: 1; padding-right: 0; padding-left: 24px; border-right: 0; border-left: 1px solid #ECE8E1; }
+.mega-zig.is-reverse .mega-zig-cols { grid-column: 1; grid-row: 1; }
+
+.mega-zig-intro {
+    padding-right: 24px;
+    border-right: 1px solid #ECE8E1;
+}
+
+.mega-zig-intro .mega-intro-title { font-size: 30px; }
+
 
 /* ----- Dải dưới: nền sáng, tiêu đề nhỏ + "Xem tất cả", banner phẳng và các thẻ mẫu ----- */
 .mega-band {
