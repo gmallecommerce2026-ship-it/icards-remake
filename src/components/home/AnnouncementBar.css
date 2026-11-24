@@ -57,9 +57,10 @@
   animation: ann-ground linear infinite;
   will-change: background-position;
 }
+.ann-ground--far { z-index: 0; }
 @keyframes ann-ground {
-  from { background-position: 0 0; }
-  to { background-position: calc(var(--ann-h) * -9) 0; }
+  from { background-position: calc(var(--ann-h) * -9) 0; }
+  to { background-position: 0 0; }
 }
 
 /* Đoàn xe trên nền trắng: không phủ tối, nút đóng cùng màu xanh thương hiệu */
@@ -71,23 +72,15 @@
   overflow: hidden;
 }
 
-/* Một đoàn: xe + dây + banner. Đi từ mép phải ra mép trái, thời lượng do JS tính theo tốc độ admin chọn. */
+/* Đoàn xe đứng yên bên trái: xe, dây và banner chữ. Nền cuộn phía sau. */
 .ann-convoy {
   position: absolute;
-  left: 0;
+  left: 28px;
   top: 0;
   height: 100%;
   display: flex;
   align-items: center;
   width: max-content;
-  transform: translate3d(var(--ann-from), 0, 0);
-  animation: ann-convoy linear infinite;
-  animation-duration: var(--ann-dur);
-  will-change: transform;
-}
-@keyframes ann-convoy {
-  from { transform: translate3d(var(--ann-from), 0, 0); }
-  to { transform: translate3d(var(--ann-to), 0, 0); }
 }
 
 .ann-train-set {
@@ -98,14 +91,6 @@
   white-space: nowrap;
 }
 
-/* Bản đo chiều rộng: không hiển thị, không chặn chuột */
-.ann-measure {
-  position: absolute;
-  left: 0;
-  top: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
 
 .ann-vehicle { display: block; flex: none; overflow: visible; }
 
@@ -251,8 +236,6 @@
   .ann-bar:not(.ann-force-motion) .ann-sep { display: none; }
   .ann-bar:not(.ann-force-motion).ann-bar--marquee .ann-inner { padding-left: 20px; }
   .ann-bar:not(.ann-force-motion) .ann-ground { animation: none; background-position: 0 0; }
-  .ann-bar:not(.ann-force-motion) .ann-convoy { animation: none; left: 50%; transform: translate3d(-50%, 0, 0); }
-  .ann-bar:not(.ann-force-motion) .ann-convoy[aria-hidden="true"] { display: none; }
   .ann-bar:not(.ann-force-motion) .ann-wheel,
   .ann-bar:not(.ann-force-motion) .ann-puff,
   .ann-bar:not(.ann-force-motion) .ann-banner,
