@@ -146,7 +146,7 @@ const MegaFeature = ({ title, path, items, onNavigate }: { title: string; path: 
           <span className="mega-banner-desc">Khám phá các mẫu thiệp được cập nhật thường xuyên, chỉnh sửa online và gửi đi chỉ trong vài phút.</span>
           <span className="mega-banner-cta">Xem tất cả <ArrowRight size={16} aria-hidden /></span>
         </a>
-        {items.map((t) => (
+        {items.slice(0, 4).map((t) => (
           <a
             key={t.slug}
             href={`${TEMPLATES}/${t.slug}`}

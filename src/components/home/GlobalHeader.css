@@ -233,13 +233,14 @@ button {
     width: 100%;
 }
 
-/* ----- MEGA MENU ----- */
-/* Lớp bắt chuột phía sau khung menu (chỉ có khi khung đang mở). Khung đã phủ tới đáy màn hình nên không cần làm mờ nữa. */
+/* ----- MEGA MENU -----
+   Khung rộng full màn hình, mở xuống ngay dưới header. Chiều cao theo nội dung (không kéo giãn tới đáy),
+   tối đa bằng phần màn hình còn lại; nếu dài hơn thì cuộn trong khung. */
 .mega-backdrop {
     position: fixed;
     inset: 0;
     z-index: 980;
-    background: rgba(14, 27, 44, 0.12);
+    background: rgba(14, 27, 44, 0.10);
     animation: mega-fade 0.25s ease;
 }
 
@@ -248,23 +249,17 @@ button {
     to { opacity: 1; }
 }
 
-/* Drop full chiều rộng màn hình, ngay dưới thanh header.
-   Mở bằng clip-path (trượt xuống từ mép header) + fade; đóng ngược lại. */
 .mega-menu-pane {
     position: absolute;
     top: 100%;
     left: 0;
     width: 100%;
-    background:
-        radial-gradient(900px 260px at 100% 0%, rgba(201, 139, 154, 0.10), transparent 70%),
-        linear-gradient(180deg, #fff 0%, #FCFBFA 100%);
+    background: #fff;
     border-top: 1px solid var(--color-border);
-    border-bottom: 1px solid rgba(14, 27, 44, 0.06);
-    box-shadow: 0 32px 48px -28px rgba(14, 27, 44, 0.38);
-    padding: 0;
-    /* --mega-top do JS đo (mép dưới thanh header) => khung luôn chạm đáy màn hình */
-    height: calc(100vh - var(--mega-top, 140px));
-    height: calc(100dvh - var(--mega-top, 140px));
+    box-shadow: 0 24px 40px -24px rgba(14, 27, 44, 0.28);
+    height: auto;
+    max-height: calc(100vh - var(--mega-top, 140px));
+    max-height: calc(100dvh - var(--mega-top, 140px));
     overflow-y: auto;
     overscroll-behavior: contain;
     z-index: -1;
@@ -272,7 +267,7 @@ button {
     visibility: hidden;
     pointer-events: none;
     clip-path: inset(0 0 100% 0);
-    transition: opacity 0.2s ease, clip-path 0.32s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.32s;
+    transition: opacity 0.2s ease, clip-path 0.3s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.3s;
 }
 
 .mega-menu-pane.visible {
@@ -281,28 +276,39 @@ button {
     pointer-events: auto;
     clip-path: inset(0 0 -40px 0);
     z-index: 998;
-    transition: opacity 0.2s ease, clip-path 0.38s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s;
+    transition: opacity 0.2s ease, clip-path 0.36s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s;
 }
 
 /* Phần tử bên trong hiện lần lượt (stagger) */
 .mega-reveal {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
 }
 
 .mega-menu-pane.visible .mega-reveal {
-    animation: mega-rise 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    animation-delay: calc(var(--i, 0) * 45ms + 60ms);
+    animation: mega-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: calc(var(--i, 0) * 40ms + 50ms);
 }
 
 @keyframes mega-rise {
     to { opacity: 1; transform: none; }
 }
 
+.mega-inner {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ----- Cột liên kết ----- */
+.mega-inner > .mega-top {
+    padding-top: 40px;
+    padding-bottom: 36px;
+}
+
 .mega-cols {
     display: grid;
-    grid-template-columns: repeat(var(--cols, 4), minmax(0, 260px));
-    gap: 36px clamp(32px, 4vw, 72px);
+    grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+    gap: 32px clamp(24px, 3vw, 48px);
     align-items: start;
 }
 
@@ -317,10 +323,10 @@ button {
 .mega-col-head h3 {
     position: relative;
     margin: 0;
-    padding-bottom: 12px;
-    font-size: 14px;
+    padding-bottom: 14px;
+    font-size: 12px;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--color-primary);
     transition: color 0.2s ease;
@@ -331,19 +337,20 @@ button {
     position: absolute;
     left: 0;
     bottom: 0;
-    width: 26px;
-    height: 2px;
-    border-radius: 2px;
-    background: #D0788C;
-    transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    width: 100%;
+    height: 1px;
+    background: var(--color-border);
+    transition: background-color 0.2s ease;
 }
 
 .mega-col-head:hover h3::after,
-.mega-col:hover .mega-col-head h3::after { width: 48px; }
+.mega-col:hover .mega-col-head h3::after {
+    background: var(--color-primary);
+}
 
 .mega-col ul {
     list-style: none;
-    margin: 14px 0 0;
+    margin: 10px 0 0;
     padding: 0;
     display: flex;
     flex-direction: column;
@@ -360,23 +367,23 @@ button {
     border-radius: 8px;
     font-size: 15px;
     line-height: 1.35;
-    color: #4a5568;
+    color: #3a4252;
     text-decoration: none;
-    transition: color 0.15s ease, background-color 0.15s ease, padding-left 0.2s ease;
+    transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .mega-link-arrow {
     flex: none;
+    color: var(--color-primary);
     opacity: 0;
-    transform: translateX(-6px);
+    transform: translateX(-4px);
     transition: opacity 0.18s ease, transform 0.2s ease;
 }
 
 .mega-col li a:hover,
 .mega-col li a:focus-visible {
     color: var(--color-primary);
-    background: rgba(39, 84, 138, 0.07);
-    padding-left: 14px;
+    background: #F3F6FA;
     outline: none;
 }
 
@@ -388,53 +395,28 @@ button {
 
 .mega-col-head:focus-visible h3 { text-decoration: underline; text-underline-offset: 5px; }
 
-/* ----- Bố cục khung: cột liên kết (trên) + dải full-bleed (dưới) giãn hết phần còn lại ----- */
-.mega-inner {
-    min-height: 100%;
-    display: flex;
-    flex-direction: column;
-}
-
-.mega-inner > .mega-top {
-    flex: none;
-    padding-top: 36px;
-    padding-bottom: 32px;
-}
-
+/* ----- Dải dưới: banner + thẻ mẫu (hoặc sản phẩm). Chiều cao theo nội dung, không giãn. ----- */
 .mega-band {
-    flex: 1 1 auto;
-    min-height: 280px;
-    display: flex;
-    flex-direction: column;
-    border-top: 1px solid #F1E4D6;
-    background: linear-gradient(120deg, #FBF6EF 0%, #FBF1EE 100%);
+    border-top: 1px solid var(--color-border);
+    background: #FAF7F2;
+    padding: 28px 0 32px;
 }
 
 .mega-band-inner {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    padding-top: 28px;
-    padding-bottom: 32px;
+    display: block;
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
-/* Lưới một hàng: thẻ nào không vừa chiều ngang bị đẩy xuống hàng cao 0 và ẩn đi; thẻ vừa thì giãn hết chiều cao còn lại */
 .mega-tiles {
-    flex: 1 1 auto;
-    min-height: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-    grid-template-rows: minmax(0, 1fr);
-    grid-auto-rows: 0;
-    column-gap: 24px;
-    row-gap: 0; /* các hàng ẩn cao 0 nên không được có khoảng cách, nếu không thẻ bị co và hở đáy */
-    overflow: hidden;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 20px;
+    align-items: start;
 }
 
 .mega-tile {
     min-width: 0;
-    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -444,12 +426,13 @@ button {
 
 .mega-tile-media {
     position: relative;
-    flex: 1 1 0;
-    min-height: 0;
-    border-radius: 14px;
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    border-radius: 12px;
     overflow: hidden;
     background: #EFE9E1;
-    box-shadow: 0 6px 18px rgba(14, 27, 44, 0.07);
+    box-shadow: 0 4px 14px rgba(14, 27, 44, 0.08);
     transition: box-shadow 0.25s ease, transform 0.25s ease;
 }
 
@@ -464,27 +447,26 @@ button {
 
 .mega-tile:hover .mega-tile-media,
 .mega-tile:focus-visible .mega-tile-media {
-    box-shadow: 0 14px 28px rgba(14, 27, 44, 0.16);
-    transform: translateY(-3px);
+    box-shadow: 0 12px 26px rgba(14, 27, 44, 0.16);
+    transform: translateY(-2px);
 }
 
 .mega-tile:hover .mega-tile-img,
-.mega-tile:focus-visible .mega-tile-img { transform: scale(1.05); }
+.mega-tile:focus-visible .mega-tile-img { transform: scale(1.04); }
 .mega-tile:focus-visible { outline: none; }
 
-/* Thẻ mẫu thiệp: tên ở trên, ảnh bên dưới (giống khối "Những dịp lan tỏa niềm vui") */
+/* Thẻ mẫu thiệp: tên ở trên, ảnh bên dưới */
 .mega-tile-card { flex-direction: column; }
 .mega-tile-card .mega-tile-media { order: 2; }
 
 .mega-tile-name {
     order: 1;
-    flex: none;
-    text-align: center;
     font-family: var(--font-tpl-display), Georgia, serif;
-    font-size: 19px;
+    font-size: 16px;
     font-weight: 600;
-    line-height: 1.25;
+    line-height: 1.3;
     color: #1a1a1a;
+    text-align: center;
     display: -webkit-box;
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
@@ -493,103 +475,121 @@ button {
 
 .mega-tile-card:hover .mega-tile-name,
 .mega-tile-card:focus-visible .mega-tile-name {
-    text-decoration: underline;
-    text-underline-offset: 4px;
+    color: var(--color-primary);
 }
 
-/* Banner quảng cáo: ô đầu tiên, rộng gấp đôi */
+/* Banner quảng cáo: ô đầu tiên, rộng gấp đôi, cao bằng hai hàng thẻ */
 .mega-banner {
     grid-column: span 2;
+    grid-row: span 2;
     position: relative;
     min-width: 0;
-    min-height: 0;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-end;
     gap: 10px;
-    padding: 32px 36px;
-    border-radius: 18px;
+    padding: 28px 30px;
+    border-radius: 16px;
     overflow: hidden;
     text-decoration: none;
     color: #fff;
     background:
-        radial-gradient(420px 240px at 100% 0%, rgba(208, 120, 140, 0.55), transparent 70%),
+        radial-gradient(360px 220px at 100% 0%, rgba(208, 120, 140, 0.5), transparent 70%),
         linear-gradient(135deg, #27548A 0%, #1F426B 100%);
     transition: box-shadow 0.25s ease, transform 0.25s ease;
 }
 
 .mega-banner:hover,
 .mega-banner:focus-visible {
-    box-shadow: 0 16px 32px rgba(39, 84, 138, 0.32);
-    transform: translateY(-3px);
+    box-shadow: 0 14px 28px rgba(39, 84, 138, 0.28);
+    transform: translateY(-2px);
     outline: none;
 }
 
 .mega-banner-eyebrow {
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.75);
+    color: rgba(255, 255, 255, 0.72);
 }
 
 .mega-banner-title {
     font-family: var(--font-display), Georgia, serif;
-    font-size: 34px;
+    font-size: 30px;
     font-weight: 600;
     line-height: 1.15;
 }
 
 .mega-banner-desc {
-    max-width: 380px;
-    font-size: 15px;
+    max-width: 340px;
+    font-size: 14px;
     line-height: 1.55;
     color: rgba(255, 255, 255, 0.85);
 }
 
 .mega-banner-cta {
-    margin-top: 8px;
+    margin-top: 10px;
     display: inline-flex;
     align-items: center;
     gap: 8px;
     align-self: flex-start;
-    height: 42px;
-    padding: 0 20px;
+    height: 38px;
+    padding: 0 18px;
     border-radius: 999px;
     background: #fff;
     color: var(--color-primary);
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
 }
 
 .mega-banner-cta svg { transition: transform 0.2s ease; }
 .mega-banner:hover .mega-banner-cta svg { transform: translateX(3px); }
 
-/* Khối cửa hàng: chữ bên trái, sản phẩm bên phải */
-.mega-promo {
-    flex-direction: row;
+/* Dải mẫu thiệp: banner + tối đa 4 thẻ, các cột cố định để không trống bên phải */
+.mega-tiles-feature {
+    grid-template-columns: minmax(0, 1.6fr) repeat(4, minmax(0, 1fr));
     align-items: stretch;
+}
+
+.mega-tiles-feature .mega-banner {
+    grid-column: auto;
+    grid-row: auto;
+    min-height: 100%;
+}
+
+@media (max-width: 1100px) {
+    .mega-tiles-feature { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .mega-tiles-feature .mega-banner { grid-column: span 2; }
+}
+
+/* ----- Khối cửa hàng: chữ bên trái, sản phẩm bên phải ----- */
+.mega-promo {
+    display: grid;
+    grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
     gap: 40px;
+    align-items: start;
 }
 
 .mega-promo-text {
-    flex: 0 0 clamp(260px, 26%, 380px);
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: flex-start;
+    padding-top: 6px;
 }
 
 .mega-promo .mega-tiles {
-    flex: 1 1 0;
-    min-width: 0;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.mega-promo .mega-tile-media {
+    aspect-ratio: 1 / 1;
 }
 
 .mega-promo-eyebrow {
     margin: 0 0 8px;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: #A8733A;
@@ -598,17 +598,16 @@ button {
 .mega-promo-title {
     margin: 0;
     font-family: var(--font-display), Georgia, serif;
-    font-size: 30px;
+    font-size: 28px;
     font-weight: 600;
     color: var(--color-text-dark);
 }
 
 .mega-promo-desc {
     margin: 10px 0 0;
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1.55;
     color: var(--color-text-light);
-    max-width: 420px;
 }
 
 .mega-promo-cta {
@@ -616,24 +615,23 @@ button {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    height: 44px;
-    padding: 0 22px;
+    height: 40px;
+    padding: 0 20px;
     border: 1px solid var(--color-primary);
     border-radius: 999px;
     background: var(--color-primary);
     color: #fff;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .mega-promo-cta svg { transition: transform 0.2s ease; }
-.mega-promo-cta:hover { background: #1F426B; box-shadow: 0 8px 18px rgba(39, 84, 138, 0.28); }
+.mega-promo-cta:hover { background: #1F426B; box-shadow: 0 8px 18px rgba(39, 84, 138, 0.25); }
 .mega-promo-cta:hover svg { transform: translateX(3px); }
 
 .mega-tile-info {
-    flex: none;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -641,7 +639,7 @@ button {
 }
 
 .mega-tile-info b {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     line-height: 1.35;
     color: var(--color-text-dark);
@@ -659,7 +657,7 @@ button {
 }
 
 .mega-promo-old { font-size: 13px; color: #9aa3af; }
-.mega-promo-price { font-size: 16px; font-weight: 700; color: #B94A12; }
+.mega-promo-price { font-size: 15px; font-weight: 700; color: #B94A12; }
 
 .mega-promo-badge {
     padding: 2px 7px;
@@ -678,10 +676,8 @@ button {
 }
 
 @media (max-width: 1100px) {
-    .mega-promo { flex-direction: column; gap: 20px; }
-    .mega-promo-text { flex-basis: auto; }
-    .mega-banner { padding: 24px; }
-    .mega-banner-title { font-size: 28px; }
+    .mega-promo { grid-template-columns: 1fr; gap: 20px; }
+    .mega-banner-title { font-size: 26px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
