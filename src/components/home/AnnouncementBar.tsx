@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import "./AnnouncementBar.css";
 
 /** Nền động: "train" (mặc định) và "truck" là đoàn xe chạy kéo banner chữ, "none" chỉ dùng màu nền. */
@@ -103,55 +103,103 @@ function Marquee({ text, link, speed }: { text: string; link?: string; speed: nu
 
 /* ---------- Đoàn xe kéo banner ---------- */
 
-/** Bánh xe: quay ngược chiều kim đồng hồ (xe đi sang trái), tốc độ góc khớp với tốc độ đoàn. */
-function Wheel({ cx, cy, dur }: { cx: number; cy: number; dur: string }) {
+/** Bánh xe 3D: vành xám-xanh có độ sâu, lốp đen, chấu xe. Quay ngược chiều kim đồng hồ (xe đi sang trái). */
+function Wheel({ cx, cy, dur, grad }: { cx: number; cy: number; dur: string; grad: string }) {
   return (
     <g className="ann-wheel" style={{ animationDuration: dur }}>
-      <circle cx={cx} cy={cy} r={WHEEL_R} fill="#0E1B2C" stroke="#27548A" strokeWidth={1} />
-      <path d={`M${cx} ${cy - WHEEL_R + 1}V${cy + WHEEL_R - 1}M${cx - WHEEL_R + 1} ${cy}H${cx + WHEEL_R - 1}`} stroke="#E8EEF6" strokeWidth={0.7} />
+      <circle cx={cx} cy={cy} r={WHEEL_R + 0.6} fill="#0A1526" />
+      <circle cx={cx} cy={cy} r={WHEEL_R} fill={`url(#${grad})`} />
+      <circle cx={cx} cy={cy} r={WHEEL_R - 1.1} fill="none" stroke="#A9C2E2" strokeWidth={0.5} opacity={0.7} />
+      <path d={`M${cx} ${cy - WHEEL_R + 0.8}V${cy + WHEEL_R - 0.8}M${cx - WHEEL_R + 0.8} ${cy}H${cx + WHEEL_R - 0.8}`} stroke="#A9C2E2" strokeWidth={0.6} />
+      <circle cx={cx} cy={cy} r={0.9} fill="#E8EEF6" />
     </g>
   );
 }
 
-/** Đầu máy hơi nước quay mặt sang trái, có khói bốc từ ống khói. */
+/** Lớp bóng và gradient dùng chung cho xe. id riêng cho mỗi thanh để tránh trùng khi có nhiều đoàn. */
+function VehicleDefs({ id }: { id: string }) {
+  return (
+    <defs>
+      <linearGradient id={`${id}-body`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#6E9BD3" />
+        <stop offset="0.45" stopColor="#2F5F9E" />
+        <stop offset="1" stopColor="#15345E" />
+      </linearGradient>
+      <linearGradient id={`${id}-dark`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#24508A" />
+        <stop offset="1" stopColor="#0F2544" />
+      </linearGradient>
+      <radialGradient id={`${id}-wheel`} cx="0.4" cy="0.35" r="0.75">
+        <stop offset="0" stopColor="#3A5F8E" />
+        <stop offset="0.7" stopColor="#0E1B2C" />
+        <stop offset="1" stopColor="#060D18" />
+      </radialGradient>
+      <radialGradient id={`${id}-puff`} cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0" stopColor="#E6EEF9" stopOpacity="1" />
+        <stop offset="0.6" stopColor="#B9CFEA" stopOpacity="0.85" />
+        <stop offset="1" stopColor="#B9CFEA" stopOpacity="0" />
+      </radialGradient>
+      <filter id={`${id}-soft`} x="-20%" y="-50%" width="140%" height="200%">
+        <feGaussianBlur stdDeviation="0.7" />
+      </filter>
+    </defs>
+  );
+}
+
+/** Đầu máy hơi nước 3D quay mặt sang trái, khói bay về phía sau (sang phải). */
 function Locomotive({ wheelDur }: { wheelDur: string }) {
-  const fill = "#27548A";
-  const puff = "#A9C2E2";
+  const id = useId().replace(/:/g, "");
   return (
     <svg className="ann-vehicle" viewBox="0 0 84 34" width={84} height={34} aria-hidden focusable="false">
-      <rect x={24} y={2} width={5} height={9} fill={fill} />
-      <g className="ann-puffs">
-        <circle className="ann-puff" cx={26.5} cy={2} r={2.4} fill={puff} style={{ animationDelay: "0s" }} />
-        <circle className="ann-puff" cx={26.5} cy={2} r={2.4} fill={puff} style={{ animationDelay: "-0.55s" }} />
-        <circle className="ann-puff" cx={26.5} cy={2} r={2.4} fill={puff} style={{ animationDelay: "-1.1s" }} />
+      <VehicleDefs id={id} />
+      {/* bóng đổ dưới xe */}
+      <ellipse cx={42} cy={30.6} rx={38} ry={1.8} fill="#0E1B2C" opacity={0.22} filter={`url(#${id}-soft)`} />
+      {/* khói: bay lên và trôi về phía sau */}
+      <g>
+        {[0, -0.6, -1.2, -1.8].map((d) => (
+          <circle key={d} className="ann-puff" cx={26.5} cy={1} r={2.6} fill={`url(#${id}-puff)`} style={{ animationDelay: `${d}s` }} />
+        ))}
       </g>
-      <rect x={6} y={13} width={18} height={9} fill={fill} />
-      <rect x={22} y={9} width={34} height={13} fill={fill} />
-      <rect x={54} y={3} width={22} height={19} fill={fill} />
-      <rect x={60} y={7} width={10} height={7} fill="#E8EEF6" />
-      <rect x={22} y={19} width={54} height={2} fill="#A9C2E2" />
-      <Wheel cx={12} cy={26} dur={wheelDur} />
-      <Wheel cx={28} cy={26} dur={wheelDur} />
-      <Wheel cx={48} cy={26} dur={wheelDur} />
-      <Wheel cx={66} cy={26} dur={wheelDur} />
+      {/* ống khói + đỉnh */}
+      <rect x={23.5} y={3} width={6} height={9} rx={1} fill={`url(#${id}-dark)`} />
+      <rect x={22.5} y={1.5} width={8} height={2.2} rx={1} fill="#17386A" />
+      {/* nồi hơi + đầu máy phía trước */}
+      <rect x={4} y={15} width={16} height={9} rx={2.5} fill={`url(#${id}-dark)`} />
+      <rect x={18} y={10} width={40} height={14} rx={3} fill={`url(#${id}-body)`} />
+      <rect x={20} y={11.2} width={36} height={1.6} rx={0.8} fill="#FFFFFF" opacity={0.35} />
+      {/* cabin */}
+      <rect x={54} y={2} width={24} height={22} rx={2.5} fill={`url(#${id}-body)`} />
+      <rect x={52} y={0} width={28} height={3} rx={1.2} fill="#17386A" />
+      <rect x={60} y={6} width={12} height={8} rx={1.2} fill="#DCE8F6" opacity={0.9} />
+      <rect x={61.5} y={7} width={3} height={6} fill="#FFFFFF" opacity={0.7} />
+      {/* dải trang trí */}
+      <rect x={18} y={21} width={56} height={2} fill="#A9C2E2" />
+      <Wheel cx={11} cy={26.5} dur={wheelDur} grad={`${id}-wheel`} />
+      <Wheel cx={28} cy={26.5} dur={wheelDur} grad={`${id}-wheel`} />
+      <Wheel cx={47} cy={26.5} dur={wheelDur} grad={`${id}-wheel`} />
+      <Wheel cx={66} cy={26.5} dur={wheelDur} grad={`${id}-wheel`} />
     </svg>
   );
 }
 
-/** Xe tải thùng quay mặt sang trái: cabin ở đầu, thùng phía sau. */
+/** Xe tải thùng 3D quay mặt sang trái: cabin ở đầu, thùng phía sau, đèn pha vàng. */
 function Truck({ wheelDur }: { wheelDur: string }) {
-  const fill = "#27548A";
+  const id = useId().replace(/:/g, "");
   return (
     <svg className="ann-vehicle" viewBox="0 0 84 34" width={84} height={34} aria-hidden focusable="false">
-      <rect x={4} y={11} width={20} height={11} fill={fill} />
-      <rect x={6} y={6} width={14} height={7} fill={fill} />
-      <rect x={8} y={8} width={8} height={4} fill="#E8EEF6" />
-      <rect x={26} y={3} width={54} height={21} fill={fill} />
-      <rect x={26} y={19} width={54} height={2} fill="#A9C2E2" />
-      <rect x={2} y={22} width={6} height={2} fill="#E8A33D" />
-      <Wheel cx={12} cy={26} dur={wheelDur} />
-      <Wheel cx={36} cy={26} dur={wheelDur} />
-      <Wheel cx={68} cy={26} dur={wheelDur} />
+      <VehicleDefs id={id} />
+      <ellipse cx={42} cy={30.6} rx={38} ry={1.8} fill="#0E1B2C" opacity={0.22} filter={`url(#${id}-soft)`} />
+      {/* cabin */}
+      <path d={`M4 26 V14 Q4 10 8 10 H18 V26 Z`} fill={`url(#${id}-body)`} />
+      <rect x={8} y={12} width={7} height={5} rx={1} fill="#DCE8F6" opacity={0.9} />
+      <rect x={2} y={23} width={5} height={2.4} rx={0.8} fill="#E8A33D" />
+      {/* thùng */}
+      <rect x={20} y={3} width={60} height={22} rx={2} fill={`url(#${id}-body)`} />
+      <rect x={20} y={20} width={60} height={2} fill="#A9C2E2" />
+      <rect x={24} y={6} width={50} height={1.6} rx={0.8} fill="#FFFFFF" opacity={0.3} />
+      <Wheel cx={12} cy={26.5} dur={wheelDur} grad={`${id}-wheel`} />
+      <Wheel cx={36} cy={26.5} dur={wheelDur} grad={`${id}-wheel`} />
+      <Wheel cx={68} cy={26.5} dur={wheelDur} grad={`${id}-wheel`} />
     </svg>
   );
 }
