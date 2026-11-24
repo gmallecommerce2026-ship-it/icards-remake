@@ -32,6 +32,10 @@ const SHOP = "/shop";
 const IPRO_PATH = "/professional";
 /* Số link tối đa mỗi cột khi dựng menu từ cây mẫu thiệp (chỉ dùng khi chưa có menu admin) */
 const MAX_LINKS = 4;
+/* Chiều cao ô mẫu (px): co theo màn hình, kẹp trong khoảng này. MEGA_BAND_CHROME = phần cố định của dải dưới (tiêu đề, đệm, tên mẫu). */
+const MEGA_MEDIA_MIN = 150;
+const MEGA_MEDIA_MAX = 300;
+const MEGA_BAND_CHROME = 130;
 
 const UserMenu = ({ name, email, initial, onLogout }: { name: string; email: string; initial: string; onLogout: () => void }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -153,8 +157,12 @@ const MegaFeature = ({ title, path, items, onNavigate }: { title: string; path: 
             className="mega-tile mega-tile-card"
             onClick={(e) => { e.preventDefault(); onNavigate(`${TEMPLATES}/${t.slug}`); }}
           >
-            <span className="mega-tile-media">
-              {t.image && <img src={t.image} alt={t.name} className="mega-tile-img" loading="lazy" />}
+            <span className={`mega-tile-media${t.image ? "" : " is-placeholder"}`}>
+              {t.image ? (
+                <img src={t.image} alt={t.name} className="mega-tile-img" loading="lazy" />
+              ) : (
+                <span className="mega-tile-initial" aria-hidden>{t.name.charAt(0)}</span>
+              )}
             </span>
             <span className="mega-tile-name">{t.name}</span>
           </a>
@@ -201,6 +209,30 @@ const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, o
       window.removeEventListener("scroll", measure);
     };
   }, [isVisible]);
+
+  // Căn chiều cao ô mẫu theo phần màn hình còn lại dưới phần danh mục: menu vừa khít, không phải cuộn.
+  const shownKey = shown?.key;
+  const shownData = shown?.data;
+  useLayoutEffect(() => {
+    const pane = paneRef.current;
+    if (!isVisible || !pane) return;
+    const fit = () => {
+      const topH = pane.querySelector<HTMLElement>(".mega-top")?.offsetHeight ?? 0;
+      const paneTop = Math.max(0, pane.getBoundingClientRect().top);
+      const avail = window.innerHeight - paneTop - topH - MEGA_BAND_CHROME;
+      const h = Math.round(Math.min(MEGA_MEDIA_MAX, Math.max(MEGA_MEDIA_MIN, avail)));
+      pane.style.setProperty("--mega-media-h", `${h}px`);
+    };
+    fit();
+    const top = pane.querySelector<HTMLElement>(".mega-top");
+    const ro = typeof ResizeObserver !== "undefined" && top ? new ResizeObserver(fit) : null;
+    if (ro && top) ro.observe(top);
+    window.addEventListener("resize", fit);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", fit);
+    };
+  }, [isVisible, shownKey, shownData]);
 
   // Esc để đóng
   useEffect(() => {

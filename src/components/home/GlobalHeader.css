@@ -533,16 +533,47 @@ button {
 .mega-tile-card:hover .mega-tile-name,
 .mega-tile-card:focus-visible .mega-tile-name { color: var(--color-primary); }
 
-/* Dải mẫu thiệp: banner + tối đa 4 thẻ, cột cố định */
+/* Dải mẫu thiệp: banner + tối đa 4 thẻ.
+   Thẻ có chiều rộng cố định (đồng nhất giữa các tab), banner tự giãn lấp phần còn lại,
+   nên dù có 0, 1 hay 4 mẫu thì hàng luôn đầy và không bị trống. Chiều cao ô do JS căn theo màn hình (--mega-media-h). */
 .mega-tiles-feature {
-    grid-template-columns: minmax(0, 1.5fr) repeat(4, minmax(0, 1fr));
+    display: flex;
     align-items: stretch;
+    gap: 16px;
+    --mega-tile-w: clamp(132px, 12vw, 184px);
+}
+
+.mega-tiles-feature > .mega-tile {
+    flex: 0 0 var(--mega-tile-w);
+    width: var(--mega-tile-w);
+}
+
+.mega-tiles-feature .mega-tile-media {
+    aspect-ratio: auto;
+    height: var(--mega-media-h, 220px);
+    flex: none;
+}
+
+/* Ô không có ảnh: nền gradient nhẹ + chữ cái đầu, thay vì khung xám trống */
+.mega-tile-media.is-placeholder {
+    background: linear-gradient(160deg, #EEF2F8 0%, #DCE5F1 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mega-tile-initial {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--color-primary);
+    opacity: 0.45;
 }
 
 /* Lưới sản phẩm cửa hàng: đúng 4 cột */
 .mega-tiles-shop { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
-/* Banner phẳng, một màu thương hiệu */
+/* Banner phẳng, một màu thương hiệu. Trong dải mẫu: giãn lấp phần trống, cao bằng hàng ô. */
 .mega-banner {
     position: relative;
     min-width: 0;
@@ -617,6 +648,12 @@ button {
 
 .mega-banner-cta svg { transition: transform 0.2s ease; }
 .mega-banner:hover .mega-banner-cta svg { transform: translateX(3px); }
+
+.mega-tiles-feature > .mega-banner {
+    flex: 1 1 0;
+    min-width: 280px;
+    padding: 24px 28px;
+}
 
 /* ----- Khối cửa hàng: chữ bên trái, sản phẩm bên phải ----- */
 .mega-promo {
@@ -733,8 +770,8 @@ button {
 @media (max-width: 1100px) {
     .mega-layout { grid-template-columns: 1fr; gap: 24px; }
     .mega-intro { border-right: 0; padding-right: 0; border-bottom: 1px solid #ECE8E1; padding-bottom: 18px; }
-    .mega-tiles-feature { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .mega-banner { grid-column: span 2; }
+    .mega-tiles-feature { flex-wrap: wrap; }
+    .mega-tiles-feature > .mega-banner { flex: 1 1 100%; min-height: var(--mega-media-h, 220px); }
     .mega-tiles-shop { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .mega-banner-title { font-size: 24px; }
 }
