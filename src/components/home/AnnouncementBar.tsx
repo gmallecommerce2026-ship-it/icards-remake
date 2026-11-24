@@ -22,6 +22,8 @@ export type AnnouncementBarData = {
   backgroundImage?: string;
   /** Nền động có sẵn; bỏ trống = "train" (mặc định). Ảnh nền tuỳ chỉnh (backgroundImage) luôn được ưu tiên. */
   backgroundPreset?: AnnouncementPreset;
+  /** Bỏ qua cài đặt giảm chuyển động của máy khách (không khuyến khích). Mặc định: tôn trọng cài đặt đó. */
+  ignoreReducedMotion?: boolean;
   isMarquee?: boolean;
   /** px/giây */
   speed?: number;
@@ -287,7 +289,7 @@ export function AnnouncementBarView({ bar, onClose, children }: { bar: Announcem
 
   return (
     <div
-      className={`ann-bar ${useConvoy ? "ann-bar--convoy" : ""} ${bar.isMarquee && !useConvoy ? "ann-bar--marquee" : ""} ${onClose ? "ann-bar--closable" : ""} ${tiled ? "ann-bar--preset" : ""} ${staticImage || useConvoy ? "ann-bar--image" : ""}`}
+      className={`ann-bar ${bar.ignoreReducedMotion ? "ann-force-motion" : ""} ${useConvoy ? "ann-bar--convoy" : ""} ${bar.isMarquee && !useConvoy ? "ann-bar--marquee" : ""} ${onClose ? "ann-bar--closable" : ""} ${tiled ? "ann-bar--preset" : ""} ${staticImage || useConvoy ? "ann-bar--image" : ""}`}
       style={style}
       role="region"
       aria-label="Thông báo"

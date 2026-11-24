@@ -192,6 +192,13 @@ export default function AnnouncementAdmin() {
               <span className="flex justify-between text-xs font-normal text-[#5B6B7F]"><span>Chậm</span><span>Nhanh</span></span>
             </label>
           )}
+          <Toggle
+            checked={!!bar.ignoreReducedMotion}
+            onChange={(v) => set({ ignoreReducedMotion: v })}
+            hint="Không khuyến khích: khách đã bật giảm chuyển động trên máy sẽ vẫn thấy thanh chạy. Một số người có thể khó chịu."
+          >
+            Chạy chuyển động kể cả khi máy khách bật giảm chuyển động
+          </Toggle>
           <Toggle checked={!!bar.isDismissible} onChange={(v) => set({ isDismissible: v })} hint="Hiện nút ✕ để khách tắt thanh. Khi bạn đổi nội dung, thanh sẽ hiện lại với mọi khách.">
             Cho phép khách tắt thanh
           </Toggle>

@@ -241,19 +241,22 @@
 }
 .ann-close:hover, .ann-close:focus-visible { opacity: 1; }
 
-/* Người dùng giảm chuyển động: không chạy; chữ hiển thị đứng yên */
+/* Người dùng giảm chuyển động: không chạy. Riêng đoàn xe vẫn hiện, đứng yên ở giữa thanh.
+   Thanh có class .ann-force-motion (admin bật "bỏ qua cài đặt giảm chuyển động") thì giữ chuyển động. */
 @media (prefers-reduced-motion: reduce) {
-  .ann-track { animation: none; width: auto; justify-content: center; }
-  .ann-half[aria-hidden="true"] { display: none; }
-  .ann-unit { white-space: normal; }
-  .ann-item { white-space: normal; text-align: center; }
-  .ann-sep { display: none; }
-  .ann-bar--marquee .ann-inner { padding-left: 20px; }
-  /* Giảm chuyển động: vẫn giữ cảnh và đoàn xe kéo banner, nhưng đứng yên ở giữa thanh, không chạy */
-  .ann-ground { animation: none; background-position: 0 0; }
-  .ann-convoy { animation: none; left: 50%; transform: translate3d(-50%, 0, 0); }
-  .ann-convoy[aria-hidden="true"] { display: none; }
-  .ann-wheel, .ann-puff, .ann-banner, .ann-banner::after { animation: none; }
-  .ann-banner { transform: none; }
-  .ann-reduced-only { display: none; }
+  .ann-bar:not(.ann-force-motion) .ann-track { animation: none; width: auto; justify-content: center; }
+  .ann-bar:not(.ann-force-motion) .ann-half[aria-hidden="true"] { display: none; }
+  .ann-bar:not(.ann-force-motion) .ann-unit { white-space: normal; }
+  .ann-bar:not(.ann-force-motion) .ann-item { white-space: normal; text-align: center; }
+  .ann-bar:not(.ann-force-motion) .ann-sep { display: none; }
+  .ann-bar:not(.ann-force-motion).ann-bar--marquee .ann-inner { padding-left: 20px; }
+  .ann-bar:not(.ann-force-motion) .ann-ground { animation: none; background-position: 0 0; }
+  .ann-bar:not(.ann-force-motion) .ann-convoy { animation: none; left: 50%; transform: translate3d(-50%, 0, 0); }
+  .ann-bar:not(.ann-force-motion) .ann-convoy[aria-hidden="true"] { display: none; }
+  .ann-bar:not(.ann-force-motion) .ann-wheel,
+  .ann-bar:not(.ann-force-motion) .ann-puff,
+  .ann-bar:not(.ann-force-motion) .ann-banner,
+  .ann-bar:not(.ann-force-motion) .ann-banner::after { animation: none; }
+  .ann-bar:not(.ann-force-motion) .ann-banner { transform: none; }
+  .ann-bar:not(.ann-force-motion) .ann-reduced-only { display: none; }
 }
