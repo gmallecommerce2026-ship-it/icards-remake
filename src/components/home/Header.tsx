@@ -17,7 +17,9 @@ import { AnnouncementBar } from "./AnnouncementBar";
 /* ---------- Kiểu & tiện ích ---------- */
 type Link = { text: string; href: string };
 type Column = { title: string; path: string; links: Link[] };
-type MenuNode = { path: string; columns: Column[] };
+/* Mẫu thiệp gợi ý hiển thị ở nửa dưới của menu thả xuống (lấy từ cây danh mục). */
+type Featured = { slug: string; name: string; image?: string | null };
+type MenuNode = { path: string; columns: Column[]; title?: string; featured?: Featured[] };
 type NavItem = { id?: string; title: string; path?: string; order?: number; isVisible?: boolean; children?: any[] };
 /* Khóa menu theo id (không theo tiêu đề: hai mục có thể cùng tên, vd "Sự kiện" là danh mục thiệp và mục Sự kiện). */
 const menuKey = (item: { id?: string; title: string }) => item.id || item.title;
@@ -71,53 +73,93 @@ const UserMenu = ({ name, email, initial, onLogout }: { name: string; email: str
 let promoCache: Promise<Product[]> | null = null;
 function loadPromoProducts(): Promise<Product[]> {
   promoCache ??= productsApi
-    .getProducts({ limit: 2 })
+    .getProducts({ limit: 6 })
     .then((res) => {
       const d = res.data?.data ?? res.data;
-      return Array.isArray(d) ? (d as Product[]).slice(0, 2) : [];
+      return Array.isArray(d) ? (d as Product[]).slice(0, 6) : [];
     })
     .catch(() => []);
   return promoCache;
 }
 
+/* Dải dưới của menu: luôn là khối full-bleed, giãn hết phần còn lại của khung nên không để lại khoảng trắng. */
 const MegaPromo = ({ items, onNavigate }: { items: Product[]; onNavigate: (path: string) => void }) => (
-  <div className="mega-promo mega-reveal" style={{ ["--i" as string]: 6 }}>
-    <div className="mega-promo-text">
-      <p className="mega-promo-eyebrow">Cửa hàng iCards</p>
-      <h4 className="mega-promo-title">Cửa hàng &amp; dịch vụ</h4>
-      <p className="mega-promo-desc">Phụ kiện trang trí, quà tặng và dịch vụ tổ chức trọn gói cho ngày vui của bạn.</p>
-      <button type="button" className="mega-promo-cta" onClick={() => onNavigate(SHOP)}>
-        Xem cửa hàng <ArrowRight size={16} aria-hidden />
-      </button>
+  <div className="mega-band mega-reveal" style={{ ["--i" as string]: 6 }}>
+    <div className="container mega-band-inner mega-promo">
+      <div className="mega-promo-text">
+        <p className="mega-promo-eyebrow">Cửa hàng iCards</p>
+        <h4 className="mega-promo-title">Cửa hàng &amp; dịch vụ</h4>
+        <p className="mega-promo-desc">Phụ kiện trang trí, quà tặng và dịch vụ tổ chức trọn gói cho ngày vui của bạn.</p>
+        <button type="button" className="mega-promo-cta" onClick={() => onNavigate(SHOP)}>
+          Xem cửa hàng <ArrowRight size={16} aria-hidden />
+        </button>
+      </div>
+      {items.length > 0 && (
+        <div className="mega-tiles">
+          {items.map((p) => {
+            const from = priceFrom(p);
+            const off = discountPercent(p);
+            return (
+              <a
+                key={p.slug}
+                href={`${SHOP}/${p.slug}`}
+                className="mega-tile"
+                onClick={(e) => { e.preventDefault(); onNavigate(`${SHOP}/${p.slug}`); }}
+              >
+                <span className="mega-tile-media">
+                  {p.image ? (
+                    <img src={p.image} alt="" className="mega-tile-img" loading="lazy" />
+                  ) : (
+                    <ProductThumb product={p} className="mega-tile-img" />
+                  )}
+                  {off > 0 && <span className="mega-promo-badge mega-tile-badge">-{off}%</span>}
+                </span>
+                <span className="mega-tile-info">
+                  <b>{p.name}</b>
+                  <span className="mega-promo-priceRow">
+                    {off > 0 && <del className="mega-promo-old">{formatPrice(p.compareAtPrice!)}</del>}
+                    <span className="mega-promo-price">{off > 0 ? "" : "Từ "}{formatPrice(from)}</span>
+                  </span>
+                </span>
+              </a>
+            );
+          })}
+        </div>
+      )}
     </div>
-    <div className="mega-promo-items">
-      {items.map((p) => {
-        const from = priceFrom(p);
-        const off = discountPercent(p);
-        return (
+  </div>
+);
+
+/* Dải dưới của menu danh mục thiệp: banner + các thẻ mẫu thiệp (tên ở trên, ảnh bên dưới, giống khối "Những dịp lan tỏa niềm vui").
+   Lưới chỉ một hàng, tự bỏ các thẻ không vừa chiều ngang; thẻ giãn theo chiều cao còn lại nên luôn lấp kín tới đáy màn hình. */
+const MegaFeature = ({ title, path, items, onNavigate }: { title: string; path: string; items: Featured[]; onNavigate: (path: string) => void }) => (
+  <div className="mega-band mega-reveal" style={{ ["--i" as string]: 5 }}>
+    <div className="container mega-band-inner">
+      <div className="mega-tiles mega-tiles-feature">
+        <a
+          href={path}
+          className="mega-banner"
+          onClick={(e) => { e.preventDefault(); onNavigate(path); }}
+        >
+          <span className="mega-banner-eyebrow">Bộ sưu tập</span>
+          <span className="mega-banner-title">{title}</span>
+          <span className="mega-banner-desc">Khám phá các mẫu thiệp được cập nhật thường xuyên, chỉnh sửa online và gửi đi chỉ trong vài phút.</span>
+          <span className="mega-banner-cta">Xem tất cả <ArrowRight size={16} aria-hidden /></span>
+        </a>
+        {items.map((t) => (
           <a
-            key={p.slug}
-            href={`${SHOP}/${p.slug}`}
-            className="mega-promo-card"
-            onClick={(e) => { e.preventDefault(); onNavigate(`${SHOP}/${p.slug}`); }}
+            key={t.slug}
+            href={`${TEMPLATES}/${t.slug}`}
+            className="mega-tile mega-tile-card"
+            onClick={(e) => { e.preventDefault(); onNavigate(`${TEMPLATES}/${t.slug}`); }}
           >
-            {p.image ? (
-              <img src={p.image} alt="" className="mega-promo-thumb mega-promo-img" loading="lazy" />
-            ) : (
-              <ProductThumb product={p} className="mega-promo-thumb" />
-            )}
-            <span className="mega-promo-info">
-              <b>{p.name}</b>
-              <span className="mega-promo-priceRow">
-                {off > 0 && <del className="mega-promo-old">{formatPrice(p.compareAtPrice!)}</del>}
-                <span className="mega-promo-price">{off > 0 ? "" : "Từ "}{formatPrice(from)}</span>
-                {off > 0 && <span className="mega-promo-badge">-{off}%</span>}
-              </span>
-              <span className="mega-promo-more">Xem sản phẩm <ArrowRight size={14} aria-hidden /></span>
+            <span className="mega-tile-name">{t.name}</span>
+            <span className="mega-tile-media">
+              {t.image && <img src={t.image} alt={t.name} className="mega-tile-img" loading="lazy" />}
             </span>
           </a>
-        );
-      })}
+        ))}
+      </div>
     </div>
   </div>
 );
@@ -126,6 +168,7 @@ const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, o
   activeKey: string | null; activeMenuData: MenuNode | null; onMouseEnter: () => void; onMouseLeave: () => void; onClose: () => void;
 }) => {
   const router = useRouter();
+  const paneRef = useRef<HTMLDivElement>(null);
   const isVisible = !!activeMenuData && activeMenuData.columns?.length > 0;
   // Giữ nội dung lần mở gần nhất để animation đóng không bị trống
   const [last, setLast] = useState<{ key: string; data: MenuNode } | null>(null);
@@ -144,6 +187,21 @@ const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, o
     return () => { alive = false; };
   }, [showPromo]);
 
+  // Đo mép trên của khung (ngay dưới thanh header) để khung cao đúng tới đáy màn hình: không hở trang bên dưới.
+  useLayoutEffect(() => {
+    if (!isVisible) return;
+    const el = paneRef.current;
+    if (!el) return;
+    const measure = () => el.style.setProperty("--mega-top", `${Math.max(0, el.getBoundingClientRect().top)}px`);
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, { passive: true });
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure);
+    };
+  }, [isVisible]);
+
   // Esc để đóng
   useEffect(() => {
     if (!isVisible) return;
@@ -158,15 +216,16 @@ const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, o
   const cols = shown?.data.columns ?? [];
   return (
     <div
+      ref={paneRef}
       className={`mega-menu-pane ${isVisible ? "visible" : ""}`}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       aria-hidden={!isVisible}
       inert={!isVisible}
     >
-      <div className="container">
-        {shown && (
-          <div key={shown.key} className="mega-inner">
+      {shown && (
+        <div key={shown.key} className="mega-inner">
+          <div className="container mega-top">
             <div className="mega-cols" style={{ ["--cols" as string]: Math.min(cols.length, 5) }}>
               {cols.map((column, index) => (
                 <section key={index} className="mega-col mega-reveal" style={{ ["--i" as string]: index }}>
@@ -186,10 +245,19 @@ const MegaMenuPane = ({ activeKey, activeMenuData, onMouseEnter, onMouseLeave, o
                 </section>
               ))}
             </div>
-            {showPromo && promoItems.length > 0 && <MegaPromo items={promoItems} onNavigate={go} />}
           </div>
-        )}
-      </div>
+          {showPromo ? (
+            <MegaPromo items={promoItems} onNavigate={go} />
+          ) : (
+            <MegaFeature
+              title={shown.data.title || ""}
+              path={shown.data.path}
+              items={shown.data.featured ?? []}
+              onNavigate={go}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -434,6 +502,11 @@ const MainHeader = ({
   /* Hover-intent: mở lần đầu trễ ~90ms để lướt chuột qua không bật menu; đang mở thì đổi mục ngay. */
   const handleMouseEnter = (title: string) => {
     if (menuTimeoutRef.current) clearTimeout(menuTimeoutRef.current);
+    // Mục không có menu thả xuống (vd "Cửa hàng & dịch vụ" chưa cấu hình cột): không mở gì, và đóng menu đang mở nếu có
+    if (!menuData[title]?.columns?.length) {
+      if (activeMenu) setActiveMenu(null);
+      return;
+    }
     if (activeMenu) setActiveMenu(title);
     else menuTimeoutRef.current = setTimeout(() => setActiveMenu(title), 90);
   };
@@ -549,6 +622,19 @@ export function Header({ className }: { className?: string }) {
     const byOrder = (a: NavItem, b: NavItem) => (a.order || 0) - (b.order || 0);
     const visible = (list: NavItem[] | undefined) => (list ?? []).filter((i) => i.isVisible !== false).sort(byOrder);
 
+    /* Mẫu thiệp gợi ý cho nửa dưới menu: tìm danh mục gốc trong cây theo ?category= của đường dẫn, không có thì theo tên. */
+    const norm = (v: string) => v.trim().toLowerCase();
+    const featuredOf = (path: string | undefined, title: string): Featured[] => {
+      const q = path?.split("?")[1];
+      const cat = q ? new URLSearchParams(q).get("category") : null;
+      const node = tree.find((r) => (cat && r.id === cat) || norm(r.label) === norm(title));
+      if (!node) return [];
+      return flattenTemplates(node)
+        .filter((t) => t.previewImage)
+        .slice(0, 8)
+        .map((t) => ({ slug: t.slug, name: t.name, image: t.previewImage }));
+    };
+
     /* 1) Menu do admin cấu hình (tab Menu): đây là nguồn duy nhất của thanh menu.
        Cấp 1 = mục chính, cấp 2 = cột trong menu thả xuống, cấp 3 = liên kết trong cột. */
     const nav = visible(settings?.headerNav);
@@ -560,7 +646,7 @@ export function Header({ className }: { className?: string }) {
           links: visible(col.children).map((l) => ({ text: l.title, href: l.path || "#" })),
         }));
         items.push({ id: root.id || root.title, title: root.title, path: root.path || "", order: i + 1, isVisible: true });
-        data[menuKey(root)] = { path: root.path || columns[0]?.path || "#", columns };
+        data[menuKey(root)] = { path: root.path || columns[0]?.path || "#", columns, title: root.title, featured: featuredOf(root.path, root.title) };
       });
       return { mainNavItems: items, menuData: data };
     }
@@ -578,7 +664,7 @@ export function Header({ className }: { className?: string }) {
       const cols = root.children.map(columnOf);
       if (root.templates.length) cols.unshift(columnOf({ ...root, children: [] }));
       items.push({ id: root.id, title: root.label, path: root.path, order: i + 1, isVisible: true });
-      data[root.id] = { path: root.path, columns: cols };
+      data[root.id] = { path: root.path, columns: cols, title: root.label, featured: featuredOf(root.path, root.label) };
     });
 
     return { mainNavItems: items, menuData: data };
@@ -620,7 +706,7 @@ export function Header({ className }: { className?: string }) {
         companyName={settings?.theme?.companyName || "iCards.com.vn"}
         logoUrl={settings?.theme?.logoUrl}
       />
-      {activeMenu && <div className="mega-backdrop" aria-hidden="true" onMouseEnter={() => setActiveMenu(null)} />}
+      {activeMenu && !!menuData[activeMenu]?.columns?.length && <div className="mega-backdrop" aria-hidden="true" onMouseEnter={() => setActiveMenu(null)} />}
       <MobileNav isOpen={isMenuOpen} onMenuToggle={() => setIsMenuOpen(false)} menuData={menuData} mainNavItems={mainNavItems} />
     </header>
   );
