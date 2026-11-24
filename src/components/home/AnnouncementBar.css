@@ -230,6 +230,11 @@
   .ann-item { white-space: normal; text-align: center; }
   .ann-sep { display: none; }
   .ann-bar--marquee .ann-inner { padding-left: 20px; }
-  .ann-ground, .ann-convoy-view { display: none; }
-  .ann-reduced-only { display: block; }
+  /* Giảm chuyển động: vẫn giữ cảnh và đoàn xe kéo banner, nhưng đứng yên ở giữa thanh, không chạy */
+  .ann-ground { animation: none; background-position: 0 0; }
+  .ann-convoy { animation: none; left: 50%; transform: translate3d(-50%, 0, 0); }
+  .ann-convoy[aria-hidden="true"] { display: none; }
+  .ann-wheel, .ann-puff, .ann-banner { animation: none; }
+  .ann-banner { transform: none; }
+  .ann-reduced-only { display: none; }
 }
